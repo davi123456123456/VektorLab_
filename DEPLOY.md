@@ -53,7 +53,16 @@ se hai la CLI di GitHub.
    - Build Command: `npm run build`
    - Output Directory: `dist`
    - Install Command: `npm install`
-5. **Deploy**.
+5. **Node.js Version**: `22.x`. È in *Settings → General*, e va controllata anche
+   se il campo sembra già a posto.
+
+   > Questa è la causa più insidiosa di una build che fallisce solo su Vercel.
+   > Vite 8 non parte sotto Node 20.19, e non parte su nessuna 21: se Vercel
+   > sceglie una di quelle versioni, `npm run build` esce con 1 senza che in
+   > locale si sia visto niente, perché in locale gira una versione più nuova.
+   > `engines.node` nel `package.json` dichiara `22.x` proprio per non lasciare
+   > la scelta al caso.
+6. **Deploy**.
 
 La prima build richiede uno o due minuti.
 
@@ -82,6 +91,7 @@ git push
 
 | Sintomo | Causa quasi sempre | Rimedio |
 |---|---|---|
+| **`npm run build` esce 1 su Vercel ma funziona in locale** | versione di Node diversa: Vite 8 richiede `^20.19 \|\| >=22.12`, e in locale gira una versione più nuova che nasconde il problema | `engines.node` in `package.json` deve dire `22.x`, non un intervallo aperto come `>=20`; controlla anche *Project → Settings → Node.js Version* |
 | Build riuscita, **schermata bianca** | percorsi degli asset sbagliati, o `base` diverso da `/` in `vite.config.ts` | apri la console del browser (F12): se vedi 404 su `/assets/…`, controlla `base: '/'` e la Root Directory |
 | **Errore di tipi** durante la build | Vercel esegue `tsc -b`, che in locale magari salti | esegui `npm run build` in locale: deve finire senza errori |
 | **404 ricaricando** una pagina | manca il fallback SPA | `vercel.json` con la regola di rewrite è già incluso: verifica che sia stato committato |
