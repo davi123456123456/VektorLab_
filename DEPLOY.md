@@ -7,32 +7,65 @@ GitHub e dieci minuti.
 
 ## A. Mettere il codice su GitHub
 
-**1. Crea il repository vuoto.** Su [github.com/new](https://github.com/new):
+Il repository locale **è già pronto**: `git init` è stato fatto, i file sono
+committati sul ramo `main`, e l'identità git è configurata. Manca solo il
+collegamento a GitHub.
 
-- nome: `vektorlab`
-- visibilità: come preferisci, Vercel funziona anche con i repository privati
-- **NON** spuntare «Add a README file», «Add .gitignore» né la licenza
+### A.1 — Il token, al posto della password
 
-> Quella spunta è la causa più comune del rifiuto al primo `push`: GitHub
-> creerebbe un commit che il tuo repository locale non ha, e i due storie
-> divergerebbero prima ancora di cominciare.
+Da anni GitHub non accetta più la password dell'account per il `push`. Serve un
+*token*, che è una password usa-e-getta con permessi limitati.
 
-**2. Carica il codice.** Dalla cartella `vektorlab`:
+1. Vai su [github.com/settings/tokens](https://github.com/settings/tokens/new)
+   (Settings → Developer settings → Personal access tokens → Tokens classic).
+2. **Note**: `vektorlab`. **Expiration**: 90 giorni va benissimo.
+3. Spunta **solo** la casella `repo`. Nient'altro serve.
+4. **Generate token**, poi **copialo subito**: GitHub lo mostra una volta sola.
+
+Il token si incolla quando `git push` chiede la *password*. Con
+`credential.helper osxkeychain` (già impostato) macOS lo salva nel Portachiavi e
+non lo richiede più.
+
+### A.2 — Collegare e caricare
+
+Se il repository su GitHub **non esiste ancora**, crealo su
+[github.com/new](https://github.com/new) con nome `vektorlab`, e **senza**
+spuntare README, .gitignore o licenza — quelle spunte creano un commit che fa
+divergere le due storie prima ancora di cominciare.
 
 ```bash
 cd vektorlab
-git init
-git add .
-git commit -m "VektorLab - prima versione pubblicabile"
-git branch -M main
 git remote add origin https://github.com/<tuo-utente>/vektorlab.git
+git branch -M main
 git push -u origin main
 ```
 
-Sostituisci `<tuo-utente>` con il tuo nome utente GitHub. Se ti chiede le
-credenziali, la password NON è quella dell'account: serve un
-[token personale](https://github.com/settings/tokens), oppure `gh auth login`
-se hai la CLI di GitHub.
+Se invece il repository **esiste già con dei file caricati a mano**, quella
+copia va sostituita: è incompleta, ed è la causa degli errori
+`TS2307 Cannot find module` nella build di Vercel.
+
+```bash
+cd vektorlab
+git remote add origin https://github.com/<tuo-utente>/vektorlab.git
+git push -u origin main --force
+```
+
+> `--force` **cancella i commit che ci sono ora su GitHub** e li sostituisce
+> con quelli locali. Qui è giusto, perché quelli sono caricamenti parziali dello
+> stesso progetto e non contengono niente che non sia già in locale. Ma è
+> irreversibile: controlla di non avere modifiche fatte solo dal browser.
+
+### A.3 — Verificare che sia arrivato tutto
+
+Il file `ELENCO-FILE.txt` contiene i nomi di tutti i file che devono esserci.
+Per confrontarlo con quello che è finito davvero su GitHub:
+
+```bash
+cd /tmp && rm -rf verifica && git clone --quiet https://github.com/<tuo-utente>/vektorlab.git verifica && cd verifica && git ls-files | diff - ELENCO-FILE.txt && echo "COMPLETO: non manca niente"
+```
+
+Se stampa `COMPLETO`, il caricamento è a posto. Se stampa delle righe, quelle
+sono i file mancanti.
 
 ---
 
