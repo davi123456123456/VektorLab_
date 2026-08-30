@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#14171c"/>
+  <!-- una V che è anche un vettore: l'asta e la sua freccia -->
+  <path d="M16 16 L32 46 L48 16" fill="none" stroke="#4a9eff"
+        stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M48 16 L41 20 L47 24 Z" fill="#4a9eff"/>
+</svg>

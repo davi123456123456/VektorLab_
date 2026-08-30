@@ -1,0 +1,80 @@
+@import 'tailwindcss';
+
+/*
+  Tema scuro professionale ad alta densità informativa.
+  I colori delle grandezze strutturali sono definiti UNA VOLTA qui e usati
+  identici dal canvas (che li legge via getComputedStyle) e dall'interfaccia:
+  la legenda non può divergere dal disegno.
+
+  Accessibilità: la palette è distinguibile in deuteranopia perché le grandezze
+  non si distinguono MAI per solo colore — N/T/M hanno anche tratteggio e
+  posizione diversi, la selezione ha un alone oltre al colore.
+*/
+:root {
+  --sfondo: #14171c;
+  --sfondo-pannello: #1b1f26;
+  --sfondo-elevato: #232830;
+  --bordo: #2f3641;
+  --bordo-chiaro: #3d4552;
+
+  --testo: #e4e7ec;
+  --testo-attenuato: #9aa3b2;
+  --testo-debole: #6b7483;
+
+  --accento: #4a9eff;
+  --accento-scuro: #2b6dbd;
+
+  --griglia-fine: #20252d;
+  --griglia-media: #2a313b;
+  --griglia-asse: #3f4a5a;
+
+  --asta: #c8d0dc;
+  --asta-selezionata: #ffb545;
+  --nodo: #8b95a5;
+  --nodo-selezionato: #ffb545;
+  --evidenziato: #ffffff;
+
+  --vincolo: #ff5f56;
+  --carico: #35c46a;
+  --snap: #00d9c0;
+
+  --sforzo-normale: #4a9eff;
+  --taglio: #35c46a;
+  --momento: #ff8a3d;
+  --deformata: #b57cff;
+  --reazione: #ffd23f;
+
+  --errore: #ff5f56;
+  --avviso: #ffbd2e;
+  --ok: #35c46a;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: var(--sfondo);
+  color: var(--testo);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+/* i numeri vanno sempre in monospaziato: incolonnati si leggono e si confrontano */
+.numerico {
+  font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+canvas { display: block; touch-action: none; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--sfondo); }
+::-webkit-scrollbar-thumb { background: var(--bordo); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--bordo-chiaro); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

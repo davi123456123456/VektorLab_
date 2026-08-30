@@ -1,0 +1,101 @@
+{
+  "versioneFormato": 1,
+  "nome": "Tre carrelli paralleli — vincoli mal disposti",
+  "nodi": [
+    {
+      "id": "n1",
+      "x": 0,
+      "y": 0,
+      "vincolo": {
+        "tipo": "carrello",
+        "angolo": 0
+      }
+    },
+    {
+      "id": "n2",
+      "x": 3,
+      "y": 0,
+      "vincolo": {
+        "tipo": "carrello",
+        "angolo": 0
+      }
+    },
+    {
+      "id": "n3",
+      "x": 6,
+      "y": 0,
+      "vincolo": {
+        "tipo": "carrello",
+        "angolo": 0
+      }
+    }
+  ],
+  "aste": [
+    {
+      "id": "a4",
+      "nodoIniziale": "n1",
+      "nodoFinale": "n2",
+      "materialeId": "S275",
+      "sezioneId": "IPE 300",
+      "svincolo": {
+        "iniziale": {
+          "N": false,
+          "T": false,
+          "M": false
+        },
+        "finale": {
+          "N": false,
+          "T": false,
+          "M": false
+        }
+      }
+    },
+    {
+      "id": "a5",
+      "nodoIniziale": "n2",
+      "nodoFinale": "n3",
+      "materialeId": "S275",
+      "sezioneId": "IPE 300",
+      "svincolo": {
+        "iniziale": {
+          "N": false,
+          "T": false,
+          "M": false
+        },
+        "finale": {
+          "N": false,
+          "T": false,
+          "M": false
+        }
+      }
+    }
+  ],
+  "vincoliInterni": [],
+  "carichi": [
+    {
+      "tipo": "forzaNodale",
+      "nodoId": "n2",
+      "fx": 5000,
+      "fy": -10000,
+      "id": "c6",
+      "casoId": "principale"
+    }
+  ],
+  "casi": [
+    {
+      "id": "principale",
+      "nome": "Caso principale",
+      "natura": "Q"
+    }
+  ],
+  "combinazioni": [],
+  "materialiPersonalizzati": [],
+  "sezioniPersonalizzate": [],
+  "impostazioni": {
+    "momentoDallaParteDelleFibreTese": true,
+    "campioniPerAsta": 41,
+    "tolleranzaRango": 1e-9,
+    "limiteFreccia": 250,
+    "includiPesoProprio": false
+  }
+}
