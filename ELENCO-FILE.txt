@@ -2,6 +2,7 @@
 .gitignore
 .nvmrc
 DEPLOY.md
+ELENCO-FILE.txt
 README.md
 cli/analyze.ts
 docs/convenzioni.md
