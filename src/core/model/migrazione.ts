@@ -129,9 +129,39 @@ export function migra(p: Progetto): Progetto {
     carichi.push(c);
   }
 
-  if (!modificato && p.versioneFormato === VERSIONE_FORMATO) return p;
+  // Il contatore degli id manca su tutti i file salvati prima che esistesse.
+  // Ricostruirlo dal massimo id presente è esatto: quei file non hanno buchi,
+  // perché gli id venivano coniati proprio così. Senza questa riga un modello
+  // caricato ripartirebbe da `n1` e riuserebbe gli id che ha già dentro.
+  const contatoriId = p.contatoriId ?? contatoriDaModello(p);
+  const serveContatore = p.contatoriId === undefined;
+
+  if (!modificato && !serveContatore && p.versioneFormato === VERSIONE_FORMATO) return p;
   return {
-    ...p, versioneFormato: VERSIONE_FORMATO, carichi, nodi,
+    ...p, versioneFormato: VERSIONE_FORMATO, carichi, nodi, contatoriId,
     ...(p.vincoliSuAsta ? { vincoliSuAsta } : {}),
   };
+}
+
+/** Massimo suffisso già speso per ciascun prefisso, dedotto dal modello. */
+function contatoriDaModello(p: Progetto): Record<string, number> {
+  const collezioni: [string, readonly string[]][] = [
+    ['n', p.nodi.map((x) => x.id as unknown as string)],
+    ['a', p.aste.map((x) => x.id as unknown as string)],
+    ['c', p.carichi.map((x) => x.id as unknown as string)],
+    ['va', (p.vincoliSuAsta ?? []).map((x) => x.id)],
+    ['sc', (p.sconnessioni ?? []).map((x) => x.id)],
+    ['vi', (p.vincoliInterni ?? []).map((x) => x.id)],
+  ];
+  const out: Record<string, number> = {};
+  for (const [prefisso, ids] of collezioni) {
+    const re = new RegExp(`^${prefisso}(\\d+)$`);
+    let massimo = 0;
+    for (const id of ids) {
+      const m = re.exec(id);
+      if (m) massimo = Math.max(massimo, Number.parseInt(m[1], 10));
+    }
+    out[prefisso] = massimo;
+  }
+  return out;
 }

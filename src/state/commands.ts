@@ -18,7 +18,7 @@ import type {
 } from '../core/model/types.js';
 import {
   nuovoIdAsta, nuovoIdCarico, nuovoIdNodo, nuovoIdSconnessione,
-  nuovoIdVincoloInterno, nuovoIdVincoloSuAsta,
+  nuovoIdVincoloInterno, nuovoIdVincoloSuAsta, registraId,
 } from './ids.js';
 import {
   sezioneDaParametri, type ParametriSezione,
@@ -37,6 +37,67 @@ const senzaNodi = (p: Progetto, ids: Set<string>): Nodo[] =>
 const senzaAste = (p: Progetto, ids: Set<string>): Asta[] =>
   p.aste.filter((a) => !ids.has(a.id as string));
 
+/**
+ * DIPENDENTI DI NODI E ASTE.
+ *
+ * Un vincolo posato su un'asta, una sconnessione, una sconnessione nodale e i
+ * carichi non esistono per conto loro: esistono PERCHÉ esiste il nodo o l'asta
+ * che li porta. Toglierli separatamente sarebbe una scelta; lasciarli indietro
+ * non lo è — diventano entità orfane che puntano a id spariti, invisibili
+ * perché il disegno non trova più il portante, e pronte a riagganciarsi alla
+ * prima geometria che riceva quello stesso id.
+ *
+ * Da qui passano tutte le rimozioni di geometria, così la cascata è una sola
+ * e non va ricordata caso per caso.
+ */
+export interface Dipendenti {
+  carichi: Carico[];
+  vincoliSuAsta: VincoloSuAsta[];
+  sconnessioni: SconnessioneSuAsta[];
+  vincoliInterni: VincoloInterno[];
+}
+
+function dipendentiDi(
+  p: Progetto, nodi: Set<string>, aste: Set<string>,
+): Dipendenti {
+  return {
+    carichi: p.carichi.filter((c) => {
+      if ('nodoId' in c) return nodi.has(c.nodoId as string);
+      if ('astaId' in c) return aste.has(c.astaId as string);
+      return false;
+    }),
+    vincoliSuAsta: (p.vincoliSuAsta ?? []).filter((v) => aste.has(v.astaId as string)),
+    sconnessioni: (p.sconnessioni ?? []).filter((x) => aste.has(x.astaId as string)),
+    vincoliInterni: (p.vincoliInterni ?? []).filter((v) => nodi.has(v.nodoId as string)),
+  };
+}
+
+/** Il progetto senza i dipendenti indicati, in una sola passata. */
+function senzaDipendenti(p: Progetto, d: Dipendenti): Progetto {
+  const idc = new Set(d.carichi.map((x) => x.id as string));
+  const idv = new Set(d.vincoliSuAsta.map((x) => x.id));
+  const ids = new Set(d.sconnessioni.map((x) => x.id));
+  const idi = new Set(d.vincoliInterni.map((x) => x.id));
+  return {
+    ...p,
+    carichi: p.carichi.filter((x) => !idc.has(x.id as string)),
+    vincoliSuAsta: (p.vincoliSuAsta ?? []).filter((x) => !idv.has(x.id)),
+    sconnessioni: (p.sconnessioni ?? []).filter((x) => !ids.has(x.id)),
+    vincoliInterni: (p.vincoliInterni ?? []).filter((x) => !idi.has(x.id)),
+  };
+}
+
+/** I dipendenti rimessi al loro posto, per l'annullamento. */
+function conDipendenti(p: Progetto, d: Dipendenti): Progetto {
+  return {
+    ...p,
+    carichi: [...p.carichi, ...d.carichi],
+    vincoliSuAsta: [...(p.vincoliSuAsta ?? []), ...d.vincoliSuAsta],
+    sconnessioni: [...(p.sconnessioni ?? []), ...d.sconnessioni],
+    vincoliInterni: [...(p.vincoliInterni ?? []), ...d.vincoliInterni],
+  };
+}
+
 // ══════════════════════════════ GEOMETRIA ══════════════════════════════
 
 export function aggiungiNodo(x: number, y: number): Comando & { id?: NodeId } {
@@ -46,7 +107,7 @@ export function aggiungiNodo(x: number, y: number): Comando & { id?: NodeId } {
     get id() { return id; },
     esegui(p) {
       id = id ?? nuovoIdNodo(p);
-      return { ...p, nodi: [...p.nodi, { id, x: x as never, y: y as never }] };
+      return { ...registraId(p, id), nodi: [...p.nodi, { id, x: x as never, y: y as never }] };
     },
     annulla(p) {
       return { ...p, nodi: senzaNodi(p, new Set([id as string])) };
@@ -74,7 +135,7 @@ export function aggiungiAsta(
           finale: { N: false, T: false, M: false },
         },
       };
-      return { ...p, aste: [...p.aste, asta] };
+      return { ...registraId(p, id as string), aste: [...p.aste, asta] };
     },
     annulla(p) {
       return { ...p, aste: senzaAste(p, new Set([id as string])) };
@@ -109,7 +170,7 @@ export function estrudi(
         },
       };
       return {
-        ...p,
+        ...registraId(p, idNodo as string, idAsta as string),
         nodi: [...p.nodi, { id: idNodo, x: x as never, y: y as never }],
         aste: [...p.aste, asta],
       };
@@ -153,12 +214,16 @@ export function trasformaNodi(
 export function elimina(nodiIds: readonly NodeId[], asteIds: readonly ElementId[]): Comando {
   let nodiRimossi: Nodo[] = [];
   let asteRimosse: Asta[] = [];
-  let carichiRimossi: Carico[] = [];
+  let dipendenti: Dipendenti = {
+    carichi: [], vincoliSuAsta: [], sconnessioni: [], vincoliInterni: [],
+  };
   return {
     etichetta: 'elimina',
     esegui(p) {
       const insiemeNodi = new Set<string>(nodiIds as readonly string[]);
       const insiemeAste = new Set<string>(asteIds as readonly string[]);
+      // un'asta senza uno dei suoi estremi non è un'asta: se ne va anche lei,
+      // e con lei tutto ciò che vi era appoggiato
       for (const a of p.aste) {
         if (insiemeNodi.has(a.nodoIniziale as string) || insiemeNodi.has(a.nodoFinale as string)) {
           insiemeAste.add(a.id as string);
@@ -166,26 +231,55 @@ export function elimina(nodiIds: readonly NodeId[], asteIds: readonly ElementId[
       }
       nodiRimossi = p.nodi.filter((n) => insiemeNodi.has(n.id as string));
       asteRimosse = p.aste.filter((a) => insiemeAste.has(a.id as string));
-      carichiRimossi = p.carichi.filter((c) => {
-        if ('nodoId' in c) return insiemeNodi.has(c.nodoId as string);
-        if ('astaId' in c) return insiemeAste.has(c.astaId as string);
-        return false;
-      });
-      const idCarichi = new Set(carichiRimossi.map((c) => c.id as string));
+      dipendenti = dipendentiDi(p, insiemeNodi, insiemeAste);
+
       return {
-        ...p,
+        ...senzaDipendenti(p, dipendenti),
         nodi: senzaNodi(p, insiemeNodi),
         aste: senzaAste(p, insiemeAste),
-        carichi: p.carichi.filter((c) => !idCarichi.has(c.id as string)),
       };
     },
     annulla(p) {
       return {
-        ...p,
+        ...conDipendenti(p, dipendenti),
         nodi: [...p.nodi, ...nodiRimossi],
         aste: [...p.aste, ...asteRimosse],
-        carichi: [...p.carichi, ...carichiRimossi],
       };
+    },
+  };
+}
+
+/**
+ * SVUOTAMENTO TOTALE.
+ *
+ * Quando la selezione copre tutto il modello non si itera sulle entità: si
+ * mette al suo posto un modello vuoto. Iterando basterebbe una collezione
+ * dimenticata perché qualcosa sopravvivesse, e «elimina tutto» che lascia
+ * indietro qualcosa è il modo più diretto di falsare un'analisi.
+ *
+ * Sopravvivono il contatore degli id — altrimenti la geometria nuova
+ * riceverebbe gli id di quella vecchia — le impostazioni, i casi di carico e
+ * la libreria di materiali e sezioni, che l'utente ha definito e non ha
+ * chiesto di buttare.
+ */
+export function svuotaModello(): Comando {
+  let precedente: Progetto | null = null;
+  return {
+    etichetta: 'elimina tutto',
+    esegui(p) {
+      precedente = p;
+      return {
+        ...p,
+        nodi: [],
+        aste: [],
+        vincoliInterni: [],
+        vincoliSuAsta: [],
+        sconnessioni: [],
+        carichi: [],
+      };
+    },
+    annulla() {
+      return precedente!;
     },
   };
 }
@@ -231,7 +325,11 @@ export function duplica(
         if (!i || !j) return;
         nuove.push({ ...a, id: nuoveAste[k], nodoIniziale: i, nodoFinale: j });
       });
-      return { ...p, nodi: [...p.nodi, ...nuoviNodi], aste: [...p.aste, ...nuove] };
+      return {
+        ...registraId(p, ...[...mappaNodi.values()] as string[], ...nuoveAste as string[]),
+        nodi: [...p.nodi, ...nuoviNodi],
+        aste: [...p.aste, ...nuove],
+      };
     },
     annulla(p) {
       return {
@@ -321,7 +419,10 @@ export function aggiungiCarico(dati: CaricoDati, casoId: LoadCaseId): Comando & 
     get id() { return id; },
     esegui(p) {
       id = id ?? nuovoIdCarico(p);
-      return { ...p, carichi: [...p.carichi, { ...dati, id, casoId } as Carico] };
+      return {
+        ...registraId(p, id as string),
+        carichi: [...p.carichi, { ...dati, id, casoId } as Carico],
+      };
     },
     annulla(p) {
       return { ...p, carichi: p.carichi.filter((c) => (c.id as string) !== (id as string)) };
@@ -625,7 +726,7 @@ export function aggiungiVincoloSuAsta(
       id = id || nuovoIdVincoloSuAsta(p);
       cmd.id = id;
       return {
-        ...p,
+        ...registraId(p, id),
         vincoliSuAsta: [
           ...(p.vincoliSuAsta ?? []),
           { id, astaId, s: Math.min(Math.max(s, 1e-6), 1 - 1e-6), vincolo },
@@ -654,7 +755,7 @@ export function aggiungiSconnessione(
       id = id || nuovoIdSconnessione(p);
       cmd.id = id;
       return {
-        ...p,
+        ...registraId(p, id),
         sconnessioni: [
           ...(p.sconnessioni ?? []),
           {
@@ -748,7 +849,7 @@ export function aggiungiSconnessioneNodale(
       id = id || nuovoIdVincoloInterno(p);
       cmd.id = id;
       return {
-        ...p,
+        ...registraId(p, id),
         vincoliInterni: [
           ...(p.vincoliInterni ?? []),
           {
@@ -875,7 +976,9 @@ export function dividiAsta(astaId: ElementId, parti: number): Comando {
       };
 
       return {
-        ...p, nodi,
+        ...registraId(p, ...idsIntermedi as unknown as string[],
+                      ...aste.map((a) => a.id as unknown as string)),
+        nodi,
         aste: p.aste.flatMap((a) => (a.id === astaId ? aste : [a])),
         carichi,
         vincoliSuAsta: (p.vincoliSuAsta ?? []).map(
@@ -988,7 +1091,7 @@ function spezza(
   };
 
   return {
-    ...p,
+    ...registraId(p, idSecondo as unknown as string),
     aste: p.aste.flatMap((a) => (a.id === astaId ? [primo, secondo] : [a])),
     carichi: p.carichi.flatMap((c) => (
       'astaId' in c && c.astaId === astaId ? ridistribuisci(c, tratti) : [c]
@@ -1019,7 +1122,7 @@ export function nodoCollegato(
       id = id ?? nuovoIdNodo(p);
       cmd.id = id;
       let q: Progetto = {
-        ...p,
+        ...registraId(p, id as string),
         nodi: [...p.nodi, { id, x: x as never, y: y as never }],
       };
       // le ascisse si riferiscono alle aste ORIGINALI: spezzando la prima, la

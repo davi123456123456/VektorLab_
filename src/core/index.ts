@@ -11,6 +11,7 @@ import { risolvi } from './fem/solve.js';
 import { costruisciIndice } from './model/queries.js';
 import { espandi } from './model/espansione.js';
 import { migra } from './model/migrazione.js';
+import { verificaIntegrita } from './model/integrita.js';
 import { normalizzaModello } from './model/normalizza.js';
 import { MATERIALI } from './materials/materials.js';
 import { SEZIONI } from './materials/sections.js';
@@ -61,7 +62,10 @@ export interface EsitoCompleto {
  * dedurre collegamenti.
  */
 export function preparaPerAnalisi(p: Progetto): Progetto {
-  return normalizzaModello(migra(p)).progetto;
+  // §1.3c — l'integrità si controlla PRIMA di ogni analisi, non solo durante
+  // l'editing: un modello può arrivare qui da un file, da localStorage o dalla
+  // riga di comando, senza essere mai passato dallo store.
+  return normalizzaModello(verificaIntegrita(migra(p)).progetto).progetto;
 }
 
 export function analizzaCinematica(

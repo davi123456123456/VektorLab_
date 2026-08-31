@@ -17,7 +17,7 @@ import {
   aggiungiCarico, aggiungiSconnessione, aggiungiSconnessioneNodale,
   aggiungiVincoloSuAsta, duplica, elimina, eliminaCarichi,
   eliminaSconnessioneNodale, eliminaSuAsta, estrudi, impostaVincolo,
-  trasformaNodi,
+  svuotaModello, trasformaNodi,
 } from './commands.js';
 import {
   deduciAzioneSuNodo, type AzioneSuNodo,
@@ -83,7 +83,21 @@ export function annullaOperazione(): void {
 export function eliminaSelezione(): void {
   const st = useStore.getState();
   if (contaSelezione(st.selezione) === 0) return;
-  st.esegui(elimina([...st.selezione.nodi], [...st.selezione.aste]));
+
+  // §1.3d — se la selezione copre TUTTO, non si itera sulle entità: si
+  // sostituisce il modello con uno vuoto. Iterando basterebbe una collezione
+  // dimenticata perché qualcosa sopravvivesse, e non c'è modo di accorgersene
+  // guardando lo schermo: ciò che resta è invisibile proprio perché ha perso
+  // il nodo o l'asta che lo portava.
+  const p = st.progetto;
+  const tuttiNodi = p.nodi.every((n) => st.selezione.nodi.has(n.id));
+  const tutteAste = p.aste.every((a) => st.selezione.aste.has(a.id)
+    || st.selezione.nodi.has(a.nodoIniziale) || st.selezione.nodi.has(a.nodoFinale));
+  if (p.nodi.length > 0 && tuttiNodi && tutteAste) {
+    st.esegui(svuotaModello());
+  } else {
+    st.esegui(elimina([...st.selezione.nodi], [...st.selezione.aste]));
+  }
   st.svuotaSelezione();
 }
 

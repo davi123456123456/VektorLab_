@@ -29,13 +29,32 @@ function telaio(): Progetto {
   return p.costruisci();
 }
 
-/** Esegue il comando e verifica che l'annullamento riporti esattamente indietro. */
+/**
+ * Esegue il comando e verifica che l'annullamento riporti esattamente indietro.
+ *
+ * Con UN'ECCEZIONE: il contatore degli id. Quello non deve tornare indietro,
+ * mai — è la garanzia che un id speso non venga riassegnato a un'entità
+ * diversa. Se l'annullamento lo riavvolgesse, disegnare un nodo, annullare e
+ * ridisegnarne un altro produrrebbe due entità distinte con lo stesso id, che
+ * è precisamente il difetto da cui nascevano i vincoli fantasma.
+ */
 function verificaInvertibilita(p: Progetto, c: Comando): Progetto {
   const prima = istantanea(p);
   const dopo = c.esegui(p);
   const tornato = c.annulla(dopo);
-  expect(istantanea(ordina(tornato))).toBe(istantanea(ordina(JSON.parse(prima))));
+  expect(istantanea(ordina(senzaContatori(tornato))))
+    .toBe(istantanea(ordina(senzaContatori(JSON.parse(prima) as Progetto))));
+
+  // e il contatore, appunto, resta avanti
+  for (const [k, v] of Object.entries(dopo.contatoriId ?? {})) {
+    expect(tornato.contatoriId?.[k] ?? 0).toBeGreaterThanOrEqual(v);
+  }
   return dopo;
+}
+
+function senzaContatori(p: Progetto): Progetto {
+  const { contatoriId: _ignorato, ...resto } = p;
+  return resto as Progetto;
 }
 
 /** L'ordine degli array non è significativo: l'annullamento può riaccodare. */

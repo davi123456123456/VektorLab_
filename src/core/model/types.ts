@@ -429,6 +429,19 @@ export interface Progetto {
    */
   versioneFormato: 1 | 2;
   nome: string;
+  /**
+   * CONTATORE DEGLI ID, per prefisso. Monotòno: non torna mai indietro, e
+   * soprattutto NON si azzera quando il modello si svuota.
+   *
+   * Senza di lui gli id si ricavavano dal massimo suffisso presente, e a
+   * modello vuoto il prossimo nodo tornava a chiamarsi `n1`. Bastava una
+   * singola entità orfana rimasta indietro perché si riagganciasse alla
+   * geometria nuova: l'utente si ritrovava vincoli che non aveva messo.
+   *
+   * Assente sui file salvati prima della versione 3: `migra()` lo ricostruisce
+   * dal massimo id trovato, che è esatto perché quei file non hanno buchi.
+   */
+  contatoriId?: Record<string, number>;
   nodi: Nodo[];
   aste: Asta[];
   vincoliInterni: VincoloInterno[];

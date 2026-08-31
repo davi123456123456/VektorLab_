@@ -28,6 +28,7 @@ import { esempi } from '../state/esempi.js';
 import { Bottone } from './Pannelli.js';
 import { usaPannelloLaterale, type PannelloLaterale } from './usaPannelloLaterale.js';
 import { BarraFogli } from './BarraFogli.js';
+import { AvvisoIntegrita } from './AvvisoIntegrita.js';
 import { useFogli } from '../state/fogli.js';
 
 export function App() {
@@ -97,6 +98,7 @@ export function App() {
       <div key={generazione} className="relative flex min-h-0 flex-1">
         <Laterale lato="sinistra" stato={sinistra} etichetta="struttura">
           <Esempi />
+          <AvvisoIntegrita />
           <PannelloConteggio />
           <div className="min-h-0 flex-1"><Outliner /></div>
         </Laterale>

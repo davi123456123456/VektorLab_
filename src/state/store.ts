@@ -34,6 +34,7 @@ import type { EsitoVerifiche } from '../core/checks/index.js';
 import { ponte } from '../worker/bridge.js';
 import { preferisceMenoMovimento, registro } from '../anim/registro.js';
 import type { Componente } from '../render/diagrammi.js';
+import { verificaIntegrita, type Anomalia } from '../core/model/integrita.js';
 import type { ModoTaglio } from '../core/checks/coefficiente.js';
 import {
   type Camera, cameraIniziale, inquadra, trasla, zoomVersoPuntatore, type Punto,
@@ -127,6 +128,14 @@ export interface Stato {
   camera: Camera;
   /** true dopo la prima misura reale della viewport */
   viewportMisurata: boolean;
+  /**
+   * Anomalie rilevate dall'ultimo controllo di integrità. Vuoto è il caso
+   * normale; quando non lo è, l'utente deve vederle: qualcosa è stato tolto
+   * dal suo modello, e correggere in silenzio gli toglierebbe l'unica
+   * occasione di accorgersene.
+   */
+  anomalieIntegrita: Anomalia[];
+
   /** transizione d'inquadratura in corso, se ce n'è una */
   transizioneCamera: {
     da: Camera; a: Camera; inizio: number; durata: number;
@@ -443,6 +452,7 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
     camera: cameraIniziale(),
     viewportMisurata: false,
     transizioneCamera: null,
+    anomalieIntegrita: [],
     pannelloDestro: pannelloDestroIniziale(),
     selezione: SELEZIONE_VUOTA,
     modalita: 'modellazione',
@@ -526,8 +536,13 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
 
     esegui(c) {
       const { progetto, passato } = get();
+      // §1.3c — il controllo gira DOPO ogni operazione, non solo prima
+      // dell'analisi: un riferimento pendente va visto quando nasce, non
+      // mezz'ora dopo quando ha già inquinato un risultato
+      const esito = verificaIntegrita(c.esegui(progetto));
       set({
-        progetto: c.esegui(progetto), passato: [...passato, c], futuro: [],
+        anomalieIntegrita: esito.anomalie,
+        progetto: esito.progetto, passato: [...passato, c], futuro: [],
         // I risultati si riferiscono al modello PRECEDENTE: tenerli visibili
         // dopo una modifica è il modo più efficace di far sbagliare una verifica.
         risultato: null, cinematica: null, verifiche: null,
@@ -541,8 +556,10 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
       const { progetto, passato, futuro } = get();
       const c = passato[passato.length - 1];
       if (!c) return;
+      const esito = verificaIntegrita(c.annulla(progetto));
       set({
-        progetto: c.annulla(progetto),
+        anomalieIntegrita: esito.anomalie,
+        progetto: esito.progetto,
         passato: passato.slice(0, -1),
         futuro: [c, ...futuro],
         messaggio: `annullato: ${c.etichetta}`,
@@ -557,8 +574,10 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
       const { progetto, passato, futuro } = get();
       const c = futuro[0];
       if (!c) return;
+      const esito = verificaIntegrita(c.esegui(progetto));
       set({
-        progetto: c.esegui(progetto),
+        anomalieIntegrita: esito.anomalie,
+        progetto: esito.progetto,
         passato: [...passato, c],
         futuro: futuro.slice(1),
         messaggio: `ripetuto: ${c.etichetta}`,
@@ -573,8 +592,13 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
     caricaProgetto(progettoDaCaricare) {
       // un file salvato con una versione precedente si converte QUI, una volta
       // sola: il resto del programma vede un solo formato
-      const p = migra(progettoDaCaricare);
+      // §4.4 — un modello che arriva da un file o da localStorage può portare
+      // riferimenti pendenti: si controlla PRIMA di metterlo nello store, non
+      // dopo che l'utente ci ha già lavorato sopra
+      const esito = verificaIntegrita(migra(progettoDaCaricare));
+      const p = esito.progetto;
       set({
+        anomalieIntegrita: esito.anomalie,
         progetto: p, passato: [], futuro: [],
         selezione: SELEZIONE_VUOTA, operazione: { tipo: 'nessuna' },
         casoCorrente: p.casi[0]?.id ?? ('principale' as LoadCaseId),

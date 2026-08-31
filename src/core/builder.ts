@@ -247,6 +247,10 @@ export class CostruttoreProgetto {
       carichi: this.carichi, casi, combinazioni: this.combinazioni,
       materialiPersonalizzati: this.materiali, sezioniPersonalizzate: this.sezioni,
       impostazioni: this.impostazioni,
+      // il contatore parte da dove il costruttore è arrivato, così l'editing
+      // interattivo non ricomincia a coniare id che il modello ha già dentro
+      contatoriId: { n: this.contatore, a: this.contatore, c: this.contatore,
+                     va: this.contatore, sc: this.contatore, vi: this.contatore },
     };
   }
 }
