@@ -6,28 +6,49 @@
  * insegna più di qualunque tabella in coda al manuale.
  */
 
-import { useStore } from '../state/store.js';
+import { HA_VARIANTE_INTERNA, useStore } from '../state/store.js';
 import { applicaVincolo, eliminaSuAstaSelezionato } from '../state/azioni.js';
 import {
-  SCONNESSIONI_DISPONIBILI, VINCOLI_DISPONIBILI, disegnaSconnessione, disegnaVincolo,
+  VINCOLI_DISPONIBILI, disegnaSconnessione, disegnaVincolo, nomeVincolo,
 } from '../render/simboli.js';
+import { asteNelNodo } from '../core/model/deduzione.js';
 import { eliminaSconnessioneNodale, spostaSuAsta } from '../state/commands.js';
 import {
   PRESET_ANGOLI, normalizzaGradi, orientamentoVincolo,
 } from '../core/model/orientamento.js';
 import { Bottone, CampoNumero, Pannello, Riga } from './Pannelli.js';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TipoVincolo } from '../core/model/types.js';
 
 export function PannelloVincoli() {
   const vincoloCorrente = useStore((s) => s.vincoloCorrente);
   const impostaVincoloCorrente = useStore((s) => s.impostaVincoloCorrente);
-  const angolo = useStore((s) => s.angoloVincolo);
-  const impostaAngolo = useStore((s) => s.impostaAngoloVincolo);
+  const ambitoGrezzo = useStore((s) => s.modoCerniera);
+  const impostaAmbito = useStore((s) => s.impostaAmbitoVincolo);
   const selezione = useStore((s) => s.selezione);
   const progetto = useStore((s) => s.progetto);
+  const [aiuto, setAiuto] = useState(false);
 
-  const scelto = VINCOLI_DISPONIBILI.find((v) => v.tipo === vincoloCorrente)!;
+  const ambito: 'esterno' | 'interno' = ambitoGrezzo === 'interno' ? 'interno' : 'esterno';
+  const haInterno = HA_VARIANTE_INTERNA.has(vincoloCorrente);
+
+  // §3.3 — l'interno esiste solo dove c'è qualcosa da sconnettere. Se nel
+  // modello non c'è un solo nodo con due aste, l'opzione va spenta: offrirla
+  // significherebbe promettere un clic che non può funzionare.
+  const nodiSconnettibili = progetto.nodi.filter(
+    (n) => asteNelNodo(progetto, n.id).length >= 2);
+  const selezionati = [...selezione.nodi];
+  const internoPossibile = haInterno && (
+    selezionati.length > 0
+      ? selezionati.some((id) => asteNelNodo(progetto, id).length >= 2)
+      : nodiSconnettibili.length > 0
+  );
+
+  // §3.3 — l'angolo si nasconde quando non ha effetto, invece di restare lì
+  // inerte: un campo che accetta un numero e non cambia niente insegna che i
+  // campi di questo pannello non sono affidabili.
+  const angoloUtile = ambito === 'esterno' && vincoloCorrente !== 'cerniera';
+
   const gradiTotali = progetto.nodi.reduce((acc, n) => {
     if (!n.vincolo) return acc;
     const v = VINCOLI_DISPONIBILI.find((x) => x.tipo === n.vincolo!.tipo);
@@ -37,19 +58,12 @@ export function PannelloVincoli() {
   return (
     <Pannello titolo="Vincoli">
       <div className="py-2">
-        <p className="px-3 pb-2 text-[11px] leading-relaxed"
-           style={{ color: 'var(--testo-debole)' }}>
-          Clicca un <b>nodo</b> per applicare il vincolo scelto, oppure un punto
-          qualunque di un'<b>asta</b> per posarlo lì. I simboli sull'asta si
-          trascinano; <b>F</b> li ribalta dall'altra parte.
-        </p>
-
         <div className="grid grid-cols-2 gap-1.5 px-3">
           {VINCOLI_DISPONIBILI.map((v) => (
             <button
               key={v.tipo}
               type="button"
-              title={v.descrizione}
+              title={nomeVincolo(v.tipo, HA_VARIANTE_INTERNA.has(v.tipo) ? ambito : 'esterno')}
               onClick={() => impostaVincoloCorrente(v.tipo)}
               className="flex flex-col items-center gap-1 rounded border py-2 transition-colors"
               style={{
@@ -57,33 +71,56 @@ export function PannelloVincoli() {
                 borderColor: vincoloCorrente === v.tipo ? 'var(--accento)' : 'var(--bordo)',
               }}
             >
-              <AnteprimaVincolo tipo={v.tipo} angolo={0} />
+              {HA_VARIANTE_INTERNA.has(v.tipo) && ambito === 'interno'
+                ? <AnteprimaSconnessione tipo={v.tipo as 'cerniera' | 'bipendolo' | 'pattino'} />
+                : <AnteprimaVincolo tipo={v.tipo} angolo={0} />}
               <span className="text-[10px] leading-tight"
                     style={{ color: vincoloCorrente === v.tipo ? '#fff' : 'var(--testo-attenuato)' }}>
-                {v.nome}
+                {nomeVincolo(v.tipo, HA_VARIANTE_INTERNA.has(v.tipo) ? ambito : 'esterno')}
               </span>
               <span className="numerico text-[9px]" style={{ color: 'var(--testo-debole)' }}>
-                {v.gradi} {v.gradi === 1 ? 'grado' : 'gradi'}
+                {HA_VARIANTE_INTERNA.has(v.tipo) && ambito === 'interno'
+                  ? (v.tipo === 'cerniera' ? '2(m−1)' : '2')
+                  : `${v.gradi} ${v.gradi === 1 ? 'grado' : 'gradi'}`}
               </span>
             </button>
           ))}
         </div>
 
-        <div className="mt-3 border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
-          <Orientamento />
-          <p className="px-3 pt-1 text-[10px] leading-relaxed"
-             style={{ color: 'var(--testo-debole)' }}>
-            {scelto.descrizione}
-          </p>
-        </div>
+        {haInterno && (
+          <div className="flex gap-1 px-3 pt-2">
+            <Bottone attivo={ambito === 'esterno'} onClick={() => impostaAmbito('esterno')}>
+              esterno
+            </Bottone>
+            <button
+              type="button"
+              disabled={!internoPossibile}
+              title={internoPossibile ? undefined : 'Serve un nodo con almeno due aste'}
+              onClick={() => impostaAmbito('interno')}
+              className="rounded border px-2 py-1 text-[11px] transition-colors
+                         disabled:cursor-not-allowed disabled:opacity-40"
+              style={{
+                background: ambito === 'interno' ? 'var(--accento-scuro)' : 'var(--sfondo-elevato)',
+                borderColor: ambito === 'interno' ? 'var(--accento)' : 'var(--bordo)',
+                color: ambito === 'interno' ? '#fff' : 'var(--testo-attenuato)',
+              }}
+            >
+              interno
+            </button>
+          </div>
+        )}
 
-        <SuNodo />
-        <SuAsta />
-        <Interne />
+        {angoloUtile && (
+          <div className="mt-3 border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
+            <Orientamento />
+          </div>
+        )}
+
+        <ElencoSuAsta />
 
         <div className="mt-3 border-t px-3 pt-2 text-[11px]"
              style={{ borderColor: 'var(--bordo)' }}>
-          <div className="flex justify-between">
+          <div className="flex items-baseline justify-between">
             <span style={{ color: 'var(--testo-attenuato)' }}>gradi di vincolo esterni</span>
             <span className="numerico" style={{ color: 'var(--testo)' }}>{gradiTotali}</span>
           </div>
@@ -96,6 +133,44 @@ export function PannelloVincoli() {
             >
               applica ai {selezione.nodi.size} nodi selezionati
             </button>
+          )}
+        </div>
+
+        {/*
+          §2 — nessun paragrafo permanente nel pannello. Le spiegazioni non
+          spariscono, si spostano: stanno dietro questa icona, chiusa per
+          default, dove chi le vuole le trova e chi non le vuole non le legge
+          ogni volta che apre il pannello.
+        */}
+        <div className="px-3 pt-2">
+          <button
+            type="button"
+            onClick={() => setAiuto((v) => !v)}
+            aria-label="Spiegazione dei vincoli"
+            className="rounded-full border px-1.5 text-[10px] leading-tight"
+            style={{
+              borderColor: aiuto ? 'var(--accento)' : 'var(--bordo)',
+              color: aiuto ? 'var(--accento)' : 'var(--testo-debole)',
+            }}
+          >?</button>
+          {aiuto && (
+            <div className="mt-1.5 rounded border p-2 text-[10px] leading-relaxed"
+                 style={{ borderColor: 'var(--bordo)', color: 'var(--testo-debole)' }}>
+              <p>
+                Clicca un <b>nodo</b> per applicare il vincolo scelto, o un punto
+                qualunque di un'<b>asta</b> per posarlo lì.
+              </p>
+              <p className="mt-1.5">
+                <b>Esterno</b> lega la struttura a terra e non separa mai i corpi
+                rigidi. <b>Interno</b> è una sconnessione: divide la struttura in
+                due corpi, e il conteggio cambia solo in questo caso.
+              </p>
+              <p className="mt-1.5">
+                L'angolo è la direzione verso cui <b>punta</b> il vincolo, in
+                assoluto: 0° in alto, 90° a sinistra, 180° in basso, 270° a
+                destra. <b>F</b> ribalta di 180°.
+              </p>
+            </div>
           )}
         </div>
       </div>
@@ -129,18 +204,13 @@ function AnteprimaVincolo({ tipo, angolo }: { tipo: TipoVincolo; angolo: number 
 
 
 /**
- * Che cosa si posa cliccando su un'asta.
+ * Elenco di ciò che è posato sulle aste.
  *
- * La distinzione fra vincolo intermedio e sconnessione è il punto in cui si
- * sbaglia più facilmente, e non si può dedurre dal disegno: entrambi stanno in
- * mezzo alla trave. Qui è una scelta esplicita, con scritto accanto che cosa
- * comporta.
+ * Solo l'elenco: quale tipo posare si sceglie in cima, con le icone, e se sia
+ * esterno o interno lo dice il selettore. Qui si vede che cosa c'è, lo si
+ * seleziona, se ne sposta l'ascissa e lo si toglie.
  */
-function SuAsta() {
-  const posa = useStore((s) => s.posaSuAsta);
-  const impostaPosa = useStore((s) => s.impostaPosaSuAsta);
-  const sconnessione = useStore((s) => s.sconnessioneCorrente);
-  const impostaSconnessione = useStore((s) => s.impostaSconnessioneCorrente);
+function ElencoSuAsta() {
   const progetto = useStore((s) => s.progetto);
   const selezionato = useStore((s) => s.suAstaSelezionato);
   const esegui = useStore((s) => s.esegui);
@@ -148,95 +218,41 @@ function SuAsta() {
   const vincoli = progetto.vincoliSuAsta ?? [];
   const sconnessioni = progetto.sconnessioni ?? [];
   const corrente = [...vincoli, ...sconnessioni].find((x) => x.id === selezionato);
-  const scelta = SCONNESSIONI_DISPONIBILI.find((x) => x.tipo === sconnessione)!;
+  if (vincoli.length === 0 && sconnessioni.length === 0) return null;
 
   return (
     <div className="mt-3 border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
       <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider"
            style={{ color: 'var(--testo-debole)' }}>
-        Cliccando su un'asta
+        Sull'asta ({vincoli.length + sconnessioni.length})
       </div>
-      <div className="flex gap-1 px-3">
-        <Bottone attivo={posa === 'vincolo'} onClick={() => impostaPosa('vincolo')}
-                 titolo="Vincolo esterno intermedio: la trave resta un corpo solo, la rotazione è continua">
-          vincolo esterno
-        </Bottone>
-        <Bottone attivo={posa === 'sconnessione'} onClick={() => impostaPosa('sconnessione')}
-                 titolo="Sconnessione interna: divide la struttura in due corpi rigidi">
-          sconnessione
-        </Bottone>
+      <div className="px-3">
+        {[...vincoli.map((v) => ({
+          id: v.id, astaId: v.astaId, s: v.s,
+          nome: nomeVincolo(v.vincolo.tipo, 'esterno'),
+        })), ...sconnessioni.map((c) => ({
+          id: c.id, astaId: c.astaId, s: c.s, nome: nomeVincolo(c.tipo, 'interno'),
+        }))].map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            onClick={() => useStore.getState().selezionaSuAsta(
+              selezionato === x.id ? null : x.id)}
+            onMouseEnter={() => useStore.getState().evidenziaSuAsta(x.id)}
+            onMouseLeave={() => useStore.getState().evidenziaSuAsta(null)}
+            className="numerico flex w-full items-center gap-2 py-[3px] text-left text-[10.5px]"
+            style={{
+              color: selezionato === x.id ? 'var(--accento)' : 'var(--testo-attenuato)',
+            }}
+          >
+            <span className="w-8 shrink-0">{x.id}</span>
+            <span className="flex-1 truncate">
+              {x.nome} su {x.astaId as unknown as string}
+            </span>
+            <span>{(x.s * 100).toFixed(0)} %</span>
+          </button>
+        ))}
       </div>
-
-      {posa === 'sconnessione' ? (
-        <>
-          <div className="grid grid-cols-3 gap-1.5 px-3 pt-2">
-            {SCONNESSIONI_DISPONIBILI.map((x) => (
-              <button
-                key={x.tipo}
-                type="button"
-                title={x.descrizione}
-                onClick={() => impostaSconnessione(x.tipo)}
-                className="flex flex-col items-center gap-1 rounded border py-2 transition-colors"
-                style={{
-                  background: sconnessione === x.tipo ? 'var(--accento-scuro)' : 'var(--sfondo-elevato)',
-                  borderColor: sconnessione === x.tipo ? 'var(--accento)' : 'var(--bordo)',
-                }}
-              >
-                <AnteprimaSconnessione tipo={x.tipo} />
-                <span className="text-[9.5px] leading-tight"
-                      style={{ color: sconnessione === x.tipo ? '#fff' : 'var(--testo-attenuato)' }}>
-                  {x.nome.replace(' interna', '').replace(' interno', '')}
-                </span>
-              </button>
-            ))}
-          </div>
-          <p className="px-3 pt-1.5 text-[10px] leading-relaxed"
-             style={{ color: 'var(--testo-debole)' }}>
-            Trasmette {scelta.trasmette}. {scelta.descrizione}
-          </p>
-        </>
-      ) : (
-        <p className="px-3 pt-1.5 text-[10px] leading-relaxed"
-           style={{ color: 'var(--testo-debole)' }}>
-          Il vincolo posato in mezzeria <b>non interrompe</b> la trave: resta un
-          unico corpo rigido e la rotazione passa attraverso quel punto. È il
-          caso della trave continua su tre appoggi, una volta iperstatica.
-        </p>
-      )}
-
-      {(vincoli.length > 0 || sconnessioni.length > 0) && (
-        <div className="px-3 pt-2">
-          <div className="pb-1 text-[10px] font-semibold uppercase tracking-wider"
-               style={{ color: 'var(--testo-debole)' }}>
-            Sull'asta ({vincoli.length + sconnessioni.length})
-          </div>
-          {[...vincoli.map((v) => ({
-            id: v.id, astaId: v.astaId, s: v.s,
-            nome: v.vincolo.tipo, interno: false,
-          })), ...sconnessioni.map((c) => ({
-            id: c.id, astaId: c.astaId, s: c.s, nome: c.tipo, interno: true,
-          }))].map((x) => (
-            <button
-              key={x.id}
-              type="button"
-              onClick={() => useStore.getState().selezionaSuAsta(
-                selezionato === x.id ? null : x.id)}
-              onMouseEnter={() => useStore.getState().evidenziaSuAsta(x.id)}
-              onMouseLeave={() => useStore.getState().evidenziaSuAsta(null)}
-              className="numerico flex w-full items-center gap-2 px-0 py-[3px] text-left text-[10.5px]"
-              style={{
-                color: selezionato === x.id ? 'var(--accento)' : 'var(--testo-attenuato)',
-              }}
-            >
-              <span className="w-8 shrink-0">{x.id}</span>
-              <span className="flex-1 truncate">
-                {x.nome}{x.interno ? ' interna' : ''} su {x.astaId as unknown as string}
-              </span>
-              <span>{(x.s * 100).toFixed(0)} %</span>
-            </button>
-          ))}
-        </div>
-      )}
 
       {corrente && (
         <div className="px-3 pt-1">
@@ -292,91 +308,6 @@ function AnteprimaSconnessione({ tipo }: {
 
 
 /**
- * Cerniera esterna o interna cliccando su un nodo.
- *
- * Sono due cose opposte che si disegnano nello stesso punto: una lega la
- * struttura a terra, l'altra la divide in due corpi. La scelta automatica
- * indovina quasi sempre, ma quel «quasi» va lasciato nelle mani dell'utente,
- * e soprattutto mostrato prima del clic.
- */
-function SuNodo() {
-  const modo = useStore((s) => s.modoCerniera);
-  const imposta = useStore((s) => s.impostaModoCerniera);
-  const anteprima = useStore((s) => s.anteprimaVincolo);
-  const tipo = useStore((s) => s.vincoloCorrente);
-  const sconnettibile = tipo === 'cerniera' || tipo === 'bipendolo' || tipo === 'pattino';
-
-  return (
-    <div className="mt-3 border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
-      <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider"
-           style={{ color: 'var(--testo-debole)' }}>
-        Cliccando su un nodo
-      </div>
-      <div className="flex gap-1 px-3">
-        {([
-          ['auto', 'automatico', 'Esterno sugli estremi, interno dove convergono due o più aste'],
-          ['esterno', 'esterno', 'Sempre vincolo a terra'],
-          ['interno', 'interno', 'Sempre sconnessione fra le aste che convergono'],
-        ] as const).map(([id, nome, aiuto]) => (
-          <Bottone key={id} attivo={modo === id} titolo={aiuto}
-                   onClick={() => imposta(id)}>
-            {nome}
-          </Bottone>
-        ))}
-      </div>
-      {!sconnettibile && (
-        <p className="px-3 pt-1.5 text-[10px] leading-relaxed"
-           style={{ color: 'var(--testo-debole)' }}>
-          Un {tipo} non ha versione interna: sconnettono solo cerniera,
-          bipendolo e pattino.
-        </p>
-      )}
-      <p className="px-3 pt-1.5 text-[10px] leading-relaxed"
-         style={{ color: anteprima ? 'var(--testo-attenuato)' : 'var(--testo-debole)' }}>
-        {anteprima
-          ? `${anteprima.nodoId as unknown as string}: ${anteprima.azione.motivo ?? ''}`
-          : 'Passa sopra un nodo per vedere che cosa comparirà.'}
-      </p>
-    </div>
-  );
-}
-
-/** Elenco delle sconnessioni interne poste sui nodi. */
-function Interne() {
-  const progetto = useStore((s) => s.progetto);
-  const esegui = useStore((s) => s.esegui);
-  const interne = (progetto.vincoliInterni ?? []).filter((v) => v.tipo !== 'biella');
-  if (interne.length === 0) return null;
-
-  return (
-    <div className="mt-3 border-t px-3 pt-2" style={{ borderColor: 'var(--bordo)' }}>
-      <div className="pb-1 text-[10px] font-semibold uppercase tracking-wider"
-           style={{ color: 'var(--testo-debole)' }}>
-        Sconnessioni sui nodi ({interne.length})
-      </div>
-      {interne.map((v) => (
-        <div key={v.id} className="numerico flex items-center gap-2 py-[3px] text-[10.5px]"
-             style={{ color: 'var(--testo-attenuato)' }}>
-          <span className="w-8 shrink-0">{v.id}</span>
-          <span className="flex-1 truncate">
-            {v.tipo} in {v.nodoId as unknown as string}
-            {v.asteSvincolate && v.asteSvincolate.length > 0 ? ' (parziale)' : ''}
-          </span>
-          <button
-            type="button"
-            onClick={() => esegui(eliminaSconnessioneNodale(v.id))}
-            className="px-1"
-            title="Rimuove la sconnessione: i corpi rigidi tornano a fondersi"
-            style={{ color: 'var(--testo-debole)' }}
-          >×</button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-
-/**
  * L'orientamento del vincolo: un solo numero, tutto il giro.
  *
  * La ghiera mostra dove PUNTA il vincolo — è la stessa direzione che il
@@ -410,13 +341,6 @@ function Orientamento() {
           </Bottone>
         ))}
       </div>
-      <p className="px-3 pt-1.5 text-[10px] leading-relaxed"
-         style={{ color: 'var(--testo-debole)' }}>
-        L'angolo è la direzione verso cui <b>punta</b> il vincolo, misurata in
-        assoluto: 0° in alto, 90° a sinistra, 180° in basso, 270° a destra. Il
-        simbolo si disegna dalla parte opposta e la reazione segue la stessa
-        direzione. <b>F</b> ribalta di 180°.
-      </p>
     </>
   );
 }

@@ -261,21 +261,38 @@ function molla(c: Contesto, v: Vincolo): void {
 export const VINCOLI_DISPONIBILI: {
   tipo: Vincolo['tipo']; nome: string; gradi: number; descrizione: string;
 }[] = [
-  { tipo: 'cerniera', nome: 'Cerniera', gradi: 2,
+  { tipo: 'cerniera', nome: 'Cerniera a telaio', gradi: 2,
     descrizione: 'Blocca entrambe le traslazioni, lascia libera la rotazione. L\'angolo è ininfluente.' },
   { tipo: 'carrello', nome: 'Carrello', gradi: 1,
     descrizione: 'L\'angolo è l\'inclinazione del PIANO DI SCORRIMENTO: blocca la traslazione normale al piano.' },
   { tipo: 'incastro', nome: 'Incastro', gradi: 3,
     descrizione: 'Blocca tutto: due traslazioni e la rotazione. L\'angolo serve solo al disegno.' },
-  { tipo: 'bipendolo', nome: 'Doppio pendolo', gradi: 2,
+  { tipo: 'bipendolo', nome: 'Doppio pendolo a telaio', gradi: 2,
     descrizione: 'Blocca la traslazione normale al piano e la rotazione. Identico al pattino nella cinematica.' },
-  { tipo: 'pattino', nome: 'Pattino', gradi: 2,
+  { tipo: 'pattino', nome: 'Pattino a telaio', gradi: 2,
     descrizione: 'Blocca la traslazione normale alla guida e la rotazione. Identico al doppio pendolo nella cinematica.' },
   { tipo: 'biella', nome: 'Biella', gradi: 1,
     descrizione: 'L\'angolo è la direzione dell\'ASSE: blocca la traslazione lungo di esso.' },
   { tipo: 'molla', nome: 'Molla', gradi: 0,
     descrizione: 'Vincolo elastico: non entra nel conteggio dei gradi di vincolo, ma irrigidisce la struttura.' },
 ];
+
+/**
+ * Il nome che il vincolo porta, secondo l'ambito.
+ *
+ * Cerniera, doppio pendolo e pattino esistono in due forme che si disegnano
+ * quasi nello stesso punto e fanno cose opposte: una lega la struttura a
+ * terra, l'altra la divide in due corpi. Chiamarle con lo stesso nome era il
+ * motivo per cui la tavolozza sembrava contenere voci duplicate.
+ */
+export function nomeVincolo(
+  tipo: Vincolo['tipo'], ambito: 'esterno' | 'interno',
+): string {
+  const base = VINCOLI_DISPONIBILI.find((v) => v.tipo === tipo)?.nome ?? tipo;
+  if (ambito === 'esterno') return base;
+  const senzaTelaio = base.replace(' a telaio', '');
+  return `${senzaTelaio} ${tipo === 'cerniera' ? 'interna' : 'interno'}`;
+}
 
 // ═══════════════════ SCONNESSIONI INTERNE ═══════════════════
 

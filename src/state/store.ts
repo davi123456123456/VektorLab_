@@ -17,6 +17,10 @@ import {
 } from '../core/model/types.js';
 import type { RisultatoAnalisi, RisultatoCinematico } from '../core/model/results.js';
 import type { AzioneSuNodo, ModoCerniera } from '../core/model/deduzione.js';
+
+/** I tipi che esistono anche in versione interna: il selettore appare solo qui. */
+export const HA_VARIANTE_INTERNA = new Set<TipoVincolo>(
+  ['cerniera', 'bipendolo', 'pattino']);
 import {
   analizzaCinematica, analizzaStatica, espandi, migra, troncoInSezione,
   verificaStruttura, VERSIONE_FORMATO, type EsitoStatico, type Tronco,
@@ -365,6 +369,8 @@ export interface Stato {
   impostaVincoloCorrente: (t: TipoVincolo) => void;
   impostaAngoloVincolo: (a: number) => void;
   impostaModoCerniera: (m: ModoCerniera) => void;
+  /** §3 — esterno (a telaio) oppure interno (sconnessione) */
+  impostaAmbitoVincolo: (a: 'esterno' | 'interno') => void;
   impostaAnteprimaVincolo: (a: Stato['anteprimaVincolo']) => void;
   impostaPosaSuAsta: (p: Stato['posaSuAsta']) => void;
   impostaSconnessioneCorrente: (t: Stato['sconnessioneCorrente']) => void;
@@ -469,7 +475,7 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
 
     vincoloCorrente: 'cerniera',
     angoloVincolo: 0,
-    modoCerniera: 'auto',
+    modoCerniera: 'esterno',
     anteprimaVincolo: null,
     posaSuAsta: 'vincolo',
     sconnessioneCorrente: 'cerniera',
@@ -772,7 +778,36 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
     impostaSezione: (sezioneCorrente) => set({ sezioneCorrente }),
     messaggia: (messaggio) => set({ messaggio }),
 
-    impostaVincoloCorrente: (vincoloCorrente) => set({ vincoloCorrente }),
+    /**
+     * §3 — scegliere il TIPO è il primo livello; l'ambito esterno/interno è il
+     * secondo. Cambiando tipo l'ambito va tenuto coerente: un carrello non ha
+     * variante interna, e lasciare «interno» selezionato da un giro
+     * precedente produrrebbe un clic che non fa quello che il pannello dice.
+     */
+    impostaVincoloCorrente(vincoloCorrente) {
+      const haInterno = HA_VARIANTE_INTERNA.has(vincoloCorrente);
+      set({
+        vincoloCorrente,
+        ...(haInterno
+          ? { sconnessioneCorrente: vincoloCorrente as Stato['sconnessioneCorrente'] }
+          : { modoCerniera: 'esterno', posaSuAsta: 'vincolo' }),
+        anteprimaVincolo: null,
+      });
+    },
+
+    /**
+     * L'ambito governa insieme il clic sul NODO e il clic sull'ASTA: sono la
+     * stessa scelta espressa in due punti, e tenerle separate era il motivo
+     * per cui la tavolozza mostrava voci che sembravano duplicate.
+     */
+    impostaAmbitoVincolo(ambito) {
+      set({
+        modoCerniera: ambito,
+        posaSuAsta: ambito === 'interno' ? 'sconnessione' : 'vincolo',
+        anteprimaVincolo: null,
+      });
+    },
+
     impostaAngoloVincolo: (angoloVincolo) => set({ angoloVincolo }),
     impostaModoCerniera: (modoCerniera) => set({ modoCerniera, anteprimaVincolo: null }),
     impostaAnteprimaVincolo: (anteprimaVincolo) => set({ anteprimaVincolo }),

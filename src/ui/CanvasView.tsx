@@ -25,6 +25,7 @@ import {
   applicaVincolo, confermaOperazione, posaSuAsta,
 } from '../state/azioni.js';
 import { spostaSuAsta } from '../state/commands.js';
+import { nomeVincolo } from '../render/simboli.js';
 import { leggiPuntatore, scriviPuntatore } from '../state/puntatore.js';
 import { DURATE, registro } from '../anim/registro.js';
 import { MOLLE } from '../anim/molla.js';
@@ -227,12 +228,17 @@ export function CanvasView() {
     if (!a || st.modalita !== 'vincoli') return null;
     const azione = a.azione;
     if (azione.azione === 'sconnessioneInterna') {
-      return { nodoId: a.nodoId, sconnessione: azione.tipo };
+      return {
+        nodoId: a.nodoId,
+        sconnessione: azione.tipo,
+        nome: nomeVincolo(azione.tipo, 'interno'),
+      };
     }
     if (azione.azione === 'vincoloEsterno') {
       return {
         nodoId: a.nodoId,
         vincolo: { tipo: azione.tipo, angolo: st.angoloVincolo as never },
+        nome: nomeVincolo(azione.tipo, 'esterno'),
       };
     }
     return null;

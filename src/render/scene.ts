@@ -82,6 +82,12 @@ export interface StatoDisegno {
     /** simbolo da mostrare in trasparenza */
     vincolo?: Vincolo;
     sconnessione?: 'cerniera' | 'bipendolo' | 'pattino';
+    /**
+     * Nome esatto di ciò che verrà creato. Il simbolo da solo non basta a
+     * distinguere una cerniera a telaio da una cerniera interna quando il
+     * cursore le copre entrambe: il nome sì.
+     */
+    nome?: string;
   } | null;
   /** vincolo o sconnessione lungo un'asta evidenziato dal cursore */
   suAstaEvidenziato: string | null;
@@ -510,6 +516,12 @@ function disegnaAnteprimaVincolo(
     disegnaVincolo(ctx, sp, a.vincolo, t.evidenziato, t.sfondo, true, 1);
   }
   ctx.restore();
+
+  // l'etichetta sta a piena opacità: è l'unica cosa che dice senza ambiguità
+  // quale delle due varianti si sta per creare
+  if (a.nome) {
+    etichettaSuSfondo(ctx, a.nome, sp.x + 14, sp.y - 12, t.evidenziato, t.sfondo);
+  }
 }
 
 /** Punto e inclinazione di un'ascissa relativa lungo un'asta. */
