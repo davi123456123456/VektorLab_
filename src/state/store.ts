@@ -35,7 +35,7 @@ import { costruisciIndice } from '../core/model/queries.js';
 import { MATERIALI } from '../core/materials/materials.js';
 import { SEZIONI } from '../core/materials/sections.js';
 import type { EsitoVerifiche } from '../core/checks/index.js';
-import { ponte } from '../worker/bridge.js';
+import { creaPonte } from '../worker/bridge.js';
 import { preferisceMenoMovimento, registro } from '../anim/registro.js';
 import type { Componente } from '../render/diagrammi.js';
 import { verificaIntegrita, type Anomalia } from '../core/model/integrita.js';
@@ -341,6 +341,9 @@ export interface Stato {
   apriPannelloDestro: () => void;
   impostaLarghezzaPannelloDestro: (v: number) => void;
 
+  /** Spegne il worker del foglio: si chiama alla chiusura della scheda. */
+  terminaWorker: () => void;
+
   inquadraTutto: () => void;
   /**
    * Come `inquadraTutto`, ma percorrendo la strada invece di saltarci sopra.
@@ -450,6 +453,10 @@ function calcolaTronco(
  * possibile — annullare in un foglio e vedere cambiare l'altro.
  */
 export function creaStore(): UseBoundStore<StoreApi<Stato>> {
+  // §4.2 — un ponte, e quindi un worker, PER FOGLIO. Condividerne uno solo
+  // farebbe scartare come «sorpassata» la risposta del foglio che ha chiesto
+  // per primo, e quel foglio resterebbe in attesa per sempre.
+  const ponte = creaPonte();
   return create<Stato>((set, get) => ({
     progetto: progettoVuoto(),
     passato: [],
@@ -704,6 +711,8 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
       set({ pannelloDestro: p });
       ricordaPannelloDestro(p);
     },
+
+    terminaWorker() { ponte.termina(); },
 
     inquadraTutto() {
       const { progetto, camera } = get();

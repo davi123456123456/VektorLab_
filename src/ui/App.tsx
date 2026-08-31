@@ -75,6 +75,19 @@ export function App() {
     if (modalita !== 'modellazione') destra.apri();
   }, [modalita, destra]);
 
+  // §4.4 — salvataggio automatico dei fogli. Non a ogni battuta: mezzo secondo
+  // dopo l'ultima modifica, così scrivere una geometria non serializza il
+  // modello venti volte. Il salvataggio protegge da una ricarica accidentale,
+  // non sostituisce il salvataggio su file.
+  const progettoCorrente = useStore((s) => s.progetto);
+  useEffect(() => {
+    const id = setTimeout(() => useFogli.getState().salva(), 500);
+    return () => clearTimeout(id);
+  }, [progettoCorrente, generazione]);
+
+  // ripristino all'avvio, una volta sola
+  useEffect(() => { useFogli.getState().ripristina(); }, []);
+
   // il messaggio di stato si dissolve da solo: resta utile senza diventare rumore
   useEffect(() => {
     if (!messaggio) return;
@@ -144,16 +157,20 @@ function PannelloDiModalita() {
 }
 
 function Esempi() {
-  const caricaProgetto = useStore((s) => s.caricaProgetto);
-  const inquadraTutto = useStore((s) => s.inquadraTutto);
   return (
     <div className="border-b p-2" style={{ borderColor: 'var(--bordo)' }}>
       <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider"
            style={{ color: 'var(--testo-debole)' }}>Esempi</div>
       <div className="flex flex-wrap gap-1">
         {esempi.map((e) => (
-          <Bottone key={e.nome} titolo={e.descrizione}
-                   onClick={() => { caricaProgetto(e.costruisci()); setTimeout(inquadraTutto, 0); }}>
+          <Bottone key={e.nome} titolo={`${e.descrizione} — si apre in un foglio nuovo`}
+                   onClick={() => {
+                     // §4.1 — un esempio non sovrascrive MAI il foglio corrente:
+                     // chi lo apre per curiosità non deve perdere ciò che stava
+                     // disegnando
+                     useFogli.getState().nuovo(e.nome, e.costruisci());
+                     setTimeout(() => useStore.getState().inquadraTutto(), 0);
+                   }}>
             {e.nome}
           </Bottone>
         ))}

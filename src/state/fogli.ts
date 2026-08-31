@@ -14,7 +14,27 @@
 import { create } from 'zustand';
 import type { StoreApi, UseBoundStore } from 'zustand';
 import { creaStore, impostaStoreAttivo, storeAttivo, type Stato } from './store.js';
+import { verificaIntegrita } from '../core/model/integrita.js';
 import type { Progetto } from '../core/model/types.js';
+
+const CHIAVE_FOGLI = 'vektorlab.fogli';
+
+/**
+ * COPIA PROFONDA del modello.
+ *
+ * Duplicare un foglio copiandone il riferimento darebbe due schede che
+ * mostrano lo stesso oggetto: modificare l'una cambierebbe l'altra, e sarebbe
+ * il modo più diretto di rompere l'isolamento senza che nessun test sul
+ * conteggio delle entità se ne accorga. `structuredClone` copia anche gli
+ * array annidati; il ripiego serve dove non esiste.
+ */
+function clonaProfondo(p: Progetto): Progetto {
+  try {
+    return structuredClone(p);
+  } catch {
+    return JSON.parse(JSON.stringify(p)) as Progetto;
+  }
+}
 
 export interface Foglio {
   id: string;
@@ -31,9 +51,16 @@ interface RegistroFogli {
   nuovo: (nome?: string, progetto?: Progetto) => string;
   attiva: (id: string) => void;
   chiudi: (id: string) => void;
+  chiudiLeAltre: (id: string) => void;
   rinomina: (id: string, nome: string) => void;
   duplica: (id: string) => string;
   foglioAttivo: () => Foglio;
+  /** true se il foglio ha modifiche non annullate: serve alla conferma */
+  modificato: (id: string) => boolean;
+  /** salva l'elenco e i modelli, così una ricarica non perde il lavoro */
+  salva: () => void;
+  /** ripristina i fogli salvati; restituisce quanti ne ha aperti */
+  ripristina: () => number;
 }
 
 let contatore = 0;
@@ -87,6 +114,9 @@ export const useFogli = create<RegistroFogli>((set, get) => {
       if (fogli.length <= 1) return;
       const i = fogli.findIndex((x) => x.id === id);
       if (i < 0) return;
+      // il worker del foglio si spegne con lui: lasciarlo acceso terrebbe in
+      // vita un thread e la copia del modello che sta calcolando
+      fogli[i].store.getState().terminaWorker();
       const rimasti = fogli.filter((x) => x.id !== id);
       set({ fogli: rimasti });
       if (attivo === id) {
@@ -95,6 +125,12 @@ export const useFogli = create<RegistroFogli>((set, get) => {
         const vicino = rimasti[Math.min(i, rimasti.length - 1)];
         impostaStoreAttivo(vicino.store);
         set((s) => ({ attivo: vicino.id, generazione: s.generazione + 1 }));
+      }
+    },
+
+    chiudiLeAltre(id) {
+      for (const f of [...get().fogli]) {
+        if (f.id !== id) get().chiudi(f.id);
       }
     },
 
@@ -111,13 +147,77 @@ export const useFogli = create<RegistroFogli>((set, get) => {
       if (!f) return id;
       // si copia il MODELLO, non lo stato: la cronologia di undo del foglio
       // originale non ha senso in una copia, e portarla dietro darebbe
-      // l'illusione di poter annullare azioni mai fatte qui
-      return get().nuovo(`${f.nome} (copia)`, f.store.getState().progetto);
+      // l'illusione di poter annullare azioni mai fatte qui.
+      // La copia è PROFONDA: condividere il riferimento darebbe due schede
+      // legate fra loro senza che si veda.
+      const id2 = get().nuovo(`${f.nome} (copia)`, clonaProfondo(f.store.getState().progetto));
+      // e anche l'inquadratura si porta dietro: duplicare un foglio per
+      // provare una variante e ritrovarsi altrove sullo schermo disorienta
+      const sorgente = f.store.getState().camera;
+      const copia = get().fogli.find((x) => x.id === id2);
+      copia?.store.getState().impostaCamera({ ...sorgente });
+      return id2;
     },
 
     foglioAttivo() {
       const { fogli, attivo } = get();
       return fogli.find((x) => x.id === attivo) ?? fogli[0];
+    },
+
+    modificato(id) {
+      const f = get().fogli.find((x) => x.id === id);
+      if (!f) return false;
+      const st = f.store.getState();
+      return st.passato.length > 0 || st.progetto.nodi.length > 0;
+    },
+
+    /**
+     * §4.4 — persistenza. Ogni accesso protetto: in navigazione privata la
+     * sola lettura può lanciare, e perdere l'applicazione per una preferenza
+     * non salvata sarebbe uno scambio pessimo.
+     */
+    salva() {
+      try {
+        const dati = {
+          attivo: get().attivo,
+          fogli: get().fogli.map((f) => ({
+            id: f.id, nome: f.nome, progetto: f.store.getState().progetto,
+          })),
+        };
+        globalThis.localStorage?.setItem(CHIAVE_FOGLI, JSON.stringify(dati));
+      } catch {
+        // spazio esaurito o storage non disponibile: si continua a lavorare
+      }
+    },
+
+    ripristina() {
+      interface Salvati {
+        attivo?: string;
+        fogli?: { id: string; nome: string; progetto: Progetto }[];
+      }
+      let dati: Salvati | null = null;
+      try {
+        const g = globalThis.localStorage?.getItem(CHIAVE_FOGLI);
+        dati = g ? (JSON.parse(g) as Salvati) : null;
+      } catch {
+        return 0;
+      }
+      const salvati = dati?.fogli?.filter((f) => f?.progetto?.nodi) ?? [];
+      if (salvati.length === 0) return 0;
+
+      const fogli: Foglio[] = salvati.map((f, k) => {
+        const store = k === 0 ? storeAttivo() : creaStore();
+        // §1 + §4.4 — ciò che torna da localStorage passa dal controllo di
+        // integrità PRIMA di entrare nello store: un modello salvato mentre
+        // conteneva riferimenti pendenti non deve reintrodurli.
+        store.getState().caricaProgetto(verificaIntegrita(f.progetto).progetto);
+        return { id: f.id, nome: f.nome, store };
+      });
+      const attivo = fogli.find((f) => f.id === dati?.attivo) ?? fogli[0];
+      impostaStoreAttivo(attivo.store);
+      contatore = Math.max(contatore, fogli.length);
+      set((s) => ({ fogli, attivo: attivo.id, generazione: s.generazione + 1 }));
+      return fogli.length;
     },
   };
 });

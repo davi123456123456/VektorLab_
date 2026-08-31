@@ -5,6 +5,7 @@
  */
 
 import { MODALITA, useStore, type Modalita, type Strumento } from '../state/store.js';
+import { useFogli } from '../state/fogli.js';
 import { Bottone } from './Pannelli.js';
 import { Logo } from './Logo.js';
 
@@ -34,6 +35,20 @@ export function BarraModalita({ onAiuto, onLogo }: {
       <Logo onClick={onLogo} />
       <span className="max-w-[24ch] truncate text-[12px]"
             style={{ color: 'var(--testo-attenuato)' }}>{nome}</span>
+      {/*
+        §4 — il `+` sta QUI, accanto al nome del modello, e non dentro la barra
+        delle schede: quella si nasconde quando il foglio è uno solo, e il
+        pulsante per aprirne un secondo finiva nascosto insieme a lei. Era il
+        motivo per cui i fogli multipli sembravano non esserci.
+      */}
+      <button
+        type="button"
+        onClick={() => useFogli.getState().nuovo()}
+        title="Nuovo foglio di lavoro (Ctrl+T)"
+        className="-ml-1 rounded px-1.5 text-[13px] leading-none transition-colors
+                   hover:bg-[var(--sfondo-elevato)]"
+        style={{ color: 'var(--testo-debole)' }}
+      >+</button>
 
       <div className="flex overflow-hidden rounded border" style={{ borderColor: 'var(--bordo)' }}>
         {MODALITA.map((m) => (

@@ -25,7 +25,7 @@ export interface EsitoCalcolo {
   ms: number;
 }
 
-class PonteSolutore {
+export class PonteSolutore {
   private worker: Worker | null = null;
   private prossimoId = 1;
   private inAttesa = new Map<number, {
@@ -89,6 +89,13 @@ class PonteSolutore {
     return { risultato: risposta.risultato, ms: risposta.ms };
   }
 
+  /** Spegne il worker: si chiama quando il foglio che lo possedeva si chiude. */
+  termina(): void {
+    this.worker?.terminate();
+    this.worker = null;
+    this.inAttesa.clear();
+  }
+
   async cinematica(progetto: Progetto): Promise<RisultatoCinematico | null> {
     const id = this.prossimoId++;
     const risposta = await this.invia({ id, tipo: 'cinematica', progetto }, 'cinematica');
@@ -99,4 +106,22 @@ class PonteSolutore {
   }
 }
 
-export const ponte = new PonteSolutore();
+/**
+ * UN PONTE PER FOGLIO DI LAVORO.
+ *
+ * Il ponte scarta le risposte sorpassate da una richiesta più recente, e lo fa
+ * per chiave: con un ponte solo, due fogli che calcolano a distanza di un
+ * istante userebbero la stessa chiave «analizza», e il risultato del primo
+ * verrebbe buttato come se fosse vecchio. Non finirebbe nel foglio sbagliato —
+ * finirebbe nel nulla, che è peggio, perché il foglio resta in attesa senza
+ * spiegazione.
+ *
+ * Ogni istanza ha il proprio Worker, creato pigramente al primo calcolo: un
+ * foglio aperto e mai analizzato non ne accende nessuno.
+ */
+export function creaPonte(): PonteSolutore {
+  return new PonteSolutore();
+}
+
+/** Ponte condiviso, per la riga di comando e per i test: lì il foglio è uno. */
+export const ponte = creaPonte();
