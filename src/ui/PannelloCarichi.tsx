@@ -10,7 +10,7 @@ import { useStore } from '../state/store.js';
 import { eliminaCaricoSelezionato } from '../state/azioni.js';
 import { aggiungiCaso, eliminaCarichi, eliminaCaso, modificaCarico } from '../state/commands.js';
 import { Bottone, CampoNumero, Interruttore, Pannello, Riga, Selettore } from './Pannelli.js';
-import type {
+import type { ElementId,
   Carico, LoadCaseId, ModoRiferimento, NaturaCarico, Progetto,
 } from '../core/model/types.js';
 import { MODI_RIFERIMENTO, risultanteDistribuito } from '../core/index.js';
@@ -245,6 +245,24 @@ function ValoriMomento() {
 }
 
 /** Descrizione a parole del verso, dato il modo e il segno dell'intensità. */
+/**
+ * Angolo assoluto perpendicolare a un'asta.
+ *
+ * §5 ha tolto il modo «locale ortogonale» perché legava il carico all'asta:
+ * ruotandola, la direzione cambiava di nascosto. Questo comando fa lo stesso
+ * conto UNA VOLTA e scrive un numero assoluto, che da quel momento non
+ * dipende più da niente. La comodità resta, il legame no.
+ */
+function perpendicolareA(p: Progetto, astaId: ElementId | null): number | null {
+  if (!astaId) return null;
+  const a = p.aste.find((x) => x.id === astaId);
+  if (!a) return null;
+  const i = p.nodi.find((n) => n.id === a.nodoIniziale);
+  const j = p.nodi.find((n) => n.id === a.nodoFinale);
+  if (!i || !j) return null;
+  return Math.atan2(j.y - i.y, j.x - i.x) + Math.PI / 2;
+}
+
 function versoDescritto(modo: ModoRiferimento, q: number, alpha: number): string {
   const positivo = q >= 0;
   switch (modo) {
@@ -291,10 +309,14 @@ function ValoriDistribuito() {
       </div>
 
       {modo === 'angolo' && (
-        <Riga etichetta="Angolo α">
-          <CampoNumero valore={(alpha * 180) / Math.PI} passo={15} suffisso="°"
-                       onChange={(v) => imposta({ angoloCarico: (v * Math.PI) / 180 })} />
-        </Riga>
+        <>
+          <Riga etichetta="Angolo α">
+            <CampoNumero valore={(alpha * 180) / Math.PI} passo={15} suffisso="°"
+                         onChange={(v) => imposta({ angoloCarico: (v * Math.PI) / 180 })} />
+          </Riga>
+          <PerpendicolareAllAsta
+            onCalcolato={(rad) => imposta({ angoloCarico: rad })} />
+        </>
       )}
 
       <Riga etichetta={trapezoidale ? 'q iniziale' : 'Intensità'}>
@@ -463,13 +485,20 @@ function ProprietaDistribuito({ carico, progetto, modifica }: {
       </div>
 
       {carico.direzione.modo === 'angolo' && (
-        <Riga etichetta="Angolo α">
-          <CampoNumero valore={((carico.direzione.alpha ?? 0) * 180) / Math.PI}
-                       passo={15} suffisso="°"
-                       onChange={(v) => modifica({
-                         direzione: { ...carico.direzione, alpha: (v * Math.PI) / 180 },
-                       })} />
-        </Riga>
+        <>
+          <Riga etichetta="Angolo α">
+            <CampoNumero valore={((carico.direzione.alpha ?? 0) * 180) / Math.PI}
+                         passo={15} suffisso="°"
+                         onChange={(v) => modifica({
+                           direzione: { ...carico.direzione, alpha: (v * Math.PI) / 180 },
+                         })} />
+          </Riga>
+          <PerpendicolareAllAsta
+            astaId={carico.astaId}
+            onCalcolato={(rad) => modifica({
+              direzione: { ...carico.direzione, alpha: rad as never },
+            })} />
+        </>
       )}
 
       <Riga etichetta="q iniziale">
@@ -523,5 +552,36 @@ function ProprietaDistribuito({ carico, progetto, modifica }: {
         </div>
       )}
     </>
+  );
+}
+
+
+/**
+ * Scrive nell'angolo il valore perpendicolare all'asta indicata — o a quella
+ * selezionata, se non se ne passa una. Calcola e dimentica: ciò che resta nel
+ * modello è un angolo assoluto come tutti gli altri.
+ */
+function PerpendicolareAllAsta({ astaId, onCalcolato }: {
+  astaId?: ElementId;
+  onCalcolato: (radianti: number) => void;
+}) {
+  const progetto = useStore((s) => s.progetto);
+  const selezione = useStore((s) => s.selezione);
+  const bersaglio = astaId ?? ([...selezione.aste][0] as ElementId | undefined) ?? null;
+  const valore = perpendicolareA(progetto, bersaglio);
+  if (valore === null) return null;
+
+  const gradi = ((((valore * 180) / Math.PI) % 360) + 360) % 360;
+  return (
+    <div className="px-3 py-0.5">
+      <Bottone
+        onClick={() => onCalcolato(valore)}
+        titolo={`Scrive ${gradi.toFixed(0)}°, perpendicolare a `
+          + `${bersaglio as unknown as string}. Il valore resta assoluto: `
+          + "ruotando l'asta non cambia."}
+      >
+        perpendicolare all'asta ({gradi.toFixed(0)}°)
+      </Bottone>
+    </div>
   );
 }

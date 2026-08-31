@@ -115,6 +115,16 @@ export function migra(p: Progetto): Progetto {
     return { ...x, vincolo: v };
   });
 
+  // §5 — i modi LOCALI diventano l'angolo assoluto equivalente, calcolato
+  // sull'inclinazione che l'asta ha adesso. Non si scartano e non si
+  // approssimano: la direzione risultante è la stessa che il carico aveva.
+  const inclinazione = new Map<string, number>();
+  for (const a of p.aste) {
+    const i = p.nodi.find((n) => n.id === a.nodoIniziale);
+    const j = p.nodi.find((n) => n.id === a.nodoFinale);
+    if (i && j) inclinazione.set(a.id as unknown as string, Math.atan2(j.y - i.y, j.x - i.x));
+  }
+
   for (const c of p.carichi) {
     if (eVecchioDistribuito(c)) {
       carichi.push(...convertiDistribuito(c as DistribuitoV1));
@@ -127,6 +137,26 @@ export function migra(p: Progetto): Progetto {
       continue;
     }
     carichi.push(c);
+  }
+
+  // §5 — seconda passata: i modi LOCALI diventano l'angolo assoluto
+  // equivalente. Va DOPO il ciclo perché la conversione dal formato 1 produce
+  // essa stessa modi locali, e farla dentro li avrebbe lasciati indietro.
+  for (let k = 0; k < carichi.length; k++) {
+    const c = carichi[k];
+    if (c.tipo !== 'distribuito') continue;
+    if (c.direzione.modo !== 'localeOrtogonale' && c.direzione.modo !== 'localeAssiale') continue;
+    const theta = inclinazione.get(c.astaId as unknown as string);
+    if (theta === undefined) continue;
+    // localeAssiale punta lungo l'asse, localeOrtogonale è ruotato di +90°:
+    // le stesse due direzioni che versoreGlobale produceva
+    const alpha = c.direzione.modo === 'localeAssiale' ? theta : theta + Math.PI / 2;
+    const { perProiezione: _via, ...direzione } = c.direzione;
+    carichi[k] = {
+      ...c,
+      direzione: { ...direzione, modo: 'angolo', alpha: normalizzaAngolo(alpha) as Radianti },
+    };
+    modificato = true;
   }
 
   // Il contatore degli id manca su tutti i file salvati prima che esistesse.

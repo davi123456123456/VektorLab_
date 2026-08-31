@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { migra, VERSIONE_FORMATO, analizzaCaso } from '../../src/core/index.js';
 import type { LoadCaseId, Progetto } from '../../src/core/model/types.js';
+import { versoreGlobale } from '../../src/core/model/direzioni.js';
 
 const CASO = 'principale' as LoadCaseId;
 
@@ -25,10 +26,23 @@ describe('formato 1 → 2', () => {
     for (const c of p.carichi) {
       if (c.tipo !== 'distribuito') continue;
       expect(c.direzione, 'carico senza direzione').toBeDefined();
-      // erano qy = −15 kN/m in riferimento locale
-      expect(c.direzione.modo).toBe('localeOrtogonale');
+      // Erano qy = −15 kN/m in riferimento locale. §5 ha tolto i modi locali:
+      // la migrazione li converte nell'angolo assoluto EQUIVALENTE, quindi il
+      // modo cambia ma la direzione risultante no.
+      expect(c.direzione.modo).toBe('angolo');
       expect(c.q1).toBeCloseTo(-15e3, 6);
       expect(c.q2).toBeCloseTo(-15e3, 6);
+
+      // la verifica che conta: stesso versore di prima della conversione
+      const a = p.aste.find((x) => x.id === c.astaId)!;
+      const i = p.nodi.find((n) => n.id === a.nodoIniziale)!;
+      const j = p.nodi.find((n) => n.id === a.nodoFinale)!;
+      const L = Math.hypot(j.x - i.x, j.y - i.y);
+      const asse = { c: (j.x - i.x) / L, s: (j.y - i.y) / L };
+      const atteso = versoreGlobale({ modo: 'localeOrtogonale' }, asse);
+      const ottenuto = versoreGlobale(c.direzione, asse);
+      expect(ottenuto[0]).toBeCloseTo(atteso[0], 12);
+      expect(ottenuto[1]).toBeCloseTo(atteso[1], 12);
     }
   });
 

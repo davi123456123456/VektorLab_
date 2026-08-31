@@ -142,14 +142,23 @@ export function risultanteDistribuito(
   };
 }
 
-/** Etichette per l'interfaccia. */
+/**
+ * Etichette per l'interfaccia.
+ *
+ * I due modi LOCALI non compaiono più: l'angolo libero copre gli stessi casi
+ * e lo fa con un dato che non dipende dall'asta a cui il carico è appeso.
+ * Ruotare un'asta con un carico «locale ortogonale» cambiava di nascosto la
+ * direzione di quel carico; con l'angolo assoluto no, e se la si vuole
+ * ricalcolare c'è il comando «perpendicolare all'asta», che scrive il valore
+ * e poi si dimentica di averlo fatto.
+ *
+ * Il nucleo continua a SAPER LEGGERE i modi locali — `versoreGlobale` li
+ * gestisce — perché un file salvato prima deve aprirsi; è `migra()` a
+ * convertirli, in ingresso e una volta sola.
+ */
 export const MODI_RIFERIMENTO: {
   modo: DirezioneCarico['modo']; nome: string; descrizione: string;
 }[] = [
-  { modo: 'localeOrtogonale', nome: 'Locale ortogonale',
-    descrizione: 'Perpendicolare all\'asse dell\'asta, ruota con essa. Vento su parete, pressione.' },
-  { modo: 'localeAssiale', nome: 'Locale assiale',
-    descrizione: 'Parallelo all\'asse dell\'asta. Attrito, peso su una colonna.' },
   { modo: 'globaleX', nome: 'Globale X',
     descrizione: 'Orizzontale, indipendente dall\'orientamento dell\'asta.' },
   { modo: 'globaleY', nome: 'Globale Y',
