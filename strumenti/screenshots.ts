@@ -92,6 +92,17 @@ async function main(): Promise<void> {
       for (const m of MODALITA) {
         await page.getByRole('button', { name: m, exact: true }).click();
         await page.waitForTimeout(450);
+
+        // il confronto fra materiali si calcola solo su richiesta: senza
+        // premere il bottone, quella parte del pannello resterebbe vuota e
+        // non ci sarebbe niente da guardare
+        if (m === 'Materiali' && aperti) {
+          const conf = page.getByRole('button', { name: 'confronta i materiali' });
+          if (await conf.count() > 0) {
+            await conf.first().click();
+            await page.waitForTimeout(1500);
+          }
+        }
         const base = `${CARTELLA}/${m.toLowerCase()}-${v.nome}`
           + `-pannelli-${aperti ? 'aperti' : 'chiusi'}`;
         await page.screenshot({ path: `${base}.png` });
@@ -109,7 +120,7 @@ async function main(): Promise<void> {
             const box = [...document.querySelectorAll('div.overflow-auto')]
               .find((e) => e.scrollHeight > e.clientHeight + 8);
             if (!box) return 0;
-            return Math.min(4, Math.ceil(box.scrollHeight / box.clientHeight));
+            return Math.min(7, Math.ceil(box.scrollHeight / box.clientHeight));
           });
           for (let k = 1; k < passi; k++) {
             await page.evaluate((i) => {

@@ -39,6 +39,20 @@ export interface RigaConfronto {
   stabile: boolean;
   /** costo indicativo [€] */
   costo: number | null;
+
+  // ── proprietà del materiale, per il confronto diretto ──
+  /** modulo di Young [Pa] */
+  E: number;
+  /** densità [kg/m³] */
+  rho: number;
+  /**
+   * Resistenza di riferimento [Pa]: snervamento se c'è, altrimenti rottura,
+   * altrimenti trazione. NaN quando il materiale non ne dichiara nessuna —
+   * e allora non si inventa, si mostra che manca.
+   */
+  resistenza: number;
+  /** prezzo specifico [€/kg], se dichiarato */
+  costoEuroKg: number | null;
   /** errore, se l'analisi non è riuscita */
   errore?: string;
 }
@@ -107,6 +121,10 @@ export function confrontaMateriali(
         verificato: v.tutteVerificate && v.perAsta.length > 0,
         stabile: v.tutteStabili,
         costo: m.costoEuroKg !== undefined ? massa * m.costoEuroKg : null,
+        E: m.E,
+        rho: m.rho,
+        resistenza: m.resistenze.fy ?? m.resistenze.fu ?? m.resistenze.ft ?? NaN,
+        costoEuroKg: m.costoEuroKg ?? null,
       });
     } catch (e) {
       righe.push({
@@ -115,6 +133,10 @@ export function confrontaMateriali(
         spostamentoMassimo: NaN, sfruttamentoMassimo: NaN,
         coefficienteMinimo: NaN, verificato: false, stabile: false,
         costo: null, errore: (e as Error).message,
+        E: m.E,
+        rho: m.rho,
+        resistenza: m.resistenze.fy ?? m.resistenze.fu ?? m.resistenze.ft ?? NaN,
+        costoEuroKg: m.costoEuroKg ?? null,
       });
     }
   }

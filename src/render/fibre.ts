@@ -79,10 +79,16 @@ export function disegnaFibre(
   ctx.fillStyle = colori.sfondo;
   ctx.fillRect(0, 0, W, H);
 
+  // MARGINI ASIMMETRICI, e non per distrazione: a sinistra serve una corsia
+  // per l'etichetta dell'asse neutro. Scrivendola sopra il concio interrompeva
+  // le fibre e sembrava un buco nel disegno; scriverla fuori costa settanta
+  // pixel di larghezza e non copre più niente.
   const margine = 30;
-  const larghezzaConcio = W - 2 * margine;
+  const margineSinistro = 74;
+  const margineDestro = 20;
+  const larghezzaConcio = W - margineSinistro - margineDestro;
   const altezzaDisegno = Math.min(H - 2 * margine, larghezzaConcio * 0.62);
-  const cx = W / 2;
+  const cx = margineSinistro + larghezzaConcio / 2;
   const cy = H / 2;
 
   const punti = o.distribuzione.length > 0 ? o.distribuzione : [];
@@ -102,49 +108,86 @@ export function disegnaFibre(
   const allungamentoUniforme = Math.sign(epsAssiale) * Math.min(0.12, Math.abs(epsAssiale) * 400)
     * o.lambda;
 
+  /**
+   * UNA SOLA PARAMETRIZZAZIONE per fibre e facce.
+   *
+   * Prima le fibre erano segmenti orizzontali con una semilunghezza
+   * approssimata al primo ordine, mentre le facce d'estremità venivano
+   * ruotate attorno al centro del concio: due costruzioni diverse per la
+   * stessa figura. Il risultato era che gli estremi delle fibre non cadevano
+   * sulle facce — il bordo esterno della trave si sfrangiava — e che la
+   * rotazione, applicata a punti distanti `m` dal centro, traslava l'intero
+   * concio verso il basso al crescere di λ.
+   *
+   * Qui c'è una sola funzione. Detta `u` la quota di una fibra misurata sulla
+   * sezione (positiva verso il basso), con φ metà dell'apertura:
+   *
+   *     y(u)    = cy + u·cos φ            la sezione si accorcia in proiezione
+   *     semi(u) = m·(1+ε) + u·sin φ       le fibre sotto si allungano
+   *
+   * Le facce sono i luoghi degli estremi al variare di u, quindi sono rette e
+   * ogni fibra ci finisce sopra per costruzione, non per approssimazione. Il
+   * centro resta fermo, e sull'asse neutro (u = 0) la lunghezza non cambia.
+   */
+  const phi = apertura / 2;
+  const cosPhi = Math.cos(phi);
+  const sinPhi = Math.sin(phi);
+  const meta = (larghezzaConcio / 2) * (1 + allungamentoUniforme);
+
+  const quotaY = (u: number) => cy + u * cosPhi;
+  const semi = (u: number) => meta + u * sinPhi;
+  const uSup = -altezzaDisegno / 2;
+  const uInf = altezzaDisegno / 2;
+
+  // ── contorno del concio ──
+  // Il bordo è una linea sua, sottile e neutra. Prima il contorno era il
+  // sottoprodotto delle due fibre estreme, disegnate spesse e colorate: il
+  // profilo della trave finiva rosso da una parte e blu dall'altra, e dove le
+  // fibre non arrivavano alla faccia restava un gradino.
+  ctx.strokeStyle = colori.contorno;
+  ctx.lineWidth = 1.6;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - semi(uSup), quotaY(uSup));
+  ctx.lineTo(cx + semi(uSup), quotaY(uSup));
+  ctx.lineTo(cx + semi(uInf), quotaY(uInf));
+  ctx.lineTo(cx - semi(uInf), quotaY(uInf));
+  ctx.closePath();
+  ctx.stroke();
+
   // ── fibre ──
   const nFibre = 17;
   for (let i = 0; i < nFibre; i++) {
     const t = i / (nFibre - 1);          // 0 = fibra inferiore
     const yRel = t - 0.5;                // −0.5 … +0.5
-    const y = cy - yRel * altezzaDisegno;
+    const u = -yRel * altezzaDisegno;
 
-    // la fibra si allunga proporzionalmente alla distanza dall'asse neutro;
-    // il segno è quello della convenzione: M>0 tende le fibre a −y
-    const fattore = 1 + allungamentoUniforme - apertura * yRel;
-    const semiLunghezza = (larghezzaConcio / 2) * fattore;
+    // le fibre estreme coincidono con il contorno: disegnarle sopra lo
+    // sporcherebbe, e sono già rappresentate dal profilo
+    if (i === 0 || i === nFibre - 1) continue;
+
+    const y = quotaY(u);
+    const semiLunghezza = semi(u);
 
     // tensione alla quota corrispondente
     const yFisico = yRel * o.altezza;
     const sigma = interpolaSigma(punti, yFisico);
     ctx.strokeStyle = coloreFibra(sigma, sigmaMax, colori.trazione, colori.compressione);
     ctx.lineWidth = i === (nFibre - 1) / 2 ? 1 : 2.4;
+    ctx.lineCap = 'butt';
     ctx.beginPath();
     ctx.moveTo(cx - semiLunghezza, y);
     ctx.lineTo(cx + semiLunghezza, y);
     ctx.stroke();
   }
 
-  // ── sezioni di estremità: restano PIANE e ruotano ──
+  // ── facce d'estremità: restano PIANE e ruotano ──
   ctx.strokeStyle = colori.contorno;
   ctx.lineWidth = 2;
   for (const lato of [-1, 1] as const) {
-    const rotazione = (lato * apertura) / 2;
-    const meta = larghezzaConcio / 2;
-    const alto = { x: cx + lato * meta, y: cy - altezzaDisegno / 2 };
-    const basso = { x: cx + lato * meta, y: cy + altezzaDisegno / 2 };
-    const ruota = (p: { x: number; y: number }) => {
-      const dx = p.x - cx, dy = p.y - cy;
-      return {
-        x: cx + dx * Math.cos(rotazione) - dy * Math.sin(rotazione)
-             + lato * (larghezzaConcio / 2) * allungamentoUniforme,
-        y: cy + dx * Math.sin(rotazione) + dy * Math.cos(rotazione),
-      };
-    };
-    const a = ruota(alto), b = ruota(basso);
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
+    ctx.moveTo(cx + lato * semi(uSup), quotaY(uSup));
+    ctx.lineTo(cx + lato * semi(uInf), quotaY(uInf));
     ctx.stroke();
   }
 
@@ -153,8 +196,8 @@ export function disegnaFibre(
   ctx.setLineDash([5, 4]);
   ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(margine * 0.5, cy);
-  ctx.lineTo(W - margine * 0.5, cy);
+  ctx.moveTo(4, cy);
+  ctx.lineTo(W - 6, cy);
   ctx.stroke();
   ctx.setLineDash([]);
 
@@ -168,17 +211,26 @@ export function disegnaFibre(
 
   ctx.textAlign = 'center';
   ctx.fillStyle = colori.trazione;
-  ctx.fillText('fibre TESE — si allungano', cx, yTeso);
+  ctx.fillText('fibre TESE', cx, yTeso);
   ctx.fillStyle = colori.compressione;
-  ctx.fillText('fibre COMPRESSE — si accorciano', cx, yCompresso);
+  ctx.fillText('fibre COMPRESSE', cx, yCompresso);
 
   // La riga dell'asse neutro attraversa il disegno da parte a parte: qui non
   // esiste un punto libero dove scriverla, quindi va su sfondo opaco. Ed è
   // accorciata: «asse neutro» dice già tutto, «lunghezza invariata» lo
   // ripeteva a parole ed era la metà che finiva sopra il contorno.
+  // Al CENTRO, non a sinistra: là copriva il bordo esterno del concio. Qui
+  // l'unica cosa che interrompe è la fibra di mezzo, che è l'asse neutro
+  // stesso — e un'etichetta appoggiata sulla linea che nomina si legge come
+  // una didascalia, non come una sovrapposizione.
+  // nella corsia di sinistra, alla quota dell'asse: nessuna fibra da
+  // interrompere, nessuno sfondo opaco da sovrapporre
   ctx.textAlign = 'left';
-  etichettaSuSfondo(ctx, 'asse neutro', margine * 0.5, cy - 10,
-                    colori.neutro, colori.sfondo);
+  ctx.fillStyle = colori.neutro;
+  ctx.fillStyle = colori.sfondo;
+  ctx.fillRect(2, cy - 7, margineSinistro - 10, 14);
+  ctx.fillStyle = colori.neutro;
+  ctx.fillText('asse neutro', 4, cy);
 
   ctx.restore();
 }

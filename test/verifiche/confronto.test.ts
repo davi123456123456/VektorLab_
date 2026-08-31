@@ -91,3 +91,51 @@ describe('confronto fra materiali', () => {
     expect(cls.verificato).toBe(false);
   });
 });
+
+describe('proprietà del materiale nelle righe di confronto', () => {
+  const righe = confrontaMateriali(trave(), { tipo: 'caso', id: CASO }, MATERIALI);
+  const riga = (id: string) => righe.find((r) => r.materialeId === id)!;
+
+  it('portano E, densità e resistenza, che servono al paragone diretto', () => {
+    const s275 = riga('S275');
+    expect(s275.E).toBeCloseTo(210e9, 0);
+    expect(s275.rho).toBeCloseTo(7850, 6);
+    expect(s275.resistenza).toBeCloseTo(275e6, 0);
+  });
+
+  it('la resistenza ripiega su rottura o trazione quando manca lo snervamento', () => {
+    // nessun materiale deve restare senza un valore se ne dichiara almeno uno
+    for (const r of righe) {
+      const m = MATERIALI.find((x) => (x.id as unknown as string) === r.materialeId)!;
+      const dichiarata = m.resistenze.fy ?? m.resistenze.fu ?? m.resistenze.ft;
+      if (dichiarata === undefined) expect(Number.isNaN(r.resistenza)).toBe(true);
+      else expect(r.resistenza).toBeCloseTo(dichiarata, 0);
+    }
+  });
+
+  it('«Acciaio generico» resta senza resistenza, per scelta', () => {
+    // il campo S_y è volutamente vuoto: il confronto deve dirlo, non inventarlo
+    const generico = righe.find((r) => r.materialeId === 'ACCIAIO_GENERICO');
+    expect(generico).toBeDefined();
+    expect(Number.isNaN(generico!.resistenza)).toBe(true);
+  });
+
+  it('il prezzo specifico è null quando il materiale non lo dichiara', () => {
+    for (const r of righe) {
+      if (r.costoEuroKg === null) expect(r.costo).toBeNull();
+      else expect(r.costo).toBeCloseTo(r.massa * r.costoEuroKg, 6);
+    }
+  });
+
+  it('la resistenza specifica ordina diversamente dalla resistenza', () => {
+    // è il motivo per cui la grandezza esiste: l'alluminio è più debole
+    // dell'acciaio ma rende di più per chilo
+    const al = riga('AL7075T6'), acc = riga('S355');
+    expect(al.resistenza).toBeGreaterThan(acc.resistenza);
+    expect(al.resistenza / al.rho).toBeGreaterThan(acc.resistenza / acc.rho);
+    // e l'S235, più debole in assoluto, resta più debole anche in specifico
+    const s235 = riga('S235');
+    expect(s235.resistenza / s235.rho).toBeLessThan(al.resistenza / al.rho);
+  });
+});
+

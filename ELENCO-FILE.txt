@@ -120,6 +120,7 @@ src/vite-env.d.ts
 src/worker/bridge.ts
 src/worker/protocol.ts
 src/worker/solver.worker.ts
+strumenti/screenshots.ts
 test/analytical/telai.test.ts
 test/analytical/travi.test.ts
 test/animazioni/inquadratura.test.ts

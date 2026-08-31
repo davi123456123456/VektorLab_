@@ -9,7 +9,6 @@
  * Dimensioni in pixel: il disegno è schematico, non in scala col modello.
  */
 
-import { etichettaSuSfondo } from './frecce.js';
 import type { DistribuzioneTensioni, PuntoTensione } from '../core/checks/index.js';
 import {
   contornoInterno, contornoSezione, type ParametriSezione,
@@ -191,21 +190,21 @@ function evidenziaCritico(
   ctx.arc(rSezione.x + rSezione.w / 2, ySchermo, 3.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // L'etichetta cade sopra il disegno della sezione: alla quota critica c'è
-  // sempre un'ala o un'anima, non c'è una posizione libera. Si scrive quindi
-  // SU UNO SFONDO OPACO, che è l'unica cosa che la rende leggibile senza
-  // spostarla lontano dalla quota che sta indicando.
+  // L'ETICHETTA NON STA SULLA QUOTA, sta nell'intestazione.
   //
-  // L'unità sta già nell'intestazione della colonna σ: ripeterla qui
-  // allungherebbe l'etichetta del 40 % per non dire niente di nuovo.
-  etichettaSuSfondo(
-    ctx,
-    `σid ${(d.critico.vonMises / 1e6).toFixed(1)}`,
-    rSezione.x,
-    // sopra la linea se c'è spazio, sotto se la quota critica è in alto:
-    // un'etichetta tagliata dal bordo è illeggibile quanto una sovrapposta
-    ySchermo > 18 ? ySchermo - 10 : ySchermo + 10,
-    o.colori.critico, o.colori.sfondo, true,
+  // Alla quota critica c'è sempre un'ala o un'anima: non esiste una posizione
+  // libera dentro il disegno della sezione, e uno sfondo opaco risolveva la
+  // leggibilità cancellando però un pezzo di profilo — l'ala inferiore
+  // spariva sotto il riquadro. Qui il valore va in cima, sulla stessa riga di
+  // «σ MPa» e «τ MPa» a cui appartiene, mentre sulla quota restano il pallino
+  // e la linea tratteggiata, che la marcano senza coprire niente.
+  ctx.font = 'bold 10px ui-monospace, SF Mono, Menlo, monospace';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = o.colori.critico;
+  ctx.fillText(
+    `σid ${(d.critico.vonMises / 1e6).toFixed(1)} MPa`,
+    rSezione.x, rSezione.y - 10,
   );
   ctx.restore();
 }

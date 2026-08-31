@@ -91,18 +91,15 @@ export function DettaglioFibre({ v, EI, EA, altezza }: {
       </div>
       <p className="px-1 pt-1.5 text-[10px] leading-relaxed"
          style={{ color: 'var(--testo-debole)' }}>
-        Le sezioni restano <b>piane</b> e ruotano l'una rispetto all'altra
-        (ipotesi di Bernoulli). Qui il momento tende le fibre <b>{latoTeso}</b>:
-        si allungano, mentre le opposte si accorciano. Sull'asse neutro la
-        lunghezza non cambia. La rotazione è ingrandita moltissimo — quella
-        vera è di frazioni di grado.
+        Sezioni <b>piane</b> (Bernoulli). Il momento tende le fibre{' '}
+        <b>{latoTeso}</b>; la rotazione è molto ingrandita.
       </p>
       {v.sezione.N !== 0 && (
         <p className="px-1 pt-1 text-[10px] leading-relaxed"
            style={{ color: 'var(--testo-debole)' }}>
-          Lo sforzo normale N = {(v.sezione.N / 1e3).toFixed(1)} kN
+          N = {(v.sezione.N / 1e3).toFixed(1)} kN
           {v.sezione.N > 0 ? ' allunga' : ' accorcia'} tutte le fibre allo stesso
-          modo, spostando l'asse a tensione nulla rispetto al baricentro.
+          modo: l'asse a tensione nulla si sposta dal baricentro.
         </p>
       )}
     </div>
