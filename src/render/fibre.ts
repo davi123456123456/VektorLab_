@@ -21,6 +21,7 @@
  * una trave in esercizio è dell'ordine di 10⁻³ m⁻¹ e sarebbe invisibile.
  */
 
+import { etichettaSuSfondo } from './frecce.js';
 import type { PuntoTensione } from '../core/checks/index.js';
 
 export interface OpzioniFibre {
@@ -171,9 +172,13 @@ export function disegnaFibre(
   ctx.fillStyle = colori.compressione;
   ctx.fillText('fibre COMPRESSE — si accorciano', cx, yCompresso);
 
-  ctx.fillStyle = colori.neutro;
+  // La riga dell'asse neutro attraversa il disegno da parte a parte: qui non
+  // esiste un punto libero dove scriverla, quindi va su sfondo opaco. Ed è
+  // accorciata: «asse neutro» dice già tutto, «lunghezza invariata» lo
+  // ripeteva a parole ed era la metà che finiva sopra il contorno.
   ctx.textAlign = 'left';
-  ctx.fillText('asse neutro: lunghezza invariata', margine * 0.5, cy - 9);
+  etichettaSuSfondo(ctx, 'asse neutro', margine * 0.5, cy - 10,
+                    colori.neutro, colori.sfondo);
 
   ctx.restore();
 }

@@ -21,6 +21,19 @@ export function DettaglioFibre({ v, EI, EA, altezza }: {
 
   const curvatura = EI !== 0 ? v.sezione.M / EI : 0;
 
+  /**
+   * I dati del fotogramma stanno in un ref, non nelle dipendenze dell'effetto.
+   *
+   * Prima l'effetto dipendeva da `v`, che è un oggetto nuovo a ogni analisi:
+   * ogni ricalcolo smontava il ciclo, rimisurava il canvas — e rimisurarlo lo
+   * AZZERA — e lo faceva ripartire. Si vedeva uno sfarfallio a ogni modifica
+   * del modello, e l'animazione ricominciava invece di continuare.
+   *
+   * Con il ref il ciclo parte una volta sola e legge sempre l'ultimo valore.
+   */
+  const dati = useRef({ v, EI, EA, altezza, curvatura, riproduci, animazioni });
+  dati.current = { v, EI, EA, altezza, curvatura, riproduci, animazioni };
+
   useEffect(() => {
     const c = canvas.current;
     if (!c) return;
@@ -43,23 +56,25 @@ export function DettaglioFibre({ v, EI, EA, altezza }: {
     };
 
     let vivo = true;
+    let id = 0;
     const passo = () => {
       if (!vivo) return;
+      const d = dati.current;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       // in riproduzione il carico sale e scende: si vede la trave inflettersi
-      const lambda = riproduci && animazioni
+      const lambda = d.riproduci && d.animazioni
         ? 0.5 - 0.5 * Math.cos(registro.orologio * 1.4)
         : 1;
       disegnaFibre(ctx, {
-        curvatura, N: v.sezione.N, EA, altezza,
-        distribuzione: v.distribuzione.punti,
+        curvatura: d.curvatura, N: d.v.sezione.N, EA: d.EA, altezza: d.altezza,
+        distribuzione: d.v.distribuzione.punti,
         lambda, larghezza: W, altezzaCanvas: H, colori,
       });
-      requestAnimationFrame(passo);
+      id = requestAnimationFrame(passo);
     };
-    const id = requestAnimationFrame(passo);
+    id = requestAnimationFrame(passo);
     return () => { vivo = false; cancelAnimationFrame(id); };
-  }, [v, EI, EA, altezza, curvatura, riproduci, animazioni]);
+  }, []);
 
   const latoTeso = curvatura >= 0 ? 'inferiori' : 'superiori';
 

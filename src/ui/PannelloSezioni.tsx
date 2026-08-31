@@ -383,10 +383,20 @@ function Dettaglio({ v, progetto, sezioni }: {
               ? v.coefficienteSicurezza.toFixed(2) : '∞'}
           </span>
         </div>
-        <div className="numerico flex justify-between text-[10px]"
+        {/*
+          L'etichetta lunga mandava a capo il valore, e «68.0» finiva su una
+          riga e «%» su quella dopo. Un numero separato dalla sua unità non è
+          più un numero: si accorcia l'etichetta e si impedisce al valore di
+          spezzarsi.
+        */}
+        <div className="numerico flex justify-between gap-2 text-[10px]"
              style={{ color: 'var(--testo-debole)' }}>
-          <span>sfruttamento (su resistenza di progetto)</span>
-          <span>{(v.sfruttamento * 100).toFixed(1)} %</span>
+          <span title="rapporto fra tensione ideale e resistenza di progetto">
+            sfruttamento
+          </span>
+          <span className="shrink-0 whitespace-nowrap">
+            {(v.sfruttamento * 100).toFixed(1)} %
+          </span>
         </div>
       </div>
 

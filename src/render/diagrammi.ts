@@ -86,6 +86,9 @@ export function disegnaDiagrammi(
   // rispetto a N e T.
   const verso = o.componente === 'M' && o.fibreTese ? -1 : 1;
 
+  // registro delle quote già scritte, valido per tutta la struttura
+  const scritte: { x: number; y: number; testo: string }[] = [];
+
   for (const risAsta of o.risultato.aste) {
     const g = geometria(risAsta.astaId, aste, nodi);
     if (!g) continue;
@@ -136,7 +139,7 @@ export function disegnaDiagrammi(
     ctx.restore();
 
     if (o.mostraValori && o.avanzamento >= 0.999) {
-      etichetteNotevoli(ctx, o, risAsta, g, verso, massimo);
+      etichetteNotevoli(ctx, o, risAsta, g, verso, massimo, scritte);
     }
   }
 }
@@ -149,6 +152,16 @@ export function disegnaDiagrammi(
 function etichetteNotevoli(
   ctx: CanvasRenderingContext2D, o: OpzioniDiagramma,
   a: RisultatoAsta, g: GeometriaAsta, verso: number, massimo: number,
+  /**
+   * Etichette già scritte su TUTTA la struttura, in coordinate schermo.
+   *
+   * La deduplica per ascissa vale dentro una singola asta e non basta: dove
+   * due aste si toccano, il valore di fine della prima e quello di inizio
+   * della seconda sono lo stesso numero nello stesso punto, e finivano scritti
+   * due volte uno sopra l'altro. Da fuori si vedeva un'etichetta sporca, non
+   * due etichette.
+   */
+  scritte: { x: number; y: number; testo: string }[],
 ): void {
   const ex = { x: g.c, y: g.s };
   const ey = { x: -g.s, y: g.c };
@@ -168,6 +181,17 @@ function etichetteNotevoli(
 
     const unita = o.componente === 'M' ? 'kNm' : 'kN';
     const testo = `${(valore / 1e3).toFixed(1)} ${unita}`;
+    // Si confronta il PUNTO DI ANCORAGGIO sull'asse dell'asta, non la
+    // posizione dell'etichetta: due aste che si incontrano in un nodo
+    // scostano la quota ognuna lungo la propria normale, e le due scritte
+    // finiscono a settanta pixel l'una dall'altra pur essendo lo stesso
+    // valore nello stesso punto della struttura.
+    const ancora = mondoASchermo(o.camera, w);
+    if (scritte.some(
+      (e) => e.testo === testo && Math.hypot(e.x - ancora.x, e.y - ancora.y) < 12)) {
+      continue;
+    }
+    scritte.push({ x: ancora.x, y: ancora.y, testo });
     ctx.save();
     ctx.font = '10px ui-monospace, SF Mono, Menlo, monospace';
     ctx.textBaseline = 'middle';

@@ -258,21 +258,25 @@ function ControlliVista({ r }: { r: RisultatoAnalisi }) {
   );
 }
 
+/**
+ * Le colonne hanno bisogno d'aria: senza spaziatura «6.46 70.4 −2.4 70.7 ∠85»
+ * si legge come un numero unico, e la tabella smette di essere una tabella.
+ */
 function TabellaReazioni({ r }: { r: RisultatoAnalisi }) {
   const cifre = useStore((s) => s.cifreRisultati);
   const progetto = useStore((s) => s.progetto);
   if (r.reazioni.length === 0) return null;
 
   return (
-    <table className="numerico w-full px-3 text-[10px]">
+    <table className="numerico w-full text-[10px]">
       <thead>
         <tr style={{ color: 'var(--testo-debole)' }}>
-          <th className="pl-3 text-left font-normal">vincolo</th>
-          <th className="text-left font-normal">nodo</th>
-          <th className="text-right font-normal">Rx kN</th>
-          <th className="text-right font-normal">Ry kN</th>
-          <th className="text-right font-normal">M kNm</th>
-          <th className="pr-3 text-right font-normal">|R| kN ∠°</th>
+          <th className="pl-3 pr-2 text-left font-normal">vincolo</th>
+          <th className="pr-2 text-left font-normal">nodo</th>
+          <th className="pr-2 text-right font-normal">Rx kN</th>
+          <th className="pr-2 text-right font-normal">Ry kN</th>
+          <th className="pr-2 text-right font-normal">M kNm</th>
+          <th className="pr-3 text-right font-normal">|R| ∠°</th>
         </tr>
       </thead>
       <tbody>
@@ -283,12 +287,12 @@ function TabellaReazioni({ r }: { r: RisultatoAnalisi }) {
             ? ((Math.atan2(x.fy, x.fx) * 180) / Math.PI + 360) % 360 : 0;
           return (
             <tr key={x.nodoId as string} style={{ color: 'var(--testo-attenuato)' }}>
-              <td className="pl-3">{nodo?.vincolo?.tipo ?? '—'}</td>
-              <td>{x.nodoId as string}</td>
-              <td className="py-0.5 text-right">{sig(x.fx / 1e3, cifre)}</td>
-              <td className="py-0.5 text-right">{sig(x.fy / 1e3, cifre)}</td>
-              <td className="py-0.5 text-right">{sig(x.mz / 1e3, cifre)}</td>
-              <td className="pr-3 text-right">
+              <td className="pl-3 pr-2">{nodo?.vincolo?.tipo ?? '—'}</td>
+              <td className="pr-2 truncate">{x.nodoId as string}</td>
+              <td className="py-0.5 pr-2 text-right">{sig(x.fx / 1e3, cifre)}</td>
+              <td className="py-0.5 pr-2 text-right">{sig(x.fy / 1e3, cifre)}</td>
+              <td className="py-0.5 pr-2 text-right">{sig(x.mz / 1e3, cifre)}</td>
+              <td className="whitespace-nowrap pr-3 text-right">
                 {sig(modulo / 1e3, cifre)} ∠{angolo.toFixed(0)}
               </td>
             </tr>
