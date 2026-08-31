@@ -302,6 +302,12 @@ export interface Stato {
   mostraModelloNeiDiagrammi: boolean;
   /** τ = T/A (media) oppure τ = T·S/(I·b) (massima) nel blocco C.S. */
   modoTaglio: ModoTaglio;
+  /**
+   * Cifre significative nelle tabelle dei risultati. Tre per default: un
+   * momento scritto `12.4000000001` non è più preciso, è solo più difficile
+   * da leggere, e nasconde le cifre che contano dietro quelle che non contano.
+   */
+  cifreRisultati: number;
 
   // ── animazioni ──
   animazioni: boolean;
@@ -411,7 +417,7 @@ export interface Stato {
   impostaOpzioniRisultati: (p: Partial<Pick<Stato,
     'mostraDeformata' | 'fattoreDeformata' | 'lambdaDeformata'
     | 'mostraReazioni' | 'mostraValoriRisultati'
-    | 'mostraModelloNeiDiagrammi' | 'modoTaglio'>>) => void;
+    | 'mostraModelloNeiDiagrammi' | 'modoTaglio' | 'cifreRisultati'>>) => void;
 
   impostaCriterio: (c: 'vonMises' | 'tresca') => void;
   selezionaSezioneInModifica: (id: string | null) => void;
@@ -538,6 +544,7 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
     mostraValoriRisultati: true,
     mostraModelloNeiDiagrammi: true,
     modoTaglio: 'media',
+    cifreRisultati: 3,
 
     animazioni: !preferisceMenoMovimento(),
     riproduciDeformata: false,

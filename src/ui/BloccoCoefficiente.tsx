@@ -38,12 +38,7 @@ export function BloccoCoefficiente({ r }: { r: RisultatoAnalisi }) {
   if (!c.massimaTensione && c.errori.length === 0) return null;
 
   return (
-    <div className="border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
-      <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider"
-           style={{ color: 'var(--testo-debole)' }}>
-        Coefficiente di sicurezza nel punto più sollecitato
-      </div>
-
+    <div>
       {c.errori.map((e) => (
         <ErroreDato key={e.codice} codice={e.codice} messaggio={e.messaggio}
                     aste={e.aste} onSeleziona={seleziona} />
@@ -112,20 +107,16 @@ function Sezioni({ c, onSeleziona }: {
       <Candidata etichetta="massima tensione" s={t}
                  valore={`σ_VM = ${(c.sigmaIdeale / 1e6).toFixed(1)} MPa`}
                  onClick={() => onSeleziona([t.astaId])} />
-      <p style={{ color: 'var(--testo-debole)' }}>
-        {c.coincidono
-          ? 'Le due sezioni coincidono: è la stessa.'
-          : 'Le due sezioni NON coincidono — sezioni o materiali diversi fanno sì '
-            + 'che il momento più grande non produca la tensione più grande. '
-            + 'Governa quella a tensione massima.'}
-      </p>
+      {!c.coincidono && (
+        <p style={{ color: 'var(--attenzione)' }}>
+          Le due sezioni non coincidono: governa quella a tensione massima.
+        </p>
+      )}
       {m?.salto && (
         <p style={{ color: 'var(--testo-debole)' }}>
-          Il momento è discontinuo in questa sezione:{' '}
-          <span className="numerico">{(m.salto.sinistra / 1e3).toFixed(2)}</span> kNm a
-          sinistra,{' '}
-          <span className="numerico">{(m.salto.destra / 1e3).toFixed(2)}</span> kNm a
-          destra. Si usa il valore in modulo maggiore.
+          M discontinuo:{' '}
+          <span className="numerico">{(m.salto.sinistra / 1e3).toFixed(2)}</span> /{' '}
+          <span className="numerico">{(m.salto.destra / 1e3).toFixed(2)}</span> kNm
         </p>
       )}
     </div>
@@ -162,18 +153,10 @@ function Esito({ c }: { c: EsitoCoefficiente }) {
           {c.coefficiente.toFixed(2)}
         </span>
       </div>
-      <p className="mt-1 text-[10px]" style={{ color: 'var(--testo-debole)' }}>
-        {ok
-          ? `La sezione resiste: la tensione ideale sta ${c.coefficiente.toFixed(2)} volte `
-            + 'dentro la tensione di snervamento.'
-          : 'La sezione NON resiste: la tensione ideale supera lo snervamento.'}
-        {c.fibraGovernante && ` Governa la fibra ${c.fibraGovernante}.`}
-      </p>
-      {c.compressa && (
-        <p className="mt-1 text-[10px]" style={{ color: 'var(--attenzione)' }}>
-          L'asta è compressa: questo è il coefficiente a RESISTENZA. Perché sia
-          quello che conta, la verifica di stabilità deve dare un margine più
-          largo — un'asta snella si inflette molto prima di snervarsi.
+      {c.fibraGovernante && (
+        <p className="mt-0.5 text-[9.5px]" style={{ color: 'var(--testo-debole)' }}>
+          fibra {c.fibraGovernante}
+          {c.compressa && ' · asta compressa: verificare anche la stabilità'}
         </p>
       )}
     </div>
@@ -209,11 +192,6 @@ function Progetto({ c }: { c: EsitoCoefficiente }) {
           </span>
         </div>
       )}
-      <p className="mt-1">
-        C.S. = 1 è il limite, non un obiettivo: è la condizione in cui la
-        struttura arriva esattamente allo snervamento sotto il carico di
-        progetto, senza alcun margine.
-      </p>
     </div>
   );
 }
@@ -233,14 +211,10 @@ function ErroreDato({ codice, messaggio, aste, onSeleziona }: {
     <div className="mx-3 mb-2 rounded border px-2 py-1.5 text-[10px]"
          style={{ borderColor: 'var(--errore)' }}>
       <div className="font-semibold" style={{ color: 'var(--errore)' }}>{messaggio}</div>
-      <p className="mt-1" style={{ color: 'var(--testo-debole)' }}>
+      <p className="mt-0.5" style={{ color: 'var(--testo-debole)' }}>
         {codice === 'SY_MANCANTE'
-          ? 'Il coefficiente di sicurezza non si può calcolare senza la tensione di '
-            + 'snervamento del materiale, e non viene inventato un valore plausibile. '
-            + 'Tutto il resto — reazioni, N/T/M, deformata — dipende da E, A e I e '
-            + 'resta valido.'
-          : 'Senza sezione non ci sono A, I e y_max, quindi non ci sono tensioni. '
-            + 'Le aste elencate sono escluse dal calcolo; le altre no.'}
+          ? 'Nessun valore inventato. Il resto dei risultati resta valido.'
+          : 'Aste escluse dal calcolo delle tensioni.'}
       </p>
       {aste.length > 0 && (
         <button type="button" onClick={() => onSeleziona(aste)}
