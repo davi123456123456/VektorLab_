@@ -149,3 +149,80 @@ describe('§10.3 — strutture articolate: dodici aste', () => {
     expect(e.falliti).toEqual([]);
   });
 });
+
+
+/*
+ * §5.1 — LE RAMIFICAZIONI, che il documento indica come punto fragile insieme
+ * alle pieghe. Un nodo con tre o più aste rende indefinito «accumulare lungo
+ * il percorso», e una spezzata aperta non ne produce mai: vanno generate
+ * apposta, altrimenti la campagna gira dove il calcolo è facile.
+ */
+describe('§10.3 — nodi ramificati, tre o più aste convergenti', () => {
+  const semi = Array.from({ length: 250 }, (_, i) => 60000 + i);
+  const e = campagna(semi, {
+    aste: 4, angoliIrregolari: true, sconnessioni: false, ramificazioni: true,
+  });
+
+  it('genera abbastanza casi ramificati', () => {
+    riporta('ramificate', e);
+    expect(e.isostatici).toBeGreaterThan(10);
+  });
+
+  it('nessun invariante violato', () => {
+    expect(e.falliti).toEqual([]);
+  });
+});
+
+describe('§10.3 — ramificate CON sconnessioni interne', () => {
+  const semi = Array.from({ length: 250 }, (_, i) => 80000 + i);
+  const e = campagna(semi, {
+    aste: 5, angoliIrregolari: true, sconnessioni: true, ramificazioni: true,
+  });
+
+  it('genera abbastanza casi', () => {
+    riporta('ramificate + sconnessioni', e);
+    expect(e.isostatici).toBeGreaterThan(10);
+  });
+
+  it('nessun invariante violato', () => {
+    expect(e.falliti).toEqual([]);
+  });
+});
+
+
+describe('§10.3 — maglie chiuse rese isostatiche da cerniere', () => {
+  const semi = Array.from({ length: 300 }, (_, i) => 100000 + i);
+  const e = campagna(semi, {
+    aste: 3, angoliIrregolari: true, sconnessioni: true, anello: true,
+  });
+
+  it('genera qualche anello isostatico', () => {
+    riporta('anelli a tre cerniere', e);
+    expect(e.isostatici).toBeGreaterThan(2);
+  });
+
+  it('nessun invariante violato', () => {
+    expect(e.falliti).toEqual([]);
+  });
+});
+
+/*
+ * §1 — il carrello interno è il vincolo appena aggiunto, ed è l'unico interno
+ * da un grado. Passarlo dalla campagna è il modo di scoprire subito se la sua
+ * combinazione di rilasci — rotazione E scorrimento — regge sulle strutture
+ * generate, invece di fidarsi dell'unico caso scritto a mano.
+ */
+describe('§10.3 — con doppio pendolo, pattino e carrello interno', () => {
+  for (const tipo of ['bipendolo', 'pattino', 'carrelloInterno'] as const) {
+    const semi = Array.from({ length: 200 }, (_, i) => 200000 + i);
+    const e = campagna(semi, {
+      aste: 3, angoliIrregolari: true, sconnessioni: true, tipoSconnessione: tipo,
+    });
+
+    it(`${tipo}: genera casi e non viola invarianti`, () => {
+      riporta(tipo, e);
+      expect(e.isostatici).toBeGreaterThan(3);
+      expect(e.falliti).toEqual([]);
+    });
+  }
+});
