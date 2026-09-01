@@ -11,7 +11,7 @@ import { generaIsostatica } from './generatore.js';
 import {
   CASO, verificaLinearita, verificaRotazione, verificaScala,
 } from './invarianti.js';
-import { analizzaCaso } from '../../src/core/index.js';
+import { analizzaCaso, analizzaStatica } from '../../src/core/index.js';
 
 interface Esito {
   provati: number; isostatici: number;
@@ -60,6 +60,31 @@ function campagna(
         seme, prova: 'equilibrio globale',
         dettaglio: `residuo ${r.equilibrio.residuoRelativo.toExponential(2)}`,
       });
+    }
+
+    /*
+     * §10.2.3 — TUTTE le autoverifiche del §9, su ogni struttura generata.
+     *
+     * Sono scritte per essere mostrate all'utente dopo un calcolo, e girano
+     * comunque; farle girare anche qui costa poco e moltiplica la copertura,
+     * perché ciascuna guarda un aspetto diverso su centinaia di strutture che
+     * nessuno ha scelto.
+     *
+     * Una verifica con `esaminati === 0` non è superata: è vuota, e va
+     * distinta — sarebbe il modo peggiore di passare un controllo.
+     */
+    try {
+      const st = analizzaStatica(p, { tipo: 'caso', id: CASO });
+      for (const v of st.autoverifiche.verifiche) {
+        if (v.superata || v.esaminati === 0) continue;
+        esito.falliti.push({
+          seme, prova: `autoverifica ${v.codice}`,
+          dettaglio: `${v.dettaglio} (scarto ${v.scarto.toExponential(2)}, `
+            + `tolleranza ${v.tolleranza.toExponential(2)})`,
+        });
+      }
+    } catch (e) {
+      esito.falliti.push({ seme, prova: 'autoverifiche', dettaglio: String(e) });
     }
   }
   return esito;

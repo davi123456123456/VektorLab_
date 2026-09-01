@@ -144,6 +144,64 @@ export function eseguiAutoverifiche(
     });
   }
 
+  /*
+   * §9.6, §9.7, §9.8 — GLI ZERI OBBLIGATI DI OGNI RILASCIO.
+   *
+   * La cerniera libera il momento, il doppio pendolo il taglio, il pattino lo
+   * sforzo normale, il carrello interno due cose insieme. Sono regole
+   * diverse a parole, ma una sola nel modello: dove una componente è
+   * RILASCIATA, quella componente deve valere zero a quell'estremo.
+   *
+   * Scriverne una per tipo di vincolo avrebbe significato dimenticarne una a
+   * ogni vincolo nuovo — ed è appunto quello che è successo con il carrello
+   * interno, che non aveva alcun controllo. Leggendo i flag di svincolo, il
+   * controllo copre da solo anche i vincoli che verranno.
+   */
+  {
+    const scale = { N: scalaF, T: scalaF, M: scalaM };
+    for (const componente of ['N', 'T', 'M'] as const) {
+      let peggiore = 0;
+      let dove = '';
+      let esaminati = 0;
+      for (const asta of calcolo.aste) {
+        const ris = risultatoFEM.aste.find((x) => x.astaId === asta.id);
+        if (!ris) continue;
+        const serie = ris[componente];
+        if (asta.svincolo.iniziale[componente]) {
+          esaminati++;
+          const v = Math.abs(serie[0]);
+          if (v > peggiore) {
+            peggiore = v;
+            dove = `${asta.id as unknown as string} (estremo iniziale)`;
+          }
+        }
+        if (asta.svincolo.finale[componente]) {
+          esaminati++;
+          const v = Math.abs(serie[serie.length - 1]);
+          if (v > peggiore) {
+            peggiore = v;
+            dove = `${asta.id as unknown as string} (estremo finale)`;
+          }
+        }
+      }
+      const t = TOLL_RELATIVA * scale[componente];
+      const unita = componente === 'M' ? 'kNm' : 'kN';
+      verifiche.push({
+        codice: `RILASCIO_${componente}_SCARICO`,
+        descrizione: `Dove ${componente} è rilasciato, ${componente} è nullo`,
+        superata: peggiore <= t,
+        scarto: peggiore,
+        tolleranza: t,
+        esaminati,
+        dettaglio: esaminati === 0
+          ? `nessun rilascio di ${componente} nel modello`
+          : `${esaminati} estremi esaminati, massimo `
+            + `${(peggiore / 1e3).toExponential(2)} ${unita}`
+            + `${dove ? ` in ${dove}` : ''}`,
+      });
+    }
+  }
+
   // ── 2. N = T = M = 0 in ogni estremo libero ──
   {
     const gradiDelNodo = new Map<string, number>();
@@ -380,7 +438,7 @@ export function eseguiAutoverifiche(
       if (!d.applicabile) continue;
       const ctx = preparaTronco(calcolo, idx, elementino!.reazioni, astaId, 'monte');
       if (!ctx.applicabile) continue;
-      const r = confrontoIntegrale(ctx, d);
+      const r = confrontoIntegrale(ctx, d, scalaM);
       if (r.campioni === 0) continue;
       esaminati++;
       if (r.scarto > peggiore) { peggiore = r.scarto; dove = astaId as unknown as string; }
@@ -486,7 +544,7 @@ function continuitaNodi(
  * quadratico, quindi Simpson è esatto e ciò che resta è solo arrotondamento.
  */
 function confrontoIntegrale(
-  ctx: ContestoTronco, d: DiagrammaEquilibrio,
+  ctx: ContestoTronco, d: DiagrammaEquilibrio, scalaGlobale: number,
 ): { scarto: number; campioni: number } {
   const L = d.L;
   if (L <= 0) return { scarto: 0, campioni: 0 };
@@ -497,8 +555,19 @@ function confrontoIntegrale(
   // La scala è quella dell'INTERO diagramma, non del singolo tratto: vicino a
   // un estremo del momento ΔM tende a zero, e rapportarci l'errore darebbe un
   // numero enorme per uno scarto invisibile.
+  /*
+   * La scala è quella dell'INTERO diagramma, e sotto di essa quella
+   * dell'intera struttura.
+   *
+   * Il pavimento era `1e-9`, un numero assoluto in Nm che non vuol dire
+   * niente: su un puntone, dove `T` e `M` sono nulli ovunque, l'arrotondamento
+   * ci veniva diviso sopra e produceva uno scarto apparente di `4e-3` su una
+   * soluzione esatta. Il termine di confronto giusto è il momento tipico
+   * della struttura, che è quello rispetto a cui un errore conta o non conta.
+   */
   const scala = Math.max(
-    ...[...d.M].map(Math.abs), ...[...d.T].map((t) => Math.abs(t) * L), 1e-9,
+    ...[...d.M].map(Math.abs), ...[...d.T].map((t) => Math.abs(t) * L),
+    scalaGlobale, 1e-9,
   );
   let scarto = 0, campioni = 0;
 

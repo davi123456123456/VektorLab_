@@ -461,6 +461,17 @@ export interface OpzioniDiagrammi {
   lato?: 'monte' | 'valle';
   /** soglia relativa della verifica differenziale */
   tolleranza?: number;
+  /**
+   * Ampiezza delle forze in gioco NELLA STRUTTURA, non nella singola asta.
+   *
+   * Serve da pavimento al confronto relativo. Senza, un'asta scarica a
+   * flessione — un puntone, dove `T` e `M` valgono zero ovunque — porta a
+   * dividere un arrotondamento per zero, e la verifica differenziale segnala
+   * uno scarto enorme su una soluzione esatta. È la stessa trappola del
+   * residuo di equilibrio: normalizzare su una quantità che può legittimamente
+   * annullarsi.
+   */
+  scalaForze?: number;
 }
 
 export function diagrammaPerEquilibrio(
@@ -516,6 +527,7 @@ export function diagrammaPerEquilibrio(
     puntiNotevoli: notevoli(ctx, L, salti, spigoli),
     differenziale: verificaDifferenziale(
       ctx, calcolo, astaId, L, salti, spigoli, tolleranza,
+      opzioni.scalaForze ?? 0,
     ),
   };
 }
@@ -567,6 +579,7 @@ function verificaDifferenziale(
   salti: number[],
   spigoli: number[],
   tolleranza: number,
+  scalaForzeGlobale: number,
 ): VerificaDifferenziale {
   const asse = { c: ctx.geometria.c, s: ctx.geometria.s };
   const bordi = [...new Set([0, ...salti, ...spigoli, L])].sort((a, b) => a - b);
@@ -601,8 +614,11 @@ function verificaDifferenziale(
   // farebbe fallire una verifica corretta. La scala giusta della derivata di
   // una funzione grande f su un tratto lungo L è f/L.
   const perLunghezza = Math.max(L, 1e-12);
-  const rifM = Math.max(scalaT, scalaM / perLunghezza);
-  const rifT = Math.max(scalaQ, scalaT / perLunghezza);
+  // il pavimento globale entra qui: su un'asta senza flessione le tre
+  // grandezze dell'asta sono tutte nulle, e il rapporto non direbbe niente
+  const rifM = Math.max(scalaT, scalaM / perLunghezza, scalaForzeGlobale);
+  const rifT = Math.max(
+    scalaQ, scalaT / perLunghezza, scalaForzeGlobale / perLunghezza);
   const relM = scartoM > 0 ? scartoM / Math.max(rifM, 1e-30) : 0;
   const relT = scartoT > 0 ? scartoT / Math.max(rifT, 1e-30) : 0;
   return {
@@ -618,9 +634,29 @@ export function diagrammiPerEquilibrio(
   reazioni: ReazioneEsterna[],
   opzioni: OpzioniDiagrammi = {},
 ): Map<ElementId, DiagrammaEquilibrio> {
+  /*
+   * La scala delle forze si legge dalle reazioni — bilanciano i carichi,
+   * quindi ne hanno l'ordine di grandezza — MA CONTANDO ANCHE I MOMENTI.
+   *
+   * Le sole componenti di forza non bastano: su una struttura caricata da una
+   * coppia le reazioni di forza sono esattamente nulle, e la scala tornerebbe
+   * a zero portandosi dietro lo stesso 0/0 che si voleva evitare. I momenti
+   * diventano una forza equivalente dividendoli per la diagonale del modello.
+   */
+  const xs = calcolo.nodi.map((n) => n.x);
+  const ys = calcolo.nodi.map((n) => n.y);
+  const diagonale = calcolo.nodi.length > 0
+    ? Math.max(1e-9, Math.hypot(
+        Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)))
+    : 1;
+  const scalaForze = opzioni.scalaForze ?? reazioni.reduce(
+    (m, r) => Math.max(
+      m, Math.abs(r.fx), Math.abs(r.fy), Math.abs(r.mz) / diagonale), 0);
+  const conScala = { ...opzioni, scalaForze };
+
   const out = new Map<ElementId, DiagrammaEquilibrio>();
   for (const a of calcolo.aste) {
-    out.set(a.id, diagrammaPerEquilibrio(calcolo, idx, reazioni, a.id, opzioni));
+    out.set(a.id, diagrammaPerEquilibrio(calcolo, idx, reazioni, a.id, conScala));
   }
   return out;
 }

@@ -131,6 +131,7 @@ test/animazioni/interpolazione.test.ts
 test/animazioni/molla.test.ts
 test/animazioni/registro.test.ts
 test/campagna/campagna.test.ts
+test/campagna/catalogo.test.ts
 test/campagna/generatore.ts
 test/campagna/invarianti.ts
 test/crosscheck/vs_fem2d.test.ts
@@ -151,6 +152,9 @@ test/interazione/snap_picking.test.ts
 test/interazione/su_asta.test.ts
 test/interazione/vincoli_carichi.test.ts
 test/kinematics/cinematica.test.ts
+test/regressioni/residuo_equilibrio_momenti.test.ts
+test/regressioni/spostamento_massimo_mensola.test.ts
+test/report.md
 test/statica/carichi_locali.test.ts
 test/statica/cerniera_sconnessa.test.ts
 test/statica/collegamento.test.ts

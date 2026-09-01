@@ -20,17 +20,24 @@ La seconda ha trovato un bug che la prima non poteva trovare, e viceversa.
 | | Casi | Esito |
 |---|---|---|
 | Catalogo analitico §10.1 | 47 | tutti superati |
-| Campagna casuale §10.2 — travi e telai, angoli notevoli | 25 isostatiche su 120 generate | 0 fallimenti |
-| Campagna casuale — angoli irregolari | 26 su 120 | 0 fallimenti |
-| Campagna casuale — con sconnessioni interne | 53 su 150 | 0 fallimenti |
-| Campagna casuale — sei aste | 63 su 200 | 0 fallimenti |
-| Campagna casuale — dodici aste | 69 su 200 | 0 fallimenti |
-| **Totale strutture casuali verificate** | **236** | **0 fallimenti** |
-| Suite completa del progetto | 754 test | tutti verdi |
+| Campagna §10.2 — travi e telai, angoli notevoli | 25 isostatiche su 120 generate | 0 fallimenti |
+| Campagna — angoli irregolari | 26 su 120 | 0 fallimenti |
+| Campagna — con sconnessioni interne | 53 su 150 | 0 fallimenti |
+| Campagna — sei aste | 63 su 200 | 0 fallimenti |
+| Campagna — dodici aste | 69 su 200 | 0 fallimenti |
+| Campagna — nodi ramificati (§5.1) | 51 su 250 | 0 fallimenti |
+| Campagna — ramificati con sconnessioni | 53 su 250 | 0 fallimenti |
+| Campagna — maglie chiuse a tre cerniere | 69 su 300 | 0 fallimenti |
+| Campagna — doppio pendolo interno | 65 su 200 | 0 fallimenti |
+| Campagna — pattino interno | 65 su 200 | 0 fallimenti |
+| Campagna — carrello interno (§1) | 42 su 200 | 0 fallimenti |
+| **Totale strutture casuali verificate** | **581** | **0 fallimenti** |
+| Suite completa del progetto | 763 test | tutti verdi |
 
-Ogni struttura casuale passa attraverso cinque prove — rotazione di +0,7 rad,
-rotazione di −2,3 rad, linearità ×2, linearità ×−3, scala geometrica ×2 — più
-l'equilibrio globale. Sono circa 1400 verifiche di invarianza.
+Ogni struttura casuale passa attraverso cinque prove d'invarianza — rotazione
+di +0,7 rad, rotazione di −2,3 rad, linearità ×2, linearità ×−3, scala
+geometrica ×2 — l'equilibrio globale, e **tutte le autoverifiche del §9**.
+Sono circa 3000 controlli indipendenti.
 
 Il tasso di scarto (circa una struttura su tre sopravvive) non è uno spreco:
 è il filtro di isostaticità. Su una struttura labile o iperstatica gli
@@ -82,6 +89,44 @@ soglia di carico il confronto passa all'assoluto.
 
 **Regressione**: `test/regressioni/residuo_equilibrio_momenti.test.ts`.
 
+### 3. Le autoverifiche normalizzavano su quantità che possono annullarsi
+
+**Trovato da**: campagna casuale, semi 1026 e 200086, dopo aver esteso la
+campagna a tutte le autoverifiche del §9.
+
+Lo stesso errore di fondo, a tre livelli diversi, e ogni correzione scopriva
+il livello successivo:
+
+1. la verifica differenziale `dM/dx = T` rapportava lo scarto ai valori
+   **della singola asta**. Su un puntone — un'asta che lavora a solo sforzo
+   normale, dove `T` e `M` sono nulli ovunque — si divideva un arrotondamento
+   per zero, e il controllo segnalava scarti dell'ordine di 10 su una
+   soluzione esatta;
+2. il pavimento globale aggiunto per rimediare leggeva le sole **forze** di
+   reazione. Su una struttura caricata da una coppia quelle sono esattamente
+   nulle, e la scala tornava a zero;
+3. lo stesso valeva per il confronto integrale `M(b) − M(a) = ∫T dx`, il cui
+   pavimento era `1e-9` — un numero assoluto in Nm, che non significa niente.
+
+**Correzione**: il termine di confronto è sempre l'ampiezza della STRUTTURA, e
+i momenti vi entrano divisi per la diagonale del modello, che li rende forze
+equivalenti. Su `a5` del seme 1026 lo scarto passa da 15,7 a 1,7e-15.
+
+Sono difetti delle **verifiche**, non del calcolo: le soluzioni erano già
+esatte. Ma un'autoverifica che grida al lupo su un risultato corretto è peggio
+di nessuna autoverifica, perché insegna a ignorarla — ed erano attive.
+
+**Regressione**: `test/regressioni/normalizzazione_autoverifiche.test.ts`.
+
+### Il filo comune
+
+Tre bug su quattro sono la stessa cosa: **dividere per una quantità che può
+legittimamente essere zero**. Il residuo di equilibrio, la verifica
+differenziale, il confronto integrale, e persino il comparatore che avevo
+scritto io per la campagna. Vale la pena tenerlo a mente: ogni volta che si
+scrive uno scarto relativo, la domanda da farsi è *quando vale zero il
+denominatore*, e la risposta quasi mai è «mai».
+
 ## Falsi allarmi, e perché li registro
 
 Due categorie di fallimenti si sono rivelate difetti degli **strumenti di
@@ -115,9 +160,8 @@ uno scarto dell'ordine dell'unità, sei ordini di grandezza sopra la soglia.
 Detto esplicitamente, perché un elenco di verifiche superate senza i suoi
 limiti è fuorviante:
 
-- il generatore produce **spezzate aperte** di aste concatenate, con vincoli
-  agli estremi. Copre travi, mensole, telai a L, a T e portali, ma non genera
-  maglie chiuse né strutture reticolari;
+- il generatore produce spezzate aperte, spezzate **ramificate** e maglie
+  chiuse a tre cerniere. Non genera strutture reticolari né maglie multiple;
 - l'invariante di **scala geometrica** si applica ai soli carichi
   concentrati di forza: i distribuiti e le coppie non scalano come le
   lunghezze, e il rapporto atteso non è più 2;
