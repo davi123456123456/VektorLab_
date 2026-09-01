@@ -138,6 +138,13 @@ export interface Asta {
   sezioneSpecifica?: boolean;
   materialeSpecifico?: boolean;
   /**
+   * §2 — la tratteggiata di questo segmento sta dal lato opposto a quello
+   * naturale. Cambia quale fibra si chiama «di riferimento», e quindi
+   * ribalta i segni di `T` e di `M`; `N` resta com'è, perché lo sforzo
+   * normale non ha un lato.
+   */
+  tratteggiataInvertita?: boolean;
+  /**
    * Asta d'origine, quando questo segmento nasce dalla suddivisione di
    * un'altra. È solo una traccia per l'interfaccia — l'outliner mostra una
    * riga sola dove l'utente ha tracciato una linea sola — e non ha alcun

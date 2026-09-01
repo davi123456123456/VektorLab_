@@ -177,6 +177,7 @@ export function CanvasView() {
         : st.lambdaDeformata,
       mostraReazioni: st.mostraReazioni,
       mostraValoriRisultati: st.mostraValoriRisultati,
+      mostraTratteggiata: st.mostraTratteggiata,
       // §5 — sotto i diagrammi il modello si può togliere di mezzo. La
       // dissolvenza è breve (~200 ms) e interrompibile: chi accende e spegne
       // la spunta per confrontare due letture non deve aspettare.

@@ -34,6 +34,7 @@ import {
 import type { ComponenteReazione, ForzaDiSconnessione } from '../core/statica/reazioni.js';
 import type { CorpoRigido } from '../core/model/results.js';
 import { asteNelNodo } from '../core/model/deduzione.js';
+import { calcolaTratteggiata, latoEffettivo } from '../core/model/tratteggiata.js';
 import { gruppiSconnessione } from '../core/model/partizione.js';
 import type { Tronco } from '../core/statica/elementino.js';
 
@@ -109,6 +110,8 @@ export interface StatoDisegno {
   lambdaDeformata: number;
   mostraReazioni: boolean;
   mostraValoriRisultati: boolean;
+  /** §2.3 — la tratteggiata, il riferimento locale reso visibile */
+  mostraTratteggiata: boolean;
   // ── modalità reazioni ──
   /**
    * Componenti di reazione dei vincoli esterni. Non è la risultante per nodo:
@@ -200,6 +203,10 @@ export function disegnaScena(ctx: CanvasRenderingContext2D, s: StatoDisegno): vo
   disegnaCorpiColorati(ctx, s, posizione);
   disegnaNodi(ctx, s, t, posizione);
   ctx.globalAlpha = 1;
+
+  // §2.3 — la tratteggiata sta sopra le aste ma sotto tutto il resto: è un
+  // riferimento, non un contenuto.
+  disegnaTratteggiata(ctx, s, t, posizione);
 
   // Le sconnessioni invece stanno SOPRA: interrompono davvero la continuità,
   // e devono vedersi.
@@ -402,6 +409,83 @@ function disegnaVincoliSolidali(
     disegnaVincolo(ctx, sp, n.vincolo, t.deformata, t.sfondo, false, 1, -f * rz);
   }
   ctx.globalAlpha = 1;
+}
+
+/**
+ * §2.3 — LA TRATTEGGIATA, disegnata sempre.
+ *
+ * Una linea a trattini su un solo lato di ogni asta: individua la fibra di
+ * riferimento, quella rispetto a cui il momento è positivo. Senza, il segno
+ * di `M` è una convenzione privata del programma; con, si legge dal disegno.
+ *
+ * La spaziatura dei trattini è in PIXEL, non in metri: deve restare la stessa
+ * a qualunque zoom, altrimenti da lontano diventa una linea continua e da
+ * vicino tre trattini lunghi un metro. Anche la distanza dall'asse è in
+ * pixel, per lo stesso motivo.
+ */
+function disegnaTratteggiata(
+  ctx: CanvasRenderingContext2D, s: StatoDisegno, t: Tema,
+  pos: (id: NodeId) => Punto,
+): void {
+  if (!s.mostraTratteggiata || s.progetto.aste.length === 0) return;
+  const info = calcolaTratteggiata(s.progetto);
+
+  ctx.save();
+  ctx.strokeStyle = t.tratteggiata;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.globalAlpha = 0.55;
+
+  const DISTANZA = 5;      // px dall'asse dell'asta
+  for (const a of s.progetto.aste) {
+    const i = mondoASchermo(s.camera, pos(a.nodoIniziale));
+    const j = mondoASchermo(s.camera, pos(a.nodoFinale));
+    const dx = j.x - i.x, dy = j.y - i.y;
+    const L = Math.hypot(dx, dy);
+    if (L < 2) continue;
+
+    // ŷ = x̂ ruotato di +90° nel MONDO; sullo schermo la y è rovesciata,
+    // quindi la normale che corrisponde a −ŷ è (−dy, +dx)/L
+    const lato = latoEffettivo(info, a);
+    const nx = (-dy / L) * DISTANZA * lato;
+    const ny = (dx / L) * DISTANZA * lato;
+
+    ctx.beginPath();
+    ctx.moveTo(i.x + nx, i.y + ny);
+    ctx.lineTo(j.x + nx, j.y + ny);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  /*
+   * L'INDICATORE DI x̂, sul primo segmento di ogni membro.
+   *
+   * La tratteggiata da sola dice quale fibra è di riferimento; per leggere il
+   * segno del taglio serve sapere anche da che parte si percorre l'asta. Sono
+   * le due informazioni che rendono interpretabili i diagrammi, e costano una
+   * freccetta.
+   */
+  ctx.globalAlpha = 0.8;
+  ctx.fillStyle = t.tratteggiata;
+  for (const id of info.capofila) {
+    const a = s.progetto.aste.find((x) => x.id === id);
+    if (!a) continue;
+    const i = mondoASchermo(s.camera, pos(a.nodoIniziale));
+    const j = mondoASchermo(s.camera, pos(a.nodoFinale));
+    const dx = j.x - i.x, dy = j.y - i.y;
+    const L = Math.hypot(dx, dy);
+    if (L < 24) continue;
+    const ux = dx / L, uy = dy / L;
+    // a un quarto dell'asta, così non finisce sopra i simboli di vincolo
+    const px = i.x + ux * L * 0.25, py = i.y + uy * L * 0.25;
+    ctx.beginPath();
+    ctx.moveTo(px + ux * 5, py + uy * 5);
+    ctx.lineTo(px - ux * 3 - uy * 3, py - uy * 3 + ux * 3);
+    ctx.lineTo(px - ux * 3 + uy * 3, py - uy * 3 - ux * 3);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 /**

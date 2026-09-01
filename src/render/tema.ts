@@ -15,6 +15,8 @@ export interface Tema {
   nodoSelezionato: string;
   evidenziato: string;
   vincolo: string;
+  /** §2 — la linea tratteggiata del riferimento locale */
+  tratteggiata: string;
   carico: string;
   snap: string;
   accento: string;
@@ -38,6 +40,7 @@ const VARIABILI: Record<keyof Tema, string> = {
   nodoSelezionato: '--nodo-selezionato',
   evidenziato: '--evidenziato',
   vincolo: '--vincolo',
+  tratteggiata: '--testo-debole',
   carico: '--carico',
   snap: '--snap',
   accento: '--accento',
@@ -54,7 +57,7 @@ const RISERVA: Tema = {
   sfondo: '#14171c', grigliaFine: '#20252d', grigliaMedia: '#2a313b',
   grigliaAsse: '#3f4a5a', asta: '#c8d0dc', astaSelezionata: '#ffb545',
   nodo: '#8b95a5', nodoSelezionato: '#ffb545', evidenziato: '#ffffff',
-  vincolo: '#ff5f56', carico: '#35c46a', snap: '#00d9c0', accento: '#4a9eff',
+  vincolo: '#ff5f56', tratteggiata: '#6b7483', carico: '#35c46a', snap: '#00d9c0', accento: '#4a9eff',
   testo: '#e4e7ec', testoAttenuato: '#9aa3b2',
   sforzoNormale: '#4a9eff', taglio: '#35c46a', momento: '#ff8a3d',
   deformata: '#b57cff', reazione: '#ffd23f',

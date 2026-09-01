@@ -927,6 +927,36 @@ export function impostaGruppiSconnessione(
   };
 }
 
+/**
+ * §2.2 — inverte la tratteggiata delle aste indicate.
+ *
+ * Il risultato FISICO non cambia: cambia quale fibra si chiama «di
+ * riferimento», e quindi da che parte il momento si dice positivo. I segni di
+ * `T` e di `M` si ribaltano, `N` resta com'è.
+ *
+ * Serve quando la scelta automatica, per quanto coerente, non è quella che
+ * l'utente ha in mente — su una trave rovescia, o per far combaciare il
+ * disegno con quello di un testo.
+ */
+export function invertiTratteggiata(asteIds: readonly ElementId[]): Comando {
+  const insieme = new Set<string>(asteIds as readonly string[]);
+  const ribalta = (p: Progetto): Progetto => ({
+    ...p,
+    aste: p.aste.map((a) => (insieme.has(a.id as unknown as string)
+      ? { ...a, tratteggiataInvertita: !a.tratteggiataInvertita }
+      : a)),
+  });
+  return {
+    etichetta: asteIds.length === 1
+      ? `inverti tratteggiata di ${asteIds[0] as unknown as string}`
+      : `inverti tratteggiata (${asteIds.length} aste)`,
+    esegui: ribalta,
+    // ribaltare due volte riporta al punto di partenza: l'annullamento è la
+    // stessa operazione
+    annulla: ribalta,
+  };
+}
+
 /** Rimuove una sconnessione nodale, per id o per nodo. */
 export function eliminaSconnessioneNodale(id: string): Comando {
   let rimossa: VincoloInterno | undefined;

@@ -300,6 +300,14 @@ export interface Stato {
   mostraReazioni: boolean;
   mostraValoriRisultati: boolean;
   /**
+   * §2.3 — la tratteggiata, disegnata sempre e in tutte le modalità.
+   *
+   * È il riferimento rispetto a cui i segni di `T` e `M` significano
+   * qualcosa: toglierla non semplifica il disegno, lo rende ambiguo. Resta
+   * spegnibile perché su strutture molto fitte affolla, ma parte accesa.
+   */
+  mostraTratteggiata: boolean;
+  /**
    * Vincoli, carichi e reazioni restano visibili mentre si leggono i
    * diagrammi. Spegnerli lascia sul foglio soltanto le curve: serve quando si
    * confrontano due componenti sovrapposte e il modello fa rumore.
@@ -433,7 +441,8 @@ export interface Stato {
   impostaOpzioniRisultati: (p: Partial<Pick<Stato,
     'mostraDeformata' | 'fattoreDeformata' | 'lambdaDeformata'
     | 'mostraReazioni' | 'mostraValoriRisultati'
-    | 'mostraModelloNeiDiagrammi' | 'modoTaglio' | 'cifreRisultati'>>) => void;
+    | 'mostraModelloNeiDiagrammi' | 'modoTaglio' | 'cifreRisultati'
+    | 'mostraTratteggiata'>>) => void;
 
   impostaCriterio: (c: 'vonMises' | 'tresca') => void;
   selezionaSezioneInModifica: (id: string | null) => void;
@@ -561,6 +570,7 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
     lambdaDeformata: 1,
     mostraReazioni: true,
     mostraValoriRisultati: true,
+    mostraTratteggiata: true,
     mostraModelloNeiDiagrammi: true,
     modoTaglio: 'media',
     cifreRisultati: 3,

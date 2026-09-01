@@ -26,6 +26,7 @@ import { ETICHETTA_COMPONENTE, type Componente } from '../render/diagrammi.js';
 import { fattoreAutomatico } from '../render/deformata.js';
 import { BloccoCoefficiente } from './BloccoCoefficiente.js';
 import { coefficienteCritico } from '../core/checks/coefficiente.js';
+import { invertiTratteggiata } from '../state/commands.js';
 import type { RisultatoAnalisi } from '../core/model/results.js';
 
 /**
@@ -217,6 +218,7 @@ function ControlliVista({ r }: { r: RisultatoAnalisi }) {
   const lambda = useStore((s) => s.lambdaDeformata);
   const mostraValori = useStore((s) => s.mostraValoriRisultati);
   const mostraModello = useStore((s) => s.mostraModelloNeiDiagrammi);
+  const mostraTratteggiata = useStore((s) => s.mostraTratteggiata);
   const cifre = useStore((s) => s.cifreRisultati);
   const opzioni = useStore((s) => s.impostaOpzioniRisultati);
   const riproduci = useStore((s) => s.riproduciDeformata);
@@ -253,6 +255,9 @@ function ControlliVista({ r }: { r: RisultatoAnalisi }) {
                     onChange={(v) => opzioni({ mostraModelloNeiDiagrammi: v })} />
       <Interruttore attivo={mostraValori} etichetta="valori numerici sul disegno"
                     onChange={(v) => opzioni({ mostraValoriRisultati: v })} />
+      <Interruttore attivo={mostraTratteggiata} etichetta="tratteggiata di riferimento"
+                    onChange={(v) => opzioni({ mostraTratteggiata: v })} />
+      <InvertiTratteggiata />
       <Riga etichetta="Cifre significative">
         <Selettore
           valore={String(cifre)}
@@ -420,6 +425,32 @@ function RigaDiagnostica({ nome, ok, dettaglio }: {
           {dettaglio}
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * §2.2 — il comando che ribalta la fibra di riferimento.
+ *
+ * Compare solo con delle aste selezionate, perché è su quelle che agisce.
+ * Dice anche che cosa cambia: chi lo preme si aspetta che qualcosa si muova,
+ * e ciò che si muove sono i segni — il disegno resta identico salvo la
+ * posizione dei trattini.
+ */
+function InvertiTratteggiata() {
+  const selezione = useStore((s) => s.selezione);
+  const esegui = useStore((s) => s.esegui);
+  const quante = selezione.aste.size;
+  if (quante === 0) return null;
+  return (
+    <div className="px-3 py-0.5">
+      <Bottone
+        larghezzaPiena
+        titolo="Sposta la tratteggiata dall'altro lato: T e M cambiano segno, N no"
+        onClick={() => esegui(invertiTratteggiata([...selezione.aste]))}
+      >
+        inverti tratteggiata ({quante} {quante === 1 ? 'asta' : 'aste'})
+      </Bottone>
     </div>
   );
 }

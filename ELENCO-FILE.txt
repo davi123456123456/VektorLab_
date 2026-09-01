@@ -152,6 +152,7 @@ test/interazione/snap_picking.test.ts
 test/interazione/su_asta.test.ts
 test/interazione/vincoli_carichi.test.ts
 test/kinematics/cinematica.test.ts
+test/regressioni/normalizzazione_autoverifiche.test.ts
 test/regressioni/residuo_equilibrio_momenti.test.ts
 test/regressioni/spostamento_massimo_mensola.test.ts
 test/report.md
