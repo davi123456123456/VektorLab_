@@ -109,6 +109,61 @@ function cerniera(c: Contesto): void {
   cerchietto(c, 0, 0, r);
 }
 
+/**
+ * CERNIERA CHE SCONNETTE — il carrello senza le ruote.
+ *
+ * Il simbolo a terra è quello della cerniera a telaio: stesso triangolo,
+ * stessa tratteggiatura, due reazioni. Cambia una cosa sola, e si vede: le
+ * aste NON attraversano il perno, ci si fermano sopra. È la differenza fra un
+ * appoggio sotto una trave continua e un appoggio che è anche una cerniera,
+ * e nel disegno strutturale è l'unico modo di distinguerli a colpo d'occhio.
+ *
+ * Qui si disegnano i due mozziconi d'asta; sul canvas ci pensa il tracciato
+ * delle aste, interrotto dalla partizione.
+ */
+export function disegnaCernieraSconnessa(
+  ctx: CanvasRenderingContext2D, p: Punto, angoloSchermo: number,
+  colore: string, sfondo: string, coloreAsta: string,
+  evidenziato = false, scala = 1, conMozziconi = false,
+): void {
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(angoloSchermo);
+  ctx.scale(scala, scala);
+  ctx.lineWidth = evidenziato ? 2.4 : 1.8;
+  ctx.lineJoin = 'round';
+  const c: Contesto = { ctx, colore, sfondo, evidenziato };
+
+  if (conMozziconi) {
+    // i due tronconi si fermano al bordo del perno: fra loro resta il vuoto
+    // che rende evidente la sconnessione
+    ctx.strokeStyle = coloreAsta;
+    ctx.lineWidth = 1.8;
+    for (const verso of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(verso * 5.2, 0);
+      ctx.lineTo(verso * 17, 0);
+      ctx.stroke();
+    }
+  }
+
+  ctx.strokeStyle = colore;
+  ctx.fillStyle = colore;
+  const r = 3.6;
+  ctx.beginPath();
+  ctx.moveTo(0, r);
+  ctx.lineTo(-10, 15);
+  ctx.lineTo(10, 15);
+  ctx.closePath();
+  ctx.fillStyle = sfondo;
+  ctx.fill();
+  ctx.strokeStyle = colore;
+  ctx.stroke();
+  terreno(c, 15);
+  cerchietto(c, 0, 0, r);
+  ctx.restore();
+}
+
 /** Cerchietto vuoto: sfondo pieno perché la linea dell'asta non ci passi dentro. */
 function cerchietto(c: Contesto, x: number, y: number, r: number): void {
   const { ctx } = c;

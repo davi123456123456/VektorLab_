@@ -9,9 +9,12 @@
 import { HA_VARIANTE_INTERNA, useStore } from '../state/store.js';
 import { applicaVincolo, eliminaSuAstaSelezionato } from '../state/azioni.js';
 import {
-  VINCOLI_DISPONIBILI, disegnaSconnessione, disegnaVincolo, nomeVincolo,
+  VINCOLI_DISPONIBILI, disegnaCernieraSconnessa, disegnaSconnessione,
+  disegnaVincolo, nomeVincolo,
 } from '../render/simboli.js';
-import { asteNelNodo } from '../core/model/deduzione.js';
+import {
+  definizioneVincolo, vincoliDi, type IconaVincolo as TipoIconaVincolo,
+} from '../core/model/catalogoVincoli.js';
 import { eliminaSconnessioneNodale, spostaSuAsta } from '../state/commands.js';
 import {
   PRESET_ANGOLI, normalizzaGradi, orientamentoVincolo,
@@ -21,33 +24,16 @@ import { useEffect, useRef, useState } from 'react';
 import type { TipoVincolo } from '../core/model/types.js';
 
 export function PannelloVincoli() {
-  const vincoloCorrente = useStore((s) => s.vincoloCorrente);
-  const impostaVincoloCorrente = useStore((s) => s.impostaVincoloCorrente);
-  const ambitoGrezzo = useStore((s) => s.modoCerniera);
-  const impostaAmbito = useStore((s) => s.impostaAmbitoVincolo);
+  const sceltoId = useStore((s) => s.vincoloSceltoId);
+  const scegli = useStore((s) => s.scegliVincolo);
+  const filtro = useStore((s) => s.filtroVincoli);
+  const impostaFiltro = useStore((s) => s.impostaFiltroVincoli);
   const selezione = useStore((s) => s.selezione);
   const progetto = useStore((s) => s.progetto);
   const [aiuto, setAiuto] = useState(false);
 
-  const ambito: 'esterno' | 'interno' = ambitoGrezzo === 'interno' ? 'interno' : 'esterno';
-  const haInterno = HA_VARIANTE_INTERNA.has(vincoloCorrente);
-
-  // §3.3 — l'interno esiste solo dove c'è qualcosa da sconnettere. Se nel
-  // modello non c'è un solo nodo con due aste, l'opzione va spenta: offrirla
-  // significherebbe promettere un clic che non può funzionare.
-  const nodiSconnettibili = progetto.nodi.filter(
-    (n) => asteNelNodo(progetto, n.id).length >= 2);
-  const selezionati = [...selezione.nodi];
-  const internoPossibile = haInterno && (
-    selezionati.length > 0
-      ? selezionati.some((id) => asteNelNodo(progetto, id).length >= 2)
-      : nodiSconnettibili.length > 0
-  );
-
-  // §3.3 — l'angolo si nasconde quando non ha effetto, invece di restare lì
-  // inerte: un campo che accetta un numero e non cambia niente insegna che i
-  // campi di questo pannello non sono affidabili.
-  const angoloUtile = ambito === 'esterno' && vincoloCorrente !== 'cerniera';
+  const voci = vincoliDi(filtro);
+  const scelto = definizioneVincolo(sceltoId);
 
   const gradiTotali = progetto.nodi.reduce((acc, n) => {
     if (!n.vincolo) return acc;
@@ -58,61 +44,69 @@ export function PannelloVincoli() {
   return (
     <Pannello titolo="Vincoli">
       <div className="py-2">
+        {/*
+          §3.3 — il filtro sta IN CIMA e c'è sempre. Non è un attributo del
+          vincolo già scelto: dice quali icone si vedono. Le due famiglie sono
+          disgiunte — carrello, incastro, biella e molla esistono solo a
+          telaio — e mostrarle insieme era il motivo per cui la tavolozza
+          sembrava contenere doppioni.
+        */}
+        <div className="flex gap-1 px-3 pb-2">
+          <Bottone attivo={filtro === 'telaio'} onClick={() => impostaFiltro('telaio')}
+                   titolo="Collegano la struttura al terreno e producono reazioni. Non separano mai i corpi rigidi.">
+            esterni
+          </Bottone>
+          <Bottone attivo={filtro === 'interno'} onClick={() => impostaFiltro('interno')}
+                   titolo="Interrompono la continuità fra le aste. Separano i corpi rigidi.">
+            interni
+          </Bottone>
+        </div>
+
         <div className="grid grid-cols-2 gap-1.5 px-3">
-          {VINCOLI_DISPONIBILI.map((v) => (
+          {voci.map((v) => (
             <button
-              key={v.tipo}
+              key={v.id}
               type="button"
-              title={nomeVincolo(v.tipo, HA_VARIANTE_INTERNA.has(v.tipo) ? ambito : 'esterno')}
-              onClick={() => impostaVincoloCorrente(v.tipo)}
-              className="flex flex-col items-center gap-1 rounded border py-2 transition-colors"
+              // la voce c'è nel catalogo — l'elenco è quello definitivo — ma
+              // il suo comportamento nel modello arriva col passo successivo.
+              // Meglio un bottone spento che dichiara di esserlo, che uno
+              // acceso che posa un vincolo diverso da quello che mostra.
+              disabled={v.id === 'cernieraSconnessa'}
+              title={v.id === 'cernieraSconnessa'
+                ? `${v.descrizione}\n\nNon ancora applicabile.`
+                : v.descrizione}
+              onClick={() => scegli(v.id)}
+              className="flex flex-col items-center gap-1 rounded border py-2 transition-colors
+                         disabled:cursor-not-allowed disabled:opacity-45"
               style={{
-                background: vincoloCorrente === v.tipo ? 'var(--accento-scuro)' : 'var(--sfondo-elevato)',
-                borderColor: vincoloCorrente === v.tipo ? 'var(--accento)' : 'var(--bordo)',
+                background: sceltoId === v.id ? 'var(--accento-scuro)' : 'var(--sfondo-elevato)',
+                borderColor: sceltoId === v.id ? 'var(--accento)' : 'var(--bordo)',
               }}
             >
-              {HA_VARIANTE_INTERNA.has(v.tipo) && ambito === 'interno'
-                ? <AnteprimaSconnessione tipo={v.tipo as 'cerniera' | 'bipendolo' | 'pattino'} />
-                : <AnteprimaVincolo tipo={v.tipo} angolo={0} />}
+              <IconaVincolo icona={v.icona} />
               <span className="text-[10px] leading-tight"
-                    style={{ color: vincoloCorrente === v.tipo ? '#fff' : 'var(--testo-attenuato)' }}>
-                {nomeVincolo(v.tipo, HA_VARIANTE_INTERNA.has(v.tipo) ? ambito : 'esterno')}
+                    style={{ color: sceltoId === v.id ? '#fff' : 'var(--testo-attenuato)' }}>
+                {v.nome}
               </span>
               <span className="numerico text-[9px]" style={{ color: 'var(--testo-debole)' }}>
-                {HA_VARIANTE_INTERNA.has(v.tipo) && ambito === 'interno'
-                  ? (v.tipo === 'cerniera' ? '2(m−1)' : '2')
-                  : `${v.gradi} ${v.gradi === 1 ? 'grado' : 'gradi'}`}
+                {v.gdv === 'elastico' ? 'elastico'
+                  : /^\d+$/.test(v.gdv)
+                    ? `${v.gdv} ${v.gdv === '1' ? 'grado' : 'gradi'}`
+                    : `${v.gdv} gradi`}
               </span>
             </button>
           ))}
         </div>
 
-        {haInterno && (
-          <div className="flex gap-1 px-3 pt-2">
-            <Bottone attivo={ambito === 'esterno'} onClick={() => impostaAmbito('esterno')}>
-              esterno
-            </Bottone>
-            <button
-              type="button"
-              disabled={!internoPossibile}
-              title={internoPossibile ? undefined : 'Serve un nodo con almeno due aste'}
-              onClick={() => impostaAmbito('interno')}
-              className="rounded border px-2 py-1 text-[11px] transition-colors
-                         disabled:cursor-not-allowed disabled:opacity-40"
-              style={{
-                background: ambito === 'interno' ? 'var(--accento-scuro)' : 'var(--sfondo-elevato)',
-                borderColor: ambito === 'interno' ? 'var(--accento)' : 'var(--bordo)',
-                color: ambito === 'interno' ? '#fff' : 'var(--testo-attenuato)',
-              }}
-            >
-              interno
-            </button>
-          </div>
-        )}
-
-        {angoloUtile && (
+        {scelto?.orientabile && (
           <div className="mt-3 border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
             <Orientamento />
+            {scelto.soloDisegno && (
+              <p className="px-3 pt-1 text-[9.5px] leading-relaxed"
+                 style={{ color: 'var(--testo-debole)' }}>
+                Qui l'angolo orienta il simbolo: le reazioni non ne dipendono.
+              </p>
+            )}
           </div>
         )}
 
@@ -136,12 +130,6 @@ export function PannelloVincoli() {
           )}
         </div>
 
-        {/*
-          §2 — nessun paragrafo permanente nel pannello. Le spiegazioni non
-          spariscono, si spostano: stanno dietro questa icona, chiusa per
-          default, dove chi le vuole le trova e chi non le vuole non le legge
-          ogni volta che apre il pannello.
-        */}
         <div className="px-3 pt-2">
           <button
             type="button"
@@ -161,9 +149,9 @@ export function PannelloVincoli() {
                 qualunque di un'<b>asta</b> per posarlo lì.
               </p>
               <p className="mt-1.5">
-                <b>Esterno</b> lega la struttura a terra e non separa mai i corpi
-                rigidi. <b>Interno</b> è una sconnessione: divide la struttura in
-                due corpi, e il conteggio cambia solo in questo caso.
+                <b>Esterni</b> collegano a terra e non separano mai i corpi rigidi,
+                nemmeno posati in campata. <b>Interni</b> interrompono la
+                continuità fra le aste, e il conteggio cambia solo in quel caso.
               </p>
               <p className="mt-1.5">
                 L'angolo è la direzione verso cui <b>punta</b> il vincolo, in
@@ -176,6 +164,41 @@ export function PannelloVincoli() {
       </div>
     </Pannello>
   );
+}
+
+/** Icona generata dal catalogo: nome e simbolo non possono più sfasarsi. */
+function IconaVincolo({ icona }: { icona: TipoIconaVincolo }) {
+  if (icona.genere === 'telaio') return <AnteprimaVincolo tipo={icona.tipo} angolo={0} />;
+  if (icona.genere === 'sconnessione') return <AnteprimaSconnessione tipo={icona.tipo} />;
+  return <AnteprimaCernieraSconnessa />;
+}
+
+/**
+ * Miniatura della cerniera che sconnette: stesso simbolo a terra della
+ * cerniera a telaio, ma coi due mozziconi d'asta che si FERMANO sul perno. È
+ * l'unico modo di distinguere le due voci in un'icona di quarantasei pixel.
+ */
+function AnteprimaCernieraSconnessa() {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const c = canvas.current;
+    if (!c) return;
+    const dpr = window.devicePixelRatio || 1;
+    c.width = 46 * dpr; c.height = 34 * dpr;
+    const ctx = c.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, 46, 34);
+    const stile = getComputedStyle(document.documentElement);
+    disegnaCernieraSconnessa(
+      ctx, { x: 23, y: 9 }, 0,
+      stile.getPropertyValue('--vincolo').trim() || '#ff5f56',
+      stile.getPropertyValue('--sfondo-elevato').trim() || '#232830',
+      stile.getPropertyValue('--asta').trim() || '#c8d0dc',
+      false, 0.72, true,
+    );
+  }, []);
+  return <canvas ref={canvas} style={{ width: 46, height: 34 }} />;
 }
 
 /** Miniatura del simbolo, disegnata con lo stesso codice del canvas. */
@@ -345,17 +368,28 @@ function Orientamento() {
   );
 }
 
-/** Ghiera: si clicca o si trascina dove deve puntare il vincolo. */
+/**
+ * Ghiera: si clicca o si trascina dove deve puntare il vincolo.
+ *
+ * Il trascinamento è CONTINUO — qualunque valore fra 0 e 359 — e `Shift`
+ * aggancia ai quindici gradi. È l'inverso della convenzione più diffusa, dove
+ * il modificatore libera invece di vincolare, ma qui la regolazione fine è il
+ * gesto normale: la ghiera esiste per orientare una cerniera esattamente come
+ * la si vede, e i valori tondi hanno già i loro bottoni.
+ */
 function Ghiera({ gradi, onChange }: {
   gradi: number; onChange: (g: number) => void;
 }) {
-  const raggio = 17;
-  const dal = (e: { clientX: number; clientY: number }, el: SVGSVGElement) => {
+  const raggio = 24;
+  const dal = (e: {
+    clientX: number; clientY: number; shiftKey: boolean;
+  }, el: SVGSVGElement) => {
     const r = el.getBoundingClientRect();
     const dx = e.clientX - (r.left + r.width / 2);
     const dy = e.clientY - (r.top + r.height / 2);
     // û = (−sin α, cos α) in coordinate mondo; sullo schermo y è rovesciata
-    onChange((Math.atan2(-dx, -dy) * 180) / Math.PI);
+    const grezzo = (Math.atan2(-dx, -dy) * 180) / Math.PI;
+    onChange(e.shiftKey ? Math.round(grezzo / 15) * 15 : grezzo);
   };
   const a = (gradi * Math.PI) / 180;
   const px = -Math.sin(a) * raggio;
@@ -363,30 +397,53 @@ function Ghiera({ gradi, onChange }: {
 
   return (
     <svg
-      width={42} height={42} viewBox="-21 -21 42 42"
+      width={56} height={56} viewBox="-28 -28 56 56"
       className="shrink-0 cursor-crosshair"
-      onPointerDown={(e) => {
-        e.currentTarget.setPointerCapture(e.pointerId);
-        dal(e, e.currentTarget);
-      }}
-      onPointerMove={(e) => {
-        if (e.buttons === 1) dal(e, e.currentTarget);
-      }}
+      // il titolo è l'unico posto in cui la scorciatoia si può scoprire:
+      // uno snap che esiste e non si annuncia è uno snap che non esiste
+      role="slider"
+      aria-label="Orientamento del vincolo"
+      aria-valuenow={Math.round(gradi)}
+      aria-valuemin={0}
+      aria-valuemax={359}
     >
+      <title>Trascina per orientare · Shift aggancia a 15°</title>
       <circle r={raggio} fill="none" stroke="var(--bordo)" strokeWidth={1} />
+
+      {/* tacche fini ogni 15°, marcate ogni 45° */}
       {PRESET_ANGOLI.map((g) => {
         const t = (g * Math.PI) / 180;
+        const grande = g % 45 === 0;
+        const dentro = raggio - (grande ? 5 : 2.5);
         return (
           <line
             key={g}
-            x1={-Math.sin(t) * (raggio - 3)} y1={-Math.cos(t) * (raggio - 3)}
+            x1={-Math.sin(t) * dentro} y1={-Math.cos(t) * dentro}
             x2={-Math.sin(t) * raggio} y2={-Math.cos(t) * raggio}
-            stroke="var(--testo-debole)" strokeWidth={1}
+            stroke={grande ? 'var(--testo-debole)' : 'var(--bordo-chiaro)'}
+            strokeWidth={1}
           />
         );
       })}
+
       <line x1={0} y1={0} x2={px} y2={py} stroke="var(--vincolo)" strokeWidth={2} />
-      <circle cx={px} cy={py} r={2.6} fill="var(--vincolo)" />
+      <circle cx={px} cy={py} r={3.4} fill="var(--vincolo)" />
+
+      {/*
+        La zona sensibile sta SOPRA il disegno e copre tutto il riquadro: sui
+        raggi corti il puntatore cadeva fra le tacche e il trascinamento non
+        partiva.
+      */}
+      <rect
+        x={-28} y={-28} width={56} height={56} fill="transparent"
+        onPointerDown={(e) => {
+          e.currentTarget.ownerSVGElement?.setPointerCapture(e.pointerId);
+          dal(e, e.currentTarget.ownerSVGElement!);
+        }}
+        onPointerMove={(e) => {
+          if (e.buttons === 1) dal(e, e.currentTarget.ownerSVGElement!);
+        }}
+      />
     </svg>
   );
 }

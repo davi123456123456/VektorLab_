@@ -17,6 +17,7 @@ import {
 } from '../core/model/types.js';
 import type { RisultatoAnalisi, RisultatoCinematico } from '../core/model/results.js';
 import type { AzioneSuNodo, ModoCerniera } from '../core/model/deduzione.js';
+import { definizioneVincolo, vincoliDi } from '../core/model/catalogoVincoli.js';
 
 /** I tipi che esistono anche in versione interna: il selettore appare solo qui. */
 export const HA_VARIANTE_INTERNA = new Set<TipoVincolo>(
@@ -167,6 +168,10 @@ export interface Stato {
   // ── modalità vincoli ──
   /** vincolo che si applica cliccando su un nodo */
   vincoloCorrente: TipoVincolo;
+  /** voce del catalogo attualmente scelta (§3.0) */
+  vincoloSceltoId: string;
+  /** categoria mostrata dalla tavolozza (§3.3) */
+  filtroVincoli: 'telaio' | 'interno';
   angoloVincolo: number;
   /**
    * Cerniera esterna o interna cliccando su un nodo. 'auto' lascia decidere
@@ -380,6 +385,14 @@ export interface Stato {
   impostaModoCerniera: (m: ModoCerniera) => void;
   /** §3 — esterno (a telaio) oppure interno (sconnessione) */
   impostaAmbitoVincolo: (a: 'esterno' | 'interno') => void;
+  /**
+   * §3.3 — filtro della tavolozza: mostra i vincoli a telaio oppure gli
+   * interni. Non è un attributo del vincolo scelto, è quali icone si vedono.
+   * Sta nello store del foglio, quindi è ricordato per foglio di lavoro.
+   */
+  impostaFiltroVincoli: (f: 'telaio' | 'interno') => void;
+  /** sceglie una voce del catalogo per id, tenendo coerente il resto */
+  scegliVincolo: (id: string) => void;
   impostaAnteprimaVincolo: (a: Stato['anteprimaVincolo']) => void;
   impostaPosaSuAsta: (p: Stato['posaSuAsta']) => void;
   impostaSconnessioneCorrente: (t: Stato['sconnessioneCorrente']) => void;
@@ -487,6 +500,8 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
     messaggio: null,
 
     vincoloCorrente: 'cerniera',
+    vincoloSceltoId: 'cerniera',
+    filtroVincoli: 'telaio',
     angoloVincolo: 0,
     modoCerniera: 'esterno',
     anteprimaVincolo: null,
@@ -816,6 +831,51 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
      * stessa scelta espressa in due punti, e tenerle separate era il motivo
      * per cui la tavolozza mostrava voci che sembravano duplicate.
      */
+    impostaFiltroVincoli(filtro) {
+      set({ filtroVincoli: filtro, anteprimaVincolo: null });
+      // la scelta corrente può appartenere all'altra categoria: si passa alla
+      // prima voce di quella mostrata, altrimenti la tavolozza resterebbe
+      // senza nessuna icona accesa
+      const scelto = definizioneVincolo(get().vincoloSceltoId);
+      if (!scelto || scelto.categoria !== filtro) {
+        const prima = vincoliDi(filtro)[0];
+        if (prima) get().scegliVincolo(prima.id);
+      }
+    },
+
+    /**
+     * Traduce la voce di catalogo nello stato che il resto del programma
+     * legge già. Il catalogo è la fonte di verità della TAVOLOZZA; il modello
+     * continua a parlare di tipi di vincolo e di sconnessioni.
+     */
+    scegliVincolo(id) {
+      const d = definizioneVincolo(id);
+      if (!d) return;
+      if (d.categoria === 'telaio' && d.icona.genere === 'telaio') {
+        set({
+          vincoloSceltoId: id,
+          vincoloCorrente: d.icona.tipo,
+          modoCerniera: 'esterno',
+          posaSuAsta: 'vincolo',
+          anteprimaVincolo: null,
+        });
+        return;
+      }
+      if (d.icona.genere === 'sconnessione') {
+        set({
+          vincoloSceltoId: id,
+          vincoloCorrente: d.icona.tipo as TipoVincolo,
+          sconnessioneCorrente: d.icona.tipo,
+          modoCerniera: 'interno',
+          posaSuAsta: 'sconnessione',
+          anteprimaVincolo: null,
+        });
+        return;
+      }
+      // cernieraSconnessa: il comportamento arriva col passo successivo
+      set({ vincoloSceltoId: id, anteprimaVincolo: null });
+    },
+
     impostaAmbitoVincolo(ambito) {
       set({
         modoCerniera: ambito,

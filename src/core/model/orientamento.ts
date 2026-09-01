@@ -85,7 +85,22 @@ export function ribalta(angolo: number): number {
 }
 
 /** Preset dell'interfaccia, in gradi. */
-export const PRESET_ANGOLI = [0, 45, 90, 135, 180, 225, 270, 315] as const;
+/**
+ * Preset dell'angolo: TUTTI i multipli di 15°.
+ *
+ * Otto valori (i multipli di 45°) coprivano le posizioni cardinali e
+ * diagonali, ma lasciavano fuori proprio i casi in cui un preset serve:
+ * l'appoggio su una falda a 30°, il carrello su un piano inclinato a 15°.
+ * Ventiquattro bottoni occupano tre righe, ed è un prezzo basso rispetto al
+ * dover digitare l'angolo ogni volta.
+ */
+export const PRESET_ANGOLI = [
+  0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165,
+  180, 195, 210, 225, 240, 255, 270, 285, 300, 315, 330, 345,
+] as const;
+
+/** I soli multipli di 45°: servono ai riferimenti grafici della ghiera. */
+export const TACCHE_GHIERA = [0, 45, 90, 135, 180, 225, 270, 315] as const;
 
 /** Passo dello snap durante la rotazione interattiva. */
 export const PASSO_SNAP_ANGOLO = Math.PI / 12;   // 15°
