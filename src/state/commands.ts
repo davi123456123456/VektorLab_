@@ -32,6 +32,27 @@ export interface Comando {
   annulla(p: Progetto): Progetto;
 }
 
+/**
+ * Più comandi come se fossero uno solo.
+ *
+ * Serve dove un gesto dell'utente corrisponde a due modifiche del modello che
+ * non hanno senso separate — la «Cerniera» che è insieme appoggio a terra e
+ * sconnessione interna. Annullare metà di quel gesto lascerebbe una struttura
+ * che l'utente non ha mai disegnato, quindi l'annullamento le disfa in ordine
+ * inverso e in un colpo solo.
+ */
+export function componi(etichetta: string, ...comandi: Comando[]): Comando {
+  return {
+    etichetta,
+    esegui(p) {
+      return comandi.reduce((q, c) => c.esegui(q), p);
+    },
+    annulla(p) {
+      return [...comandi].reverse().reduce((q, c) => c.annulla(q), p);
+    },
+  };
+}
+
 const senzaNodi = (p: Progetto, ids: Set<string>): Nodo[] =>
   p.nodi.filter((n) => !ids.has(n.id as string));
 const senzaAste = (p: Progetto, ids: Set<string>): Asta[] =>
@@ -840,7 +861,11 @@ export function eliminaSuAsta(id: string): Comando {
 export function aggiungiSconnessioneNodale(
   nodoId: NodeId,
   tipo: 'cerniera' | 'bipendolo' | 'pattino',
-  opzioni: { astaMaster?: ElementId; asteSvincolate?: ElementId[] } = {},
+  opzioni: {
+    astaMaster?: ElementId; asteSvincolate?: ElementId[];
+    /** §3.2 — partizione esplicita delle aste convergenti in gruppi rigidi */
+    gruppi?: ElementId[][];
+  } = {},
 ): Comando & { id?: string } {
   let id = '';
   const cmd: Comando & { id?: string } = {
@@ -856,6 +881,7 @@ export function aggiungiSconnessioneNodale(
             id, tipo, nodoId,
             ...(opzioni.astaMaster ? { astaMaster: opzioni.astaMaster } : {}),
             ...(opzioni.asteSvincolate ? { asteSvincolate: opzioni.asteSvincolate } : {}),
+            ...(opzioni.gruppi ? { gruppi: opzioni.gruppi } : {}),
           },
         ],
       };
@@ -865,6 +891,40 @@ export function aggiungiSconnessioneNodale(
     },
   };
   return cmd;
+}
+
+/**
+ * Cambia la partizione di una sconnessione nodale.
+ *
+ * È il comando dietro allo spostamento di un'asta da un gruppo all'altro nel
+ * pannello: correggere l'inserimento senza doverlo rifare.
+ */
+export function impostaGruppiSconnessione(
+  id: string, gruppi: ElementId[][],
+): Comando {
+  let precedente: ElementId[][] | undefined;
+  return {
+    etichetta: 'raggruppamento della sconnessione',
+    esegui(p) {
+      const v = (p.vincoliInterni ?? []).find((x) => x.id === id);
+      precedente = v?.gruppi;
+      return {
+        ...p,
+        vincoliInterni: (p.vincoliInterni ?? []).map(
+          (x) => (x.id === id ? { ...x, gruppi } : x)),
+      };
+    },
+    annulla(p) {
+      return {
+        ...p,
+        vincoliInterni: (p.vincoliInterni ?? []).map((x) => {
+          if (x.id !== id) return x;
+          const { gruppi: _via, ...resto } = x;
+          return precedente ? { ...resto, gruppi: precedente } : resto;
+        }),
+      };
+    },
+  };
 }
 
 /** Rimuove una sconnessione nodale, per id o per nodo. */

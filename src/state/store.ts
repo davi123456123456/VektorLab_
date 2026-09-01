@@ -397,6 +397,9 @@ export interface Stato {
   impostaPosaSuAsta: (p: Stato['posaSuAsta']) => void;
   impostaSconnessioneCorrente: (t: Stato['sconnessioneCorrente']) => void;
   selezionaSuAsta: (id: string | null) => void;
+  /** §4 — sconnessione nodale selezionata nell'elenco o sul canvas */
+  sconnessioneNodaleSelezionata: string | null;
+  selezionaSconnessioneNodale: (id: string | null) => void;
   avviaRotazioneVincolo: (r: Stato['rotazioneVincolo']) => void;
   aggiornaRotazioneVincolo: (angolo: number, agganciato: boolean) => void;
   concludiRotazioneVincolo: (conferma: boolean) => void;
@@ -509,6 +512,7 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
     sconnessioneCorrente: 'cerniera',
     rotazioneVincolo: null,
     suAstaSelezionato: null,
+    sconnessioneNodaleSelezionata: null,
     suAstaEvidenziato: null,
     anteprimaSuAsta: null,
 
@@ -872,8 +876,17 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
         });
         return;
       }
-      // cernieraSconnessa: il comportamento arriva col passo successivo
-      set({ vincoloSceltoId: id, anteprimaVincolo: null });
+      // cernieraSconnessa: appoggio a terra E sconnessione. Lo stato è quello
+      // della sconnessione interna — il clic passa da lì — più l'angolo, che
+      // qui serve perché il simbolo a terra c'è e va orientato.
+      set({
+        vincoloSceltoId: id,
+        vincoloCorrente: 'cerniera',
+        sconnessioneCorrente: 'cerniera',
+        modoCerniera: 'interno',
+        posaSuAsta: 'sconnessione',
+        anteprimaVincolo: null,
+      });
     },
 
     impostaAmbitoVincolo(ambito) {
@@ -889,7 +902,12 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
     impostaAnteprimaVincolo: (anteprimaVincolo) => set({ anteprimaVincolo }),
     impostaPosaSuAsta: (posaSuAsta) => set({ posaSuAsta }),
     impostaSconnessioneCorrente: (sconnessioneCorrente) => set({ sconnessioneCorrente }),
-    selezionaSuAsta: (suAstaSelezionato) => set({ suAstaSelezionato }),
+    selezionaSuAsta: (suAstaSelezionato) => set({
+      suAstaSelezionato, sconnessioneNodaleSelezionata: null,
+    }),
+    selezionaSconnessioneNodale: (sconnessioneNodaleSelezionata) => set({
+      sconnessioneNodaleSelezionata, suAstaSelezionato: null,
+    }),
 
     avviaRotazioneVincolo: (rotazioneVincolo) => set({ rotazioneVincolo }),
     aggiornaRotazioneVincolo(angolo, agganciato) {

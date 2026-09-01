@@ -33,6 +33,8 @@ import {
 } from './reazioni.js';
 import type { ComponenteReazione, ForzaDiSconnessione } from '../core/statica/reazioni.js';
 import type { CorpoRigido } from '../core/model/results.js';
+import { asteNelNodo } from '../core/model/deduzione.js';
+import { gruppiSconnessione } from '../core/model/partizione.js';
 import type { Tronco } from '../core/statica/elementino.js';
 
 export interface StatoDisegno {
@@ -93,6 +95,8 @@ export interface StatoDisegno {
   suAstaEvidenziato: string | null;
   /** vincolo o sconnessione lungo un'asta selezionato */
   suAstaSelezionato: string | null;
+  /** sconnessione nodale selezionata nell'elenco */
+  sconnessioneNodaleSelezionata: string | null;
   /** anteprima del trascinamento: ascissa provvisoria */
   anteprimaSuAsta: { id: string; s: number } | null;
 
@@ -599,9 +603,36 @@ function disegnaSconnessioni(
     if (!n) continue;
     const sp = mondoASchermo(s.camera, pos(n.id));
     const tApp = s.apparizione(`vi:${v.id}`);
+
+    /*
+     * §3.2 — la cerniera PARZIALE si sposta verso l'asta imperniata.
+     *
+     * Completa e parziale producono strutture diverse e vanno distinte a
+     * colpo d'occhio, non aprendo un pannello. Disegnate entrambe centrate
+     * sul nodo sarebbero identiche. Spostando il perno verso l'asta che
+     * svincola si legge subito quale gira e quali proseguono saldate: è la
+     * stessa convenzione dei disegni a mano.
+     */
+    const convergenti = asteNelNodo(s.progetto, v.nodoId);
+    const gruppi = gruppiSconnessione(v, convergenti);
+    let offset = { x: 0, y: 0 };
+    if (gruppi.length === 2 && convergenti.length >= 3) {
+      const soli = gruppi.find((g) => g.length === 1);
+      const altra = soli?.[0];
+      const asta = altra ? s.progetto.aste.find((a) => a.id === altra) : undefined;
+      if (asta) {
+        const altroNodo = asta.nodoIniziale === v.nodoId ? asta.nodoFinale : asta.nodoIniziale;
+        const q = mondoASchermo(s.camera, pos(altroNodo));
+        const d = Math.hypot(q.x - sp.x, q.y - sp.y) || 1;
+        offset = { x: ((q.x - sp.x) / d) * 9, y: ((q.y - sp.y) / d) * 9 };
+      }
+    }
+
     disegnaSconnessioneNodale(
-      ctx, sp, v.tipo, enfasiInterne ? t.nodoSelezionato : t.vincolo, t.sfondo,
-      enfasiInterne || s.suAstaEvidenziato === v.id || s.suAstaSelezionato === v.id,
+      ctx, { x: sp.x + offset.x, y: sp.y + offset.y },
+      v.tipo, enfasiInterne ? t.nodoSelezionato : t.vincolo, t.sfondo,
+      enfasiInterne || s.suAstaEvidenziato === v.id || s.suAstaSelezionato === v.id
+        || s.sconnessioneNodaleSelezionata === v.id,
       (enfasiInterne ? 1.35 : 1) * (tApp >= 1 ? 1 : rimbalzo(tApp)),
     );
   }

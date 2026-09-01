@@ -211,6 +211,22 @@ export interface VincoloInterno {
    * con tre o più aste, la cerniera può riguardarne soltanto due.
    */
   asteSvincolate?: ElementId[];
+  /**
+   * PARTIZIONE ESPLICITA delle aste convergenti in gruppi rigidi.
+   *
+   * È un dato del modello, non una deduzione: con tre o più aste in un nodo,
+   * «cerniera» non basta a dire che cosa è imperniato rispetto a che cosa.
+   * Inserendola sul nodo si svincolano tutte fra loro — `[[a1],[a2],[a3]]`;
+   * trascinandovi una sconnessione da un'asta si sposta solo quella —
+   * `[[a1],[a2,a3]]`, dove a2 e a3 restano saldate.
+   *
+   * I gradi di vincolo introdotti sono `2(g−1)` con g gruppi, che per g = m
+   * ridà il `2(m−1)` del caso completo.
+   *
+   * Assente sui modelli precedenti: `gruppiSconnessione()` la ricostruisce da
+   * `astaMaster`/`asteSvincolate`, che restano leggibili in ingresso.
+   */
+  gruppi?: ElementId[][];
   angolo?: Radianti;
 }
 

@@ -17,6 +17,7 @@
  * analisi.
  */
 
+import { gruppiSconnessione, partizioneNonRappresentabile } from './partizione.js';
 import type { ElementId, NodeId, Progetto } from './types.js';
 
 export type GenereAnomalia =
@@ -28,7 +29,8 @@ export type GenereAnomalia =
   | 'astaDegenere'
   | 'sezioneInesistente'
   | 'materialeInesistente'
-  | 'nodiCoincidenti';
+  | 'nodiCoincidenti'
+  | 'partizioneNonRappresentabile';
 
 export interface Anomalia {
   genere: GenereAnomalia;
@@ -187,6 +189,24 @@ export function verificaIntegrita(p: Progetto): EsitoIntegrita {
     }
   }
 
+  // ── 6b. partizioni che il meccanismo di rilascio non sa rappresentare ──
+  for (const v of vincoliInterni) {
+    const convergenti = asteValide
+      .filter((a) => a.nodoIniziale === v.nodoId || a.nodoFinale === v.nodoId)
+      .map((a) => a.id);
+    const gruppi = gruppiSconnessione(v, convergenti);
+    if (!partizioneNonRappresentabile(gruppi)) continue;
+    anomalie.push({
+      genere: 'partizioneNonRappresentabile',
+      id: v.id,
+      riferimento: v.nodoId as string,
+      messaggio: `Sconnessione ${v.id}: due o più gruppi con più di un'asta. `
+        + 'Il rilascio degli estremi sa tenerne saldato uno solo, quindi il '
+        + 'conteggio userebbe il gruppo più numeroso.',
+      rimossa: false,
+    });
+  }
+
   // ── 7. nodi coincidenti non fusi ──
   // solo segnalazione: fonderli qui cambierebbe la topologia senza che
   // l'utente l'abbia chiesto, e la fusione ha già il suo posto in normalizza()
@@ -216,6 +236,30 @@ export function verificaIntegrita(p: Progetto): EsitoIntegrita {
     },
     anomalie,
     integro: false,
+  };
+}
+
+/**
+ * §4.1 — quanti vincoli contiene il modello, contando TUTTE E QUATTRO le
+ * famiglie.
+ *
+ * L'elenco dell'interfaccia si costruisce da qui, e non da una lista propria:
+ * è così che il numero di righe non può divergere dal modello. Un elenco che
+ * ne enumerasse solo tre — com'era, senza i vincoli sui nodi né le
+ * sconnessioni nodali — lascerebbe fuori vincoli che si possono inserire e
+ * non si possono più selezionare né togliere.
+ */
+export function contaVincoli(p: Progetto): {
+  suNodo: number; inCampata: number; sconnessioniInCampata: number;
+  sconnessioniNodali: number; totale: number;
+} {
+  const suNodo = p.nodi.filter((n) => n.vincolo).length;
+  const inCampata = (p.vincoliSuAsta ?? []).length;
+  const sconnessioniInCampata = (p.sconnessioni ?? []).length;
+  const sconnessioniNodali = (p.vincoliInterni ?? []).length;
+  return {
+    suNodo, inCampata, sconnessioniInCampata, sconnessioniNodali,
+    totale: suNodo + inCampata + sconnessioniInCampata + sconnessioniNodali,
   };
 }
 

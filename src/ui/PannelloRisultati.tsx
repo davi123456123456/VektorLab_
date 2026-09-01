@@ -92,7 +92,13 @@ export function PannelloRisultati() {
           <>
             <Sintesi r={risultato} />
             <Componenti />
-            <Blocco titolo="Vista">
+            {/*
+              §5 — eccezione dichiarata alla regola «tutti chiusi tranne il
+              primo»: questi non sono dati da consultare, sono i comandi con
+              cui si decide cosa guardare. Servono subito, e tenerli chiusi
+              costava un clic prima di ogni lettura.
+            */}
+            <Blocco titolo="Vista" aperto>
               <ControlliVista r={risultato} />
             </Blocco>
             <Blocco titolo={`Reazioni vincolari (${risultato.reazioni.length})`} aperto>

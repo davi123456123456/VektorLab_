@@ -15,6 +15,7 @@ import {
 import {
   definizioneVincolo, vincoliDi, type IconaVincolo as TipoIconaVincolo,
 } from '../core/model/catalogoVincoli.js';
+import { ElencoVincoli } from './ElencoVincoli.js';
 import { eliminaSconnessioneNodale, spostaSuAsta } from '../state/commands.js';
 import {
   PRESET_ANGOLI, normalizzaGradi, orientamentoVincolo,
@@ -67,17 +68,9 @@ export function PannelloVincoli() {
             <button
               key={v.id}
               type="button"
-              // la voce c'è nel catalogo — l'elenco è quello definitivo — ma
-              // il suo comportamento nel modello arriva col passo successivo.
-              // Meglio un bottone spento che dichiara di esserlo, che uno
-              // acceso che posa un vincolo diverso da quello che mostra.
-              disabled={v.id === 'cernieraSconnessa'}
-              title={v.id === 'cernieraSconnessa'
-                ? `${v.descrizione}\n\nNon ancora applicabile.`
-                : v.descrizione}
+              title={v.descrizione}
               onClick={() => scegli(v.id)}
-              className="flex flex-col items-center gap-1 rounded border py-2 transition-colors
-                         disabled:cursor-not-allowed disabled:opacity-45"
+              className="flex flex-col items-center gap-1 rounded border py-2 transition-colors"
               style={{
                 background: sceltoId === v.id ? 'var(--accento-scuro)' : 'var(--sfondo-elevato)',
                 borderColor: sceltoId === v.id ? 'var(--accento)' : 'var(--bordo)',
@@ -88,7 +81,13 @@ export function PannelloVincoli() {
                     style={{ color: sceltoId === v.id ? '#fff' : 'var(--testo-attenuato)' }}>
                 {v.nome}
               </span>
-              <span className="numerico text-[9px]" style={{ color: 'var(--testo-debole)' }}>
+              {/*
+                Sulla piastrella accesa il grigio debole non si stacca dal
+                fondo blu: i gradi di vincolo diventavano illeggibili proprio
+                sul vincolo scelto, che è quello che si sta guardando.
+              */}
+              <span className="numerico text-[9px]"
+                    style={{ color: sceltoId === v.id ? 'rgba(255,255,255,0.72)' : 'var(--testo-debole)' }}>
                 {v.gdv === 'elastico' ? 'elastico'
                   : /^\d+$/.test(v.gdv)
                     ? `${v.gdv} ${v.gdv === '1' ? 'grado' : 'gradi'}`
@@ -110,7 +109,7 @@ export function PannelloVincoli() {
           </div>
         )}
 
-        <ElencoSuAsta />
+        <ElencoVincoli />
 
         <div className="mt-3 border-t px-3 pt-2 text-[11px]"
              style={{ borderColor: 'var(--bordo)' }}>
@@ -225,76 +224,6 @@ function AnteprimaVincolo({ tipo, angolo }: { tipo: TipoVincolo; angolo: number 
   return <canvas ref={canvas} style={{ width: 46, height: 34 }} />;
 }
 
-
-/**
- * Elenco di ciò che è posato sulle aste.
- *
- * Solo l'elenco: quale tipo posare si sceglie in cima, con le icone, e se sia
- * esterno o interno lo dice il selettore. Qui si vede che cosa c'è, lo si
- * seleziona, se ne sposta l'ascissa e lo si toglie.
- */
-function ElencoSuAsta() {
-  const progetto = useStore((s) => s.progetto);
-  const selezionato = useStore((s) => s.suAstaSelezionato);
-  const esegui = useStore((s) => s.esegui);
-
-  const vincoli = progetto.vincoliSuAsta ?? [];
-  const sconnessioni = progetto.sconnessioni ?? [];
-  const corrente = [...vincoli, ...sconnessioni].find((x) => x.id === selezionato);
-  if (vincoli.length === 0 && sconnessioni.length === 0) return null;
-
-  return (
-    <div className="mt-3 border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
-      <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider"
-           style={{ color: 'var(--testo-debole)' }}>
-        Sull'asta ({vincoli.length + sconnessioni.length})
-      </div>
-      <div className="px-3">
-        {[...vincoli.map((v) => ({
-          id: v.id, astaId: v.astaId, s: v.s,
-          nome: nomeVincolo(v.vincolo.tipo, 'esterno'),
-        })), ...sconnessioni.map((c) => ({
-          id: c.id, astaId: c.astaId, s: c.s, nome: nomeVincolo(c.tipo, 'interno'),
-        }))].map((x) => (
-          <button
-            key={x.id}
-            type="button"
-            onClick={() => useStore.getState().selezionaSuAsta(
-              selezionato === x.id ? null : x.id)}
-            onMouseEnter={() => useStore.getState().evidenziaSuAsta(x.id)}
-            onMouseLeave={() => useStore.getState().evidenziaSuAsta(null)}
-            className="numerico flex w-full items-center gap-2 py-[3px] text-left text-[10.5px]"
-            style={{
-              color: selezionato === x.id ? 'var(--accento)' : 'var(--testo-attenuato)',
-            }}
-          >
-            <span className="w-8 shrink-0">{x.id}</span>
-            <span className="flex-1 truncate">
-              {x.nome} su {x.astaId as unknown as string}
-            </span>
-            <span>{(x.s * 100).toFixed(0)} %</span>
-          </button>
-        ))}
-      </div>
-
-      {corrente && (
-        <div className="px-3 pt-1">
-          <Riga etichetta="Ascissa">
-            <CampoNumero
-              valore={Number((corrente.s * 100).toFixed(2))}
-              passo={5}
-              suffisso="%"
-              onChange={(v) => esegui(spostaSuAsta(corrente.id, v / 100))}
-            />
-          </Riga>
-          <Bottone larghezzaPiena onClick={eliminaSuAstaSelezionato}>
-            elimina {corrente.id}
-          </Bottone>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /** Miniatura della sconnessione, con lo stesso codice del canvas. */
 function AnteprimaSconnessione({ tipo }: {

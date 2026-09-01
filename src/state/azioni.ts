@@ -16,13 +16,14 @@ import {
 import {
   aggiungiCarico, aggiungiSconnessione, aggiungiSconnessioneNodale,
   aggiungiVincoloSuAsta, duplica, elimina, eliminaCarichi,
-  eliminaSconnessioneNodale, eliminaSuAsta, estrudi, impostaVincolo,
-  svuotaModello, trasformaNodi,
+  componi, eliminaSconnessioneNodale, eliminaSuAsta, estrudi, impostaVincolo,
+  spostaSuAsta, svuotaModello, trasformaNodi,
 } from './commands.js';
 import {
-  deduciAzioneSuNodo, type AzioneSuNodo,
+  asteNelNodo, deduciAzioneSuNodo, type AzioneSuNodo,
 } from '../core/model/deduzione.js';
 import { normalizzaVincolo } from '../core/model/orientamento.js';
+import { nomeVincolo } from '../render/simboli.js';
 import type {
   CaricoDati, ElementId, NodeId, TipoVincolo,
 } from '../core/model/types.js';
@@ -82,7 +83,46 @@ export function annullaOperazione(): void {
 
 export function eliminaSelezione(): void {
   const st = useStore.getState();
+
+  // §4.2 — un VINCOLO selezionato ha la precedenza sulla selezione di nodi e
+  // aste: chi ha appena cliccato un carrello nell'elenco e preme Canc vuole
+  // togliere quel carrello, non la geometria che gli sta sotto.
+  if (st.suAstaSelezionato) {
+    const p = st.progetto;
+    const v = (p.vincoliSuAsta ?? []).find((x) => x.id === st.suAstaSelezionato);
+    const c = (p.sconnessioni ?? []).find((x) => x.id === st.suAstaSelezionato);
+    const nome = v ? nomeVincolo(v.vincolo.tipo, 'esterno')
+      : c ? nomeVincolo(c.tipo, 'interno') : 'vincolo';
+    const dove = (v?.astaId ?? c?.astaId) as unknown as string | undefined;
+    st.esegui({
+      ...eliminaSuAsta(st.suAstaSelezionato),
+      etichetta: `eliminato ${nome}${dove ? ` su ${dove}` : ''}`,
+    });
+    st.selezionaSuAsta(null);
+    return;
+  }
+  if (st.sconnessioneNodaleSelezionata) {
+    const v = (st.progetto.vincoliInterni ?? [])
+      .find((x) => x.id === st.sconnessioneNodaleSelezionata);
+    const nodo = st.progetto.nodi.find((n) => n.id === v?.nodoId);
+    st.esegui({
+      ...eliminaSconnessioneNodale(st.sconnessioneNodaleSelezionata),
+      etichetta: `eliminata ${v ? nomeVincolo(v.tipo, 'interno') : 'sconnessione'}`
+        + `${nodo ? ` in ${nodo.etichetta ?? (nodo.id as unknown as string)}` : ''}`,
+    });
+    st.selezionaSconnessioneNodale(null);
+    return;
+  }
+
   if (contaSelezione(st.selezione) === 0) return;
+
+  // §4.2 — conferma solo oltre i cinque elementi: sotto quella soglia c'è
+  // l'undo, e una finestra a ogni cancellazione stanca più di quanto protegga
+  const quanti = contaSelezione(st.selezione);
+  if (quanti > 5) {
+    const ok = globalThis.confirm?.(`Eliminare ${quanti} elementi?`);
+    if (ok === false) return;
+  }
 
   // §1.3d — se la selezione copre TUTTO, non si itera sulle entità: si
   // sostituisce il modello con uno vuoto. Iterando basterebbe una collezione
@@ -198,7 +238,29 @@ export function applicaVincolo(nodi: readonly NodeId[]): void {
       st.messaggia('vincolo rimosso');
       return;
     case 'sconnessioneInterna': {
-      const cmd = aggiungiSconnessioneNodale(nodi[0], esito.tipo);
+      // §3.0.1 — la «Cerniera» degli interni è le due cose insieme: appoggio a
+      // terra CHE SCONNETTE. Non serve un tipo nuovo nel modello, perché è
+      // esattamente la somma di quelli che ci sono già — ed è anche il conto
+      // dei gradi di vincolo che la specifica dà: 2 esterni + 2(m−1) interni
+      // = 2m. Un tipo nuovo avrebbe duplicato solutore, cinematica e disegno
+      // per rappresentare una somma.
+      if (st.vincoloSceltoId === 'cernieraSconnessa') {
+        st.esegui(componi(
+          'cerniera a terra sconnessa',
+          impostaVincolo(nodi, {
+            tipo: 'cerniera', angolo: st.angoloVincolo as never,
+          }),
+          aggiungiSconnessioneNodale(nodi[0], 'cerniera', {
+            gruppi: esito.aste.map((a) => [a]),
+          }),
+        ));
+        st.messaggia('cerniera: due reazioni e rotazione relativa libera');
+        return;
+      }
+      // posata SUL NODO: svincola tutte le aste fra loro, un gruppo ciascuna
+      const cmd = aggiungiSconnessioneNodale(nodi[0], esito.tipo, {
+        gruppi: esito.aste.map((a) => [a]),
+      });
       st.esegui(cmd);
       st.messaggia(`${esito.tipo} interna: ${esito.motivo}`);
       return;
@@ -327,6 +389,19 @@ export function eliminaCaricoSelezionato(): void {
 export function posaSuAsta(astaId: ElementId, s: number): void {
   const st = useStore.getState();
   if (st.posaSuAsta === 'sconnessione') {
+    // §3.0.1 in campata: appoggio a terra E sconnessione nello stesso punto,
+    // in un solo passo di undo. È la stessa somma che al nodo.
+    if (st.vincoloSceltoId === 'cernieraSconnessa') {
+      const vincolo = normalizzaVincolo({
+        tipo: 'cerniera', angolo: st.angoloVincolo as never,
+      });
+      const esterno = aggiungiVincoloSuAsta(astaId, s, vincolo);
+      const interna = aggiungiSconnessione(astaId, s, 'cerniera', st.angoloVincolo);
+      st.esegui(componi('cerniera a terra sconnessa in campata', esterno, interna));
+      st.selezionaSuAsta(esterno.id ?? null);
+      st.messaggia('cerniera in campata: due reazioni, rotazione libera');
+      return;
+    }
     const cmd = aggiungiSconnessione(astaId, s, st.sconnessioneCorrente, st.angoloVincolo);
     st.esegui(cmd);
     st.selezionaSuAsta(cmd.id ?? null);
@@ -348,6 +423,49 @@ export function posaSuAsta(astaId: ElementId, s: number): void {
   st.esegui(cmd);
   st.selezionaSuAsta(cmd.id ?? null);
   st.messaggia(`${st.vincoloCorrente} su ${astaId as unknown as string}`);
+}
+
+/**
+ * §3.2 — fine del trascinamento di un elemento posato sull'asta.
+ *
+ * Se una SCONNESSIONE arriva sul nodo d'estremità, non resta una sconnessione
+ * in campata a un millimetro dal nodo: diventa una sconnessione NODALE, e
+ * per il modo in cui ci è arrivata — trascinandola da un'asta — svincola solo
+ * quell'asta rispetto alle altre, che restano saldate fra loro.
+ *
+ * È la distinzione del §3.2 fra cerniera completa e cerniera parziale, e la
+ * si esprime col gesto invece che con un'opzione: chi la posa sul nodo le
+ * svincola tutte, chi ce la trascina ne imperna una.
+ */
+export function concludiTrascinamentoSuAsta(id: string, s: number): void {
+  const st = useStore.getState();
+  const p = st.progetto;
+  const sconnessione = (p.sconnessioni ?? []).find((x) => x.id === id);
+
+  const AGGANCIO = 0.03;
+  if (!sconnessione || (s > AGGANCIO && s < 1 - AGGANCIO)) {
+    st.esegui(spostaSuAsta(id, s));
+    return;
+  }
+
+  const asta = p.aste.find((a) => a.id === sconnessione.astaId);
+  if (!asta) { st.esegui(spostaSuAsta(id, s)); return; }
+  const nodoId = s <= AGGANCIO ? asta.nodoIniziale : asta.nodoFinale;
+  const convergenti = asteNelNodo(p, nodoId);
+  if (convergenti.length < 2) { st.esegui(spostaSuAsta(id, s)); return; }
+
+  const altre = convergenti.filter((x) => x !== asta.id);
+  st.esegui(componi(
+    `${sconnessione.tipo} parziale in ${nodoId as unknown as string}`,
+    eliminaSuAsta(id),
+    aggiungiSconnessioneNodale(nodoId, sconnessione.tipo, {
+      gruppi: [[asta.id], altre],
+    }),
+  ));
+  st.messaggia(
+    `${sconnessione.tipo} parziale: ${asta.id as unknown as string} imperniata, `
+    + `${altre.length === 1 ? "l'altra asta resta saldata" : 'le altre restano saldate'}`,
+  );
 }
 
 /** Rimuove il vincolo o la sconnessione selezionati sull'asta. */

@@ -22,9 +22,8 @@ import { useStore } from '../state/store.js';
 import { calcolaAnteprima } from '../state/operazioni.js';
 import {
   annullaOperazione, anteprimaSuNodo, applicaCaricoAsta, applicaCaricoNodale,
-  applicaVincolo, confermaOperazione, posaSuAsta,
+  applicaVincolo, concludiTrascinamentoSuAsta, confermaOperazione, posaSuAsta,
 } from '../state/azioni.js';
-import { spostaSuAsta } from '../state/commands.js';
 import { nomeVincolo } from '../render/simboli.js';
 import { leggiPuntatore, scriviPuntatore } from '../state/puntatore.js';
 import { DURATE, registro } from '../anim/registro.js';
@@ -156,6 +155,7 @@ export function CanvasView() {
       rotazioneVincolo: st.rotazioneVincolo,
       suAstaEvidenziato: st.suAstaEvidenziato,
       suAstaSelezionato: st.suAstaSelezionato,
+      sconnessioneNodaleSelezionata: st.sconnessioneNodaleSelezionata,
       anteprimaSuAsta: st.anteprimaSuAsta,
       apparizione: (id) => registro.apparizione(id),
 
@@ -541,7 +541,7 @@ export function CanvasView() {
       trascinaSuAsta.current = null;
       const anteprima = st.anteprimaSuAsta;
       st.impostaAnteprimaSuAsta(null);
-      if (anteprima && info?.trascinato) st.esegui(spostaSuAsta(t.id, anteprima.s));
+      if (anteprima && info?.trascinato) concludiTrascinamentoSuAsta(t.id, anteprima.s);
       return;
     }
 

@@ -47,6 +47,7 @@ src/core/linalg/svd.ts
 src/core/materials/materials.ts
 src/core/materials/sections.ts
 src/core/materials/sezioniParametriche.ts
+src/core/model/catalogoVincoli.ts
 src/core/model/deduzione.ts
 src/core/model/direzioni.ts
 src/core/model/espansione.ts
@@ -130,6 +131,7 @@ test/animazioni/registro.test.ts
 test/crosscheck/vs_fem2d.test.ts
 test/integrita/vincoli_fantasma.test.ts
 test/interazione/camera_griglia.test.ts
+test/interazione/catalogo_vincoli.test.ts
 test/interazione/comandi.test.ts
 test/interazione/dividi_ricongiungi.test.ts
 test/interazione/fogli.test.ts

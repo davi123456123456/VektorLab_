@@ -18,6 +18,7 @@
  * calcolati sui sotto-elementi vanno riportati sull'asta originale.
  */
 
+import { gruppiSconnessione, rilasciDa } from './partizione.js';
 import type {
   Asta, Carico, ElementId, NodeId, Nodo, Progetto, SvincoloEstremita,
   VincoloInterno,
@@ -260,12 +261,11 @@ function applicaSconnessioniNodali(
     );
     if (convergenti.length < 2) continue;
 
-    const master = v.astaMaster && convergenti.includes(v.astaMaster)
-      ? v.astaMaster
-      : convergenti[0];
-    const svincolate = (v.asteSvincolate && v.asteSvincolate.length > 0
-      ? v.asteSvincolate.filter((id) => convergenti.includes(id) && id !== master)
-      : convergenti.filter((id) => id !== master));
+    // §3.2 — la partizione è un dato del modello, non una deduzione. Il
+    // gruppo più numeroso conserva il nodo; le aste degli altri gruppi
+    // vengono rilasciate, e ciascuna ruota per conto proprio.
+    const gruppi = gruppiSconnessione(v, convergenti);
+    const { rilasciate: svincolate } = rilasciDa(gruppi);
 
     for (const id of svincolate) {
       const t = troncoAlNodo(id, v.nodoId);
