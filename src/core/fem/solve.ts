@@ -237,7 +237,26 @@ function verificaEquilibrio(
   sistema: SistemaAssemblato,
   reazioni: Reazione[],
 ): VerificaEquilibrio {
-  let Fx = 0, Fy = 0, Mz = 0, scala = 0;
+  let Fx = 0, Fy = 0, Mz = 0, scalaF = 0, scalaM = 0;
+
+  /*
+   * LUNGHEZZA CARATTERISTICA — serve a rendere confrontabili forze e momenti.
+   *
+   * Il residuo era `hypot(ΣFx, ΣFy)` e la scala la somma delle sole forze.
+   * Due conseguenze, entrambe sbagliate: uno squilibrio di MOMENTO non
+   * compariva affatto nel residuo, e su una struttura caricata da coppie la
+   * scala tendeva a zero, così un residuo di 1e-11 N diventava un «64 %» che
+   * faceva fallire l'autoverifica su una soluzione perfettamente equilibrata.
+   *
+   * Dividendo i momenti per la diagonale del modello si ottiene una forza
+   * equivalente, e le due famiglie tornano sommabili.
+   */
+  const xs = progetto.nodi.map((n) => n.x);
+  const ys = progetto.nodi.map((n) => n.y);
+  const diagonale = progetto.nodi.length > 0
+    ? Math.max(1e-9, Math.hypot(
+        Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)))
+    : 1;
 
   // carichi applicati, riportati in assi globali
   progetto.nodi.forEach((nodo, k) => {
@@ -248,7 +267,8 @@ function verificaEquilibrio(
     const fy = s * fx0 + c * fy0;
     Fx += fx; Fy += fy;
     Mz += mz0 + nodo.x * fy - nodo.y * fx;
-    scala += Math.abs(fx) + Math.abs(fy);
+    scalaF += Math.abs(fx) + Math.abs(fy);
+    scalaM += Math.abs(mz0);
   });
 
   const indice = sistema.indiceNodo;
@@ -257,11 +277,18 @@ function verificaEquilibrio(
     const nodo = progetto.nodi[k];
     Fx += r.fx; Fy += r.fy;
     Mz += r.mz + nodo.x * r.fy - nodo.y * r.fx;
-    scala += Math.abs(r.fx) + Math.abs(r.fy);
+    scalaF += Math.abs(r.fx) + Math.abs(r.fy);
+    scalaM += Math.abs(r.mz);
   }
 
-  const norma = Math.hypot(Fx, Fy);
-  const residuoRelativo = scala > 0 ? norma / scala : norma;
+  // il momento entra nel residuo, che prima lo ignorava: una struttura
+  // squilibrata alla rotazione passava il controllo
+  const norma = Math.hypot(Fx, Fy, Mz / diagonale);
+  const scala = scalaF + scalaM / diagonale;
+  // sotto la soglia il problema non ha carichi degni di questo nome, e un
+  // rapporto fra due quantità entrambe nulle non dice niente: si confronta
+  // in assoluto
+  const residuoRelativo = scala > 1e-6 ? norma / scala : norma;
   return {
     sommaFx: Fx, sommaFy: Fy, sommaMz: Mz,
     residuoRelativo,
