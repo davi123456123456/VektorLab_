@@ -196,15 +196,41 @@ export function risolvi(
     const d = Math.hypot(uGlob[3 * k], uGlob[3 * k + 1]);
     if (d > spostamentoMassimo) spostamentoMassimo = d;
   }
+  /*
+   * IL MASSIMO SI CERCA PUNTO PER PUNTO, non sommando due massimi.
+   *
+   * Prima si prendeva lo spostamento maggiore fra i due estremi e vi si
+   * sommava la freccia rispetto alla corda. Sono due massimi raggiunti in
+   * punti DIVERSI — l'uno all'estremo, l'altra a metà — e sommarli dà un
+   * maggiorante, non il massimo. Su una mensola con forza in punta l'errore
+   * vale esattamente il 19,245 %: la freccia rispetto alla corda inclinata
+   * misura 0,19245·δ e finiva sommata a δ.
+   *
+   * `uLocale` e `vLocale` sono già gli spostamenti ASSOLUTI campionati lungo
+   * l'asta, quindi il massimo è il loro modulo maggiore e basta cercarlo.
+   */
   for (const a of aste) {
-    // la freccia è misurata rispetto alla corda: va sommata allo spostamento
-    // rigido degli estremi per ottenere lo spostamento assoluto del punto
-    const estremi = Math.max(
-      Math.hypot(a.uLocale[0], a.vLocale[0]),
-      Math.hypot(a.uLocale[a.uLocale.length - 1], a.vLocale[a.vLocale.length - 1]),
-    );
-    const totale = estremi + a.frecciaMassima;
-    if (totale > spostamentoMassimo) spostamentoMassimo = totale;
+    // i campioni: corretti sempre, ma il massimo di una curva cade fra due
+    // di essi e viene leggermente sottostimato
+    for (let i = 0; i < a.uLocale.length; i++) {
+      const d = Math.hypot(a.uLocale[i], a.vLocale[i]);
+      if (d > spostamentoMassimo) spostamentoMassimo = d;
+    }
+
+    // e il punto di freccia massima, dove `frecciaMassima` è ESATTA perché
+    // ricavata per integrazione e non per campionamento. Lì lo spostamento
+    // assoluto è quello della corda più la freccia, che le è ortogonale: è il
+    // termine che restituisce il valore esatto sulla trave appoggiata, dove
+    // la corda non si muove.
+    const ultimo = a.uLocale.length - 1;
+    if (ultimo < 1 || a.lunghezza <= 0) continue;
+    const s = a.xFreccia / a.lunghezza;
+    const uc = a.uLocale[0] + (a.uLocale[ultimo] - a.uLocale[0]) * s;
+    const vc = a.vLocale[0] + (a.vLocale[ultimo] - a.vLocale[0]) * s;
+    for (const verso of [1, -1]) {
+      const d = Math.hypot(uc, vc + verso * a.frecciaMassima);
+      if (d > spostamentoMassimo) spostamentoMassimo = d;
+    }
   }
 
   const diagnostica: DiagnosticaSolutore = {

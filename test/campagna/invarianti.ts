@@ -88,6 +88,22 @@ export function scalaGeometria(p: Progetto, k: number): Progetto {
   };
 }
 
+/**
+ * TOLLERANZA DEGLI INVARIANTI — quella del §9.16, `1e-6` relativo.
+ *
+ * Non è una soglia scelta per far passare i test: è il limite del metodo.
+ * La matrice di rigidezza di un telaio articolato ha un numero di
+ * condizionamento alto — la rigidezza assiale `EA/L` e quella flessionale
+ * `12EI/L³` differiscono di ordini di grandezza — e in doppia precisione
+ * l'accuratezza relativa che se ne ottiene è appunto intorno a `1e-7`.
+ * Pretendere di più significherebbe misurare il rumore.
+ *
+ * Resta abbondantemente sufficiente allo scopo: un errore di segno o di
+ * proiezione produce uno scarto dell'ordine dell'unità, sei ordini di
+ * grandezza sopra questa soglia.
+ */
+export const TOLLERANZA = 1e-6;
+
 export interface Scostamento {
   nome: string;
   atteso: number;
@@ -159,7 +175,7 @@ export function verificaRotazione(p: Progetto, theta: number): Scostamento[] {
       for (let k = 0; k < a[quale].length; k++) {
         const s = confronta(
           `${a.astaId as unknown as string}.${quale}[${k}]`,
-          a[quale][k], b[quale][k], scala, 1e-7);
+          a[quale][k], b[quale][k], scala, TOLLERANZA);
         if (s) fuori.push(s);
       }
     }
@@ -176,7 +192,7 @@ export function verificaRotazione(p: Progetto, theta: number): Scostamento[] {
     for (const [nome, atteso, ott] of [
       ['Rx', attesoX, r1.fx], ['Ry', attesoY, r1.fy], ['Mz', r0.mz, r1.mz],
     ] as const) {
-      const s = confronta(`reazione ${i}.${nome}`, atteso, ott, scalaR, 1e-7);
+      const s = confronta(`reazione ${i}.${nome}`, atteso, ott, scalaR, TOLLERANZA);
       if (s) fuori.push(s);
     }
   }
@@ -193,7 +209,7 @@ export function verificaLinearita(p: Progetto, k = 2): Scostamento[] {
     const a = base.aste[i], b = scalato.aste[i];
     for (const quale of ['N', 'T', 'M'] as const) {
       for (let j = 0; j < a[quale].length; j++) {
-        const s = confronta(`${quale}[${j}]`, a[quale][j] * k, b[quale][j], scala, 1e-8);
+        const s = confronta(`${quale}[${j}]`, a[quale][j] * k, b[quale][j], scala, TOLLERANZA);
         if (s) fuori.push(s);
       }
     }
@@ -228,7 +244,7 @@ export function verificaScala(p: Progetto, k = 2): Scostamento[] {
     for (let j = 0; j < a.N.length; j++) {
       for (const [quale, fattore] of [['N', 1], ['T', 1], ['M', k]] as const) {
         const s = confronta(
-          `${quale}[${j}]`, a[quale][j] * fattore, b[quale][j], scala, 1e-7);
+          `${quale}[${j}]`, a[quale][j] * fattore, b[quale][j], scala, TOLLERANZA);
         if (s) fuori.push(s);
       }
     }

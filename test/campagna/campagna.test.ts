@@ -114,3 +114,38 @@ describe('§10.2 — con sconnessioni interne', () => {
     expect(e.falliti).toEqual([]);
   });
 });
+
+/*
+ * §10.3 — la campagna precedente passa, quindi si alza la complessità: più
+ * aste, angoli tutti irregolari, sconnessioni. È il ciclo che il documento
+ * chiede, e il senso è che una struttura più articolata mette sotto sforzo
+ * la propagazione attraverso pieghe e nodi ramificati, che è dove il calcolo
+ * a mano sbaglia e dove il codice ha più modi di sbagliare.
+ */
+describe('§10.3 — strutture articolate: sei aste', () => {
+  const semi = Array.from({ length: 200 }, (_, i) => 20000 + i);
+  const e = campagna(semi, { aste: 6, angoliIrregolari: true, sconnessioni: true });
+
+  it('genera abbastanza casi', () => {
+    riporta('sei aste', e);
+    expect(e.isostatici).toBeGreaterThan(10);
+  });
+
+  it('nessun invariante violato', () => {
+    expect(e.falliti).toEqual([]);
+  });
+});
+
+describe('§10.3 — strutture articolate: dodici aste', () => {
+  const semi = Array.from({ length: 200 }, (_, i) => 40000 + i);
+  const e = campagna(semi, { aste: 12, angoliIrregolari: true, sconnessioni: true });
+
+  it('genera abbastanza casi', () => {
+    riporta('dodici aste', e);
+    expect(e.isostatici).toBeGreaterThan(5);
+  });
+
+  it('nessun invariante violato', () => {
+    expect(e.falliti).toEqual([]);
+  });
+});

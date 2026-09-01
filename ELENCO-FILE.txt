@@ -55,6 +55,7 @@ src/core/model/integrita.ts
 src/core/model/migrazione.ts
 src/core/model/normalizza.ts
 src/core/model/orientamento.ts
+src/core/model/partizione.ts
 src/core/model/queries.ts
 src/core/model/results.ts
 src/core/model/types.ts
@@ -102,6 +103,7 @@ src/ui/DettaglioFibre.tsx
 src/ui/DisegnoConcio.tsx
 src/ui/EditorMateriale.tsx
 src/ui/EditorSezione.tsx
+src/ui/ElencoVincoli.tsx
 src/ui/Ispettore.tsx
 src/ui/Logo.tsx
 src/ui/Outliner.tsx
@@ -128,7 +130,11 @@ test/animazioni/inquadratura.test.ts
 test/animazioni/interpolazione.test.ts
 test/animazioni/molla.test.ts
 test/animazioni/registro.test.ts
+test/campagna/campagna.test.ts
+test/campagna/generatore.ts
+test/campagna/invarianti.ts
 test/crosscheck/vs_fem2d.test.ts
+test/integrita/elenco_vincoli.test.ts
 test/integrita/vincoli_fantasma.test.ts
 test/interazione/camera_griglia.test.ts
 test/interazione/catalogo_vincoli.test.ts
@@ -146,6 +152,7 @@ test/interazione/su_asta.test.ts
 test/interazione/vincoli_carichi.test.ts
 test/kinematics/cinematica.test.ts
 test/statica/carichi_locali.test.ts
+test/statica/cerniera_sconnessa.test.ts
 test/statica/collegamento.test.ts
 test/statica/direzioni.test.ts
 test/statica/dualita.test.ts
@@ -153,8 +160,11 @@ test/statica/elementino.test.ts
 test/statica/espansione.test.ts
 test/statica/migrazione.test.ts
 test/statica/orientamento.test.ts
+test/statica/partizione_sconnessioni.test.ts
 test/statica/reazioni.test.ts
+test/statica/segni_riferimento.test.ts
 test/statica/topologia.test.ts
+test/statica/vincoli_in_campata.test.ts
 test/suite/simulazioni.test.ts
 test/unit/linalg.test.ts
 test/verifiche/coefficiente.test.ts
