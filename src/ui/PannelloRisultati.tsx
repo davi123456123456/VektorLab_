@@ -27,7 +27,10 @@ import { fattoreAutomatico } from '../render/deformata.js';
 import { BloccoCoefficiente } from './BloccoCoefficiente.js';
 import { coefficienteCritico } from '../core/checks/coefficiente.js';
 import { invertiTratteggiata } from '../state/commands.js';
-import type { RisultatoAnalisi } from '../core/model/results.js';
+import {
+  espressioniPerAsta, scrivi, type Polinomio,
+} from '../core/statica/espressioni.js';
+import type { RisultatoAnalisi, RisultatoAsta } from '../core/model/results.js';
 
 /**
  * Cifre significative, non decimali fissi: 0.00123 e 123000 vanno scritti
@@ -355,6 +358,50 @@ function ValoriNotevoli({ r }: { r: RisultatoAnalisi }) {
               ))}
             </tbody>
           </table>
+          <Espressioni a={a} cifre={cifre} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * §6.3 — le espressioni polinomiali, tratto per tratto.
+ *
+ * È ciò che si scrive risolvendo a mano, ed è il motivo per cui vale la pena
+ * mostrarlo accanto ai numeri: una tabella dice quanto vale il momento in
+ * dodici punti, `M(x) = 30x − 5x²` dice perché.
+ *
+ * I coefficienti sono riferiti all'INIZIO DEL TRATTO, non all'inizio
+ * dell'asta: è la convenzione del calcolo a mano, dove `x` riparte da zero a
+ * ogni discontinuità. Il campo dell'intervallo lo dichiara, perché altrimenti
+ * i numeri sarebbero ambigui.
+ */
+function Espressioni({ a, cifre }: { a: RisultatoAsta; cifre: number }) {
+  const tratti = espressioniPerAsta(a.ascisse, a.N, a.T, a.M, a.lunghezza);
+  if (tratti.length === 0) return null;
+
+  const inKilo = (p: Polinomio | null): Polinomio | null =>
+    (p ? { ...p, coefficienti: p.coefficienti.map((c) => c / 1e3) } : null);
+
+  return (
+    <div className="px-3 pt-1">
+      {tratti.map((t, i) => (
+        <div key={i} className="pb-1">
+          <div className="numerico text-[9.5px]" style={{ color: 'var(--testo-debole)' }}>
+            tratto {sig(t.da, cifre)} ≤ x ≤ {sig(t.a, cifre)} m
+            {tratti.length > 1 && ` · x da ${sig(t.da, cifre)}`}
+          </div>
+          {([['N', 'kN'], ['T', 'kN'], ['M', 'kNm']] as const).map(([quale, unita]) => (
+            <div key={quale} className="numerico flex gap-2 text-[10px]">
+              <span className="w-8 shrink-0" style={{ color: 'var(--testo-debole)' }}>
+                {quale}(x)
+              </span>
+              <span style={{ color: 'var(--testo-attenuato)' }}>
+                = {scrivi(inKilo(t[quale]), unita, cifre)}
+              </span>
+            </div>
+          ))}
         </div>
       ))}
     </div>

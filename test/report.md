@@ -32,7 +32,7 @@ La seconda ha trovato un bug che la prima non poteva trovare, e viceversa.
 | Campagna — pattino interno | 65 su 200 | 0 fallimenti |
 | Campagna — carrello interno (§1) | 42 su 200 | 0 fallimenti |
 | **Totale strutture casuali verificate** | **581** | **0 fallimenti** |
-| Suite completa del progetto | 763 test | tutti verdi |
+| Suite completa del progetto | 790 test | tutti verdi |
 
 Ogni struttura casuale passa attraverso cinque prove d'invarianza — rotazione
 di +0,7 rad, rotazione di −2,3 rad, linearità ×2, linearità ×−3, scala
@@ -154,6 +154,16 @@ intorno a 1e-7. Pretendere di più significherebbe misurare il rumore.
 
 Resta abbondantemente sufficiente: un errore di segno o di proiezione produce
 uno scarto dell'ordine dell'unità, sei ordini di grandezza sopra la soglia.
+
+## Bug 4 — il calcolo, non i controlli
+
+Va distinto dagli altri tre, perché è l'unico che sbagliava un NUMERO
+MOSTRATO all'utente e non una verifica.
+
+`spostamentoMassimo` — il `δmax` della striscia di sintesi, e il riferimento
+dell'amplificazione automatica della deformata — era sovrastimato del 19,245 %
+su ogni struttura in cui la corda dell'asta si sposta, cioè su ogni telaio.
+Sul portale di esempio mostrava 16,4 mm invece di 12,2 mm.
 
 ## Che cosa la campagna non copre
 

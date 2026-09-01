@@ -58,6 +58,7 @@ src/core/model/orientamento.ts
 src/core/model/partizione.ts
 src/core/model/queries.ts
 src/core/model/results.ts
+src/core/model/tratteggiata.ts
 src/core/model/types.ts
 src/core/post/deflection.ts
 src/core/post/internalActions.ts
@@ -169,6 +170,7 @@ test/statica/partizione_sconnessioni.test.ts
 test/statica/reazioni.test.ts
 test/statica/segni_riferimento.test.ts
 test/statica/topologia.test.ts
+test/statica/tratteggiata.test.ts
 test/statica/vincoli_in_campata.test.ts
 test/suite/simulazioni.test.ts
 test/unit/linalg.test.ts
