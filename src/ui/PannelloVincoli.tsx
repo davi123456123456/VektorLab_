@@ -22,7 +22,7 @@ import {
 } from '../core/model/orientamento.js';
 import { Bottone, CampoNumero, Pannello, Riga } from './Pannelli.js';
 import { useEffect, useRef, useState } from 'react';
-import type { TipoVincolo } from '../core/model/types.js';
+import type { TipoSconnessione, TipoVincolo } from '../core/model/types.js';
 
 export function PannelloVincoli() {
   const sceltoId = useStore((s) => s.vincoloSceltoId);
@@ -227,7 +227,7 @@ function AnteprimaVincolo({ tipo, angolo }: { tipo: TipoVincolo; angolo: number 
 
 /** Miniatura della sconnessione, con lo stesso codice del canvas. */
 function AnteprimaSconnessione({ tipo }: {
-  tipo: 'cerniera' | 'bipendolo' | 'pattino';
+  tipo: TipoSconnessione;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {

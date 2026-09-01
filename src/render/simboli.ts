@@ -16,7 +16,7 @@
  * qualunque zoom, esattamente come le quote di un disegno tecnico.
  */
 
-import type { Vincolo } from '../core/model/types.js';
+import type { TipoSconnessione, Vincolo } from '../core/model/types.js';
 import type { Punto } from './camera.js';
 import { orientamentoVincolo } from '../core/model/orientamento.js';
 
@@ -341,8 +341,13 @@ export const VINCOLI_DISPONIBILI: {
  * motivo per cui la tavolozza sembrava contenere voci duplicate.
  */
 export function nomeVincolo(
-  tipo: Vincolo['tipo'], ambito: 'esterno' | 'interno',
+  tipo: Vincolo['tipo'] | TipoSconnessione | 'biella',
+  ambito: 'esterno' | 'interno',
 ): string {
+  // il carrello interno esiste SOLO interno: non ha una controparte a telaio
+  // da cui derivare il nome, e chiamarlo «Carrello» lo confonderebbe con
+  // quello, che è un'altra cosa
+  if (tipo === 'carrelloInterno') return 'Carrello interno';
   const base = VINCOLI_DISPONIBILI.find((v) => v.tipo === tipo)?.nome ?? tipo;
   if (ambito === 'esterno') return base;
   const senzaTelaio = base.replace(' a telaio', '');
@@ -352,7 +357,7 @@ export function nomeVincolo(
 // ═══════════════════ SCONNESSIONI INTERNE ═══════════════════
 
 export const SCONNESSIONI_DISPONIBILI: {
-  tipo: 'cerniera' | 'bipendolo' | 'pattino'; nome: string;
+  tipo: TipoSconnessione; nome: string;
   trasmette: string; descrizione: string;
 }[] = [
   { tipo: 'cerniera', nome: 'Cerniera interna', trasmette: 'N e T, non M',
@@ -372,7 +377,7 @@ export const SCONNESSIONI_DISPONIBILI: {
  */
 export function disegnaSconnessione(
   ctx: CanvasRenderingContext2D, p: Punto,
-  tipo: 'cerniera' | 'bipendolo' | 'pattino',
+  tipo: TipoSconnessione,
   angoloSchermo: number,
   colore: string, sfondo: string, evidenziato = false, scala = 1,
 ): void {
@@ -403,6 +408,24 @@ export function disegnaSconnessione(
         ctx.stroke();
       }
     }
+  } else if (tipo === 'carrelloInterno') {
+    // §1 — carrello interno: un perno che scorre su un piano. Il perno dice
+    // che la rotazione è libera, il piano con i due rulli che è libero anche
+    // lo scorrimento. NESSUNA tratteggiatura di terra: non tocca il terreno,
+    // ed è l'unica cosa che lo distingue dal carrello a telaio.
+    ctx.beginPath();
+    ctx.arc(0, -4.5, 3.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    for (const x of [-4, 4]) {
+      ctx.beginPath();
+      ctx.arc(x, 2.4, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.moveTo(-9, 6); ctx.lineTo(9, 6);
+    ctx.stroke();
   } else {
     // pattino: la guida è perpendicolare all'asse, lo scorrimento è assiale
     ctx.beginPath();
@@ -425,7 +448,7 @@ export function disegnaSconnessione(
  */
 export function disegnaSconnessioneNodale(
   ctx: CanvasRenderingContext2D, p: Punto,
-  tipo: 'cerniera' | 'bipendolo' | 'pattino',
+  tipo: TipoSconnessione,
   colore: string, sfondo: string, evidenziato = false, scala = 1,
 ): void {
   ctx.save();

@@ -20,7 +20,7 @@
  * 'esterno' e il modo 'interno' la ignorano.
  */
 
-import type { ElementId, NodeId, Progetto, TipoVincolo } from './types.js';
+import type { TipoSconnessione, ElementId, NodeId, Progetto, TipoVincolo } from './types.js';
 
 export type ModoCerniera = 'auto' | 'esterno' | 'interno';
 
@@ -29,7 +29,7 @@ export type AzioneSuNodo =
   | { azione: 'rimuoviVincoloEsterno'; motivo: string }
   | {
       azione: 'sconnessioneInterna';
-      tipo: 'cerniera' | 'bipendolo' | 'pattino';
+      tipo: TipoSconnessione;
       /** aste che convergono nel nodo, tutte coinvolte per default */
       aste: ElementId[];
       motivo: string;
@@ -96,7 +96,7 @@ export function deduciAzioneSuNodo(
   if (interne) {
     return {
       azione: 'sconnessioneInterna',
-      tipo: tipo as 'cerniera' | 'bipendolo' | 'pattino',
+      tipo: tipo as TipoSconnessione,
       aste,
       motivo: `${aste.length} aste convergono qui: la ${tipo} le sconnette, ` +
         'i corpi rigidi diventano di più',

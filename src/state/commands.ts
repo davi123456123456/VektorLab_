@@ -11,7 +11,7 @@
  * Nessuna mutazione in luogo, così React vede sempre riferimenti nuovi.
  */
 
-import type {
+import type { TipoSconnessione,
   Asta, Carico, CaricoDati, ElementId, LoadCaseId, LoadId, NodeId, Nodo,
   Materiale, Progetto, SconnessioneSuAsta, Sezione, Vincolo, VincoloInterno,
   VincoloSuAsta,
@@ -767,7 +767,7 @@ export function aggiungiVincoloSuAsta(
  */
 export function aggiungiSconnessione(
   astaId: ElementId, s: number,
-  tipo: 'cerniera' | 'bipendolo' | 'pattino', angolo = 0,
+  tipo: TipoSconnessione, angolo = 0,
 ): Comando & { id?: string } {
   let id = '';
   const cmd: Comando & { id?: string } = {
@@ -860,7 +860,7 @@ export function eliminaSuAsta(id: string): Comando {
  */
 export function aggiungiSconnessioneNodale(
   nodoId: NodeId,
-  tipo: 'cerniera' | 'bipendolo' | 'pattino',
+  tipo: TipoSconnessione,
   opzioni: {
     astaMaster?: ElementId; asteSvincolate?: ElementId[];
     /** §3.2 — partizione esplicita delle aste convergenti in gruppi rigidi */

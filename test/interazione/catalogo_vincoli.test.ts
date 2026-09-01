@@ -47,33 +47,45 @@ describe('elenco degli esterni (a telaio)', () => {
 describe('elenco degli interni', () => {
   const interni = vincoliDi('interno');
 
-  it('sono esattamente quattro, in quest ordine', () => {
+  it('sono esattamente cinque, in quest ordine', () => {
     expect(interni.map((v) => v.nome)).toEqual([
       'Cerniera interna',
       'Cerniera',
       'Doppio pendolo interno',
       'Pattino interno',
+      'Carrello interno',
     ]);
   });
 
   it('con questi gradi di vincolo', () => {
-    expect(interni.map((v) => v.gdv)).toEqual(['2(g−1)', '2m', '2', '2']);
+    expect(interni.map((v) => v.gdv)).toEqual(['2(g−1)', '2m', '2', '2', '1']);
+  });
+
+  it('il carrello interno è l unico interno da un grado', () => {
+    const daUno = interni.filter((v) => v.gdv === '1');
+    expect(daUno.map((v) => v.id)).toEqual(['carrelloInterno']);
   });
 
   it('TUTTI separano i corpi rigidi', () => {
     expect(interni.every((v) => v.separa)).toBe(true);
   });
 
-  it('carrello, incastro, biella e molla non compaiono fra gli interni', () => {
+  it('incastro, biella e molla non compaiono fra gli interni', () => {
+    // il CARRELLO invece sì, ma solo nella variante interna: quella a telaio
+    // e quella interna sono due vincoli diversi, e i loro nomi lo dicono
     const nomi = interni.map((v) => v.nome.toLowerCase()).join(' ');
-    for (const assente of ['carrello', 'incastro', 'biella', 'molla']) {
+    for (const assente of ['incastro', 'biella', 'molla']) {
       expect(nomi).not.toContain(assente);
     }
+    expect(nomi).toContain('carrello interno');
+    expect(interni.some((v) => v.nome === 'Carrello')).toBe(false);
   });
 
-  it('solo la «Cerniera» ha un simbolo orientabile: le altre non hanno terra', () => {
+  it('orientabili sono la «Cerniera» e il carrello interno', () => {
+    // la prima perché ha il simbolo a terra, il secondo perché l'angolo
+    // definisce il piano di scorrimento
     expect(interni.filter((v) => v.orientabile).map((v) => v.id))
-      .toEqual(['cernieraSconnessa']);
+      .toEqual(['cernieraSconnessa', 'carrelloInterno']);
   });
 });
 
@@ -88,8 +100,10 @@ describe('integrità del catalogo', () => {
     expect(new Set(nomi).size).toBe(nomi.length);
   });
 
-  it('undici voci in tutto', () => {
-    expect(CATALOGO_VINCOLI).toHaveLength(11);
+  it('dodici voci in tutto: sette a telaio, cinque interne', () => {
+    expect(CATALOGO_VINCOLI).toHaveLength(12);
+    expect(vincoliDi('telaio')).toHaveLength(7);
+    expect(vincoliDi('interno')).toHaveLength(5);
   });
 
   it('ogni voce porta la PROPRIA icona: nome e simbolo non possono sfasarsi', () => {

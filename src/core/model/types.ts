@@ -50,6 +50,15 @@ export interface Nodo {
   etichetta?: string;
 }
 
+/**
+ * Sconnessioni interne. Il CARRELLO INTERNO libera due cose invece di una —
+ * la rotazione relativa e la traslazione nel piano di scorrimento — e per
+ * questo trasmette una sola componente di forza, quella perpendicolare al
+ * piano. È l'unico vincolo interno da un grado.
+ */
+export type TipoSconnessione =
+  | 'cerniera' | 'bipendolo' | 'pattino' | 'carrelloInterno';
+
 export type TipoVincolo =
   | 'incastro'
   | 'cerniera'
@@ -181,7 +190,7 @@ export interface SconnessioneSuAsta {
   astaId: ElementId;
   /** posizione lungo l'asta, ascissa relativa in (0,1) */
   s: number;
-  tipo: 'cerniera' | 'bipendolo' | 'pattino';
+  tipo: TipoSconnessione;
   /** orientazione, per bipendolo e pattino */
   angolo?: Radianti;
 }
@@ -196,7 +205,7 @@ export interface SconnessioneSuAsta {
  */
 export interface VincoloInterno {
   id: string;
-  tipo: 'cerniera' | 'bipendolo' | 'pattino' | 'biella';
+  tipo: TipoSconnessione | 'biella';
   nodoId: NodeId;
   /**
    * Asta che resta rigidamente connessa al nodo. Se assente la sceglie

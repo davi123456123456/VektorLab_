@@ -19,7 +19,7 @@
  */
 
 import { gruppiSconnessione, rilasciDa } from './partizione.js';
-import type {
+import type { TipoSconnessione,
   Asta, Carico, ElementId, NodeId, Nodo, Progetto, SvincoloEstremita,
   VincoloInterno,
 } from './types.js';
@@ -60,7 +60,7 @@ const NESSUNO: SvincoloEstremita = { N: false, T: false, M: false };
  * Serve un lato rigido, altrimenti il grado di libertà del nodo resterebbe
  * indeterminato — è la stessa regola del "master" già usata sui nodi.
  */
-function rilascioDa(tipo: 'cerniera' | 'bipendolo' | 'pattino'): SvincoloEstremita {
+function rilascioDa(tipo: TipoSconnessione): SvincoloEstremita {
   switch (tipo) {
     // la cerniera non trasmette momento
     case 'cerniera': return { N: false, T: false, M: true };
@@ -68,6 +68,10 @@ function rilascioDa(tipo: 'cerniera' | 'bipendolo' | 'pattino'): SvincoloEstremi
     case 'bipendolo': return { N: false, T: true, M: false };
     // il pattino non trasmette sforzo normale
     case 'pattino': return { N: true, T: false, M: false };
+    // §1 — il carrello interno libera DUE cose: la rotazione relativa e lo
+    // scorrimento lungo il piano. Resta trasmessa la sola componente
+    // perpendicolare, che nel riferimento locale è il taglio.
+    case 'carrelloInterno': return { N: true, T: false, M: true };
   }
 }
 
@@ -273,7 +277,7 @@ function applicaSconnessioniNodali(
       const chiave = `${t.asta.id as unknown as string}|${t.estremo}`;
       const attuale = rilasci.get(chiave)
         ?? (t.estremo === 'iniziale' ? t.asta.svincolo.iniziale : t.asta.svincolo.finale);
-      const nuovo = rilascioDa(v.tipo as 'cerniera' | 'bipendolo' | 'pattino');
+      const nuovo = rilascioDa(v.tipo as TipoSconnessione);
       rilasci.set(chiave, {
         N: attuale.N || nuovo.N, T: attuale.T || nuovo.T, M: attuale.M || nuovo.M,
       });

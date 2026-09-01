@@ -12,7 +12,7 @@
  * ridisegna tutto. Niente invalidazione parziale finché non serve davvero.
  */
 
-import type {
+import type { TipoSconnessione,
   Carico, ElementId, NodeId, Progetto, Vincolo,
 } from '../core/model/types.js';
 import type { RisultatoAnalisi, RisultatoCinematico } from '../core/model/results.js';
@@ -83,7 +83,7 @@ export interface StatoDisegno {
     nodoId: NodeId;
     /** simbolo da mostrare in trasparenza */
     vincolo?: Vincolo;
-    sconnessione?: 'cerniera' | 'bipendolo' | 'pattino';
+    sconnessione?: TipoSconnessione;
     /**
      * Nome esatto di ciò che verrà creato. Il simbolo da solo non basta a
      * distinguere una cerniera a telaio da una cerniera interna quando il

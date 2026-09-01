@@ -9,7 +9,7 @@
 
 import { create, useStore as usaStore } from 'zustand';
 import type { StoreApi, UseBoundStore } from 'zustand';
-import {
+import { type TipoSconnessione,
   IMPOSTAZIONI_DEFAULT, type CombinationId, type ElementId, type LoadCaseId,
   type LoadId,
   type ModoRiferimento, type NodeId, type Progetto, type TipoVincolo,
@@ -190,7 +190,7 @@ export interface Stato {
    * Sono due concetti opposti e la scelta va fatta esplicitamente.
    */
   posaSuAsta: 'vincolo' | 'sconnessione';
-  sconnessioneCorrente: 'cerniera' | 'bipendolo' | 'pattino';
+  sconnessioneCorrente: TipoSconnessione;
   /**
    * Rotazione interattiva in corso: quale vincolo, da che angolo si è partiti
    * e a quale si è adesso. Vive fuori dal modello finché non si rilascia —

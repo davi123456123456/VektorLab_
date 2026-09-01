@@ -5,7 +5,7 @@
  * scriverlo.
  */
 
-import {
+import { type TipoSconnessione,
   IMPOSTAZIONI_DEFAULT, NESSUNO_SVINCOLO,
   type Asta, type Carico, type CasoDiCarico, type Combinazione, type ElementId,
   type ImpostazioniAnalisi, type LoadCaseId, type Materiale, type NodeId,
@@ -103,7 +103,7 @@ export class CostruttoreProgetto {
    */
   sconnessione(
     astaId: ElementId, s: number,
-    tipo: 'cerniera' | 'bipendolo' | 'pattino' = 'cerniera', angolo?: number,
+    tipo: TipoSconnessione = 'cerniera', angolo?: number,
   ): string {
     const id = this.nuovoId('sc');
     this.sconnessioni.push({
@@ -122,7 +122,7 @@ export class CostruttoreProgetto {
    */
   sconnessioneNodale(
     nodoId: NodeId,
-    tipo: 'cerniera' | 'bipendolo' | 'pattino' = 'cerniera',
+    tipo: TipoSconnessione = 'cerniera',
     opzioni: { astaMaster?: ElementId; asteSvincolate?: ElementId[] } = {},
   ): string {
     const id = this.nuovoId('vi');
