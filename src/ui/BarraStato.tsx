@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../state/store.js';
 import { schermoAMondo } from '../render/camera.js';
-import { indicatoreScala } from '../render/grid.js';
+import { indicatoreScala, passoGriglia } from '../render/grid.js';
 import { calcolaAnteprima } from '../state/operazioni.js';
 import { leggiPuntatore } from '../state/puntatore.js';
 import { contaSelezione } from '../state/store.js';
@@ -83,8 +83,25 @@ export function BarraStato() {
     const passo = () => {
       if (!attivo) return;
       const st = useStore.getState();
-      const m = schermoAMondo(st.camera, leggiPuntatore());
-      setCoordinate(`${m.x.toFixed(3)}, ${m.y.toFixed(3)}`);
+      /*
+       * §5.3 — SI MOSTRA IL PUNTO AGGANCIATO, non la posizione del puntatore.
+       *
+       * Prima si leggeva `schermoAMondo(camera, puntatore)`, cioè dove sta il
+       * mouse. Ma il vertice non nasce lì: nasce dove lo snap lo porta, e i
+       * due valori differiscono di tutta la tolleranza di aggancio. Chi
+       * leggeva «3.017» e otteneva un nodo in 3.000 concludeva, con ragione,
+       * che le coordinate erano sbagliate.
+       *
+       * I decimali seguono il passo della griglia: scrivere tre cifre quando
+       * il passo è di un metro suggerisce una precisione che non c'è.
+       */
+      const grezzo = schermoAMondo(st.camera, leggiPuntatore());
+      const m = st.ultimoSnap && st.ultimoSnap.tipo !== 'nessuno'
+        ? st.ultimoSnap.punto : grezzo;
+      const passoDellaGriglia = passoGriglia(st.camera.zoom);
+      const decimali = Math.max(
+        0, Math.min(4, Math.ceil(-Math.log10(passoDellaGriglia)) + 1));
+      setCoordinate(`${m.x.toFixed(decimali)}, ${m.y.toFixed(decimali)}`);
       const a = calcolaAnteprima(st.operazione, m);
       setDescrizione(a ? a.descrizione : null);
       setTimeout(passo, 60);   // 16 fps bastano per un testo: non serve un rAF

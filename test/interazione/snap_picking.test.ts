@@ -69,11 +69,28 @@ describe('aggancio', () => {
     expect(r.etichetta).toMatch(/^L /);
     // l'angolo è esatto...
     expect(Math.atan2(r.punto.y, r.punto.x)).toBeCloseTo(Math.PI / 4, 9);
-    // ...e la lunghezza è arrotondata al passo EFFETTIVO della griglia a
-    // questo zoom, non a un valore fisso
+
+    /*
+     * ...e l'ESTREMO cade su un nodo di griglia.
+     *
+     * Questa asserzione è cambiata con l'iterazione 11 §5.3, e vale la pena
+     * dire perché. Prima si verificava che la LUNGHEZZA fosse multipla del
+     * passo, ed era la formulazione sbagliata: su una diagonale a 45° una
+     * lunghezza multipla del passo dà componenti pari a `L·√2/2`, che sulla
+     * griglia non ci stanno. L'estremo finiva a metà quadretto — il difetto
+     * che il §5.1 descriveva come «più evidente sulle diagonali».
+     *
+     * Ora si quantizzano le COMPONENTI: l'angolo resta esattamente 45° perché
+     * |dx| = |dy|, e l'estremo è su un nodo. La lunghezza è di conseguenza un
+     * multiplo di `passo·√2`, che è la cosa giusta e non quella che si
+     * verificava prima.
+     */
     const passo = passoGriglia(cam.zoom);
-    const L = Math.hypot(r.punto.x, r.punto.y);
-    expect(Math.abs(L / passo - Math.round(L / passo))).toBeLessThan(1e-9);
+    const suGriglia = (v: number) =>
+      Math.abs(v / passo - Math.round(v / passo)) < 1e-9;
+    expect(suGriglia(r.punto.x)).toBe(true);
+    expect(suGriglia(r.punto.y)).toBe(true);
+    expect(Math.abs(r.punto.x)).toBeCloseTo(Math.abs(r.punto.y), 12);
   });
 
   it('aggancia i multipli di 15°, non solo quelli di 45°', () => {

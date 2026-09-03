@@ -198,10 +198,10 @@ export function calcolaSnap(
   // ── 5. griglia ──────────────────────────────────────────────────────
   if (opzioni.griglia) {
     const passo = passoGriglia(camera.zoom);
-    const p = {
+    const p = pulisci({
       x: Math.round(mondo.x / passo) * passo,
       y: Math.round(mondo.y / passo) * passo,
-    };
+    });
     if (distSchermo(p) <= toll * 1.5) {
       return { punto: p, tipo: 'griglia', etichetta: `${fmt(p.x)}, ${fmt(p.y)}` };
     }
@@ -244,18 +244,80 @@ export function calcolaSnap(
  * passo della griglia: altrimenti si otterrebbero aste a 45° esatti ma lunghe
  * 2.8374 m, che non è ciò che l'utente intende quando aggancia un angolo.
  */
+/**
+ * Toglie il rumore di virgola mobile dalle coordinate.
+ *
+ * `Math.round(x / 0.2) * 0.2` non dà `1.4` ma `1.4000000000000001`, e quel
+ * residuo si propaga: due punti che dovrebbero coincidere restano distinti di
+ * un femtometro, il quadrato non si chiude, e nascono due nodi sovrapposti —
+ * che è una delle condizioni da cui vengono i problemi di topologia.
+ *
+ * Un nanometro è dieci ordini di grandezza sotto qualunque tolleranza
+ * costruttiva: arrotondare lì non perde niente di reale.
+ */
+function pulisci(p: Punto): Punto {
+  return { x: Number(p.x.toFixed(9)), y: Number(p.y.toFixed(9)) };
+}
+
+/**
+ * L'estremo del segmento, agganciato alla griglia SENZA tradire l'angolo.
+ *
+ * Prima si quantizzava la LUNGHEZZA lungo la direzione e si ricomponeva
+ * l'estremo. Su un'orizzontale funziona per caso — la lunghezza è la
+ * coordinata — ma su una diagonale a 45° una lunghezza multipla del passo dà
+ * componenti pari a `L·√2/2`, che non è un multiplo del passo. L'estremo
+ * cadeva a metà quadretto, ed è il motivo per cui il problema si vedeva
+ * soprattutto sulle diagonali.
+ *
+ * Qui si quantizzano le COMPONENTI, quando la direzione lo consente:
+ *
+ *   · assiale (0°, 90°, 180°, 270°) → una componente è nulla, si quantizza
+ *     l'altra e l'estremo cade su un nodo di griglia;
+ *   · diagonale (45° e multipli) → le due componenti sono uguali in modulo,
+ *     si quantizzano insieme allo stesso multiplo: l'angolo resta esattamente
+ *     45° e l'estremo è su un nodo;
+ *   · ogni altra direzione (15°, 30°, 75°…) è INCOMMENSURABILE con la
+ *     griglia: `tan 30°` è irrazionale, e nessun punto della semiretta oltre
+ *     l'origine sta su un nodo. Lì si quantizza la lunghezza, e l'angolo vince
+ *     sulla griglia — perché un cateto a 89,97° è un errore, mentre un vertice
+ *     fuori griglia su una direzione a 30° è una conseguenza della geometria.
+ */
 function allineaAGriglia(
   p: Punto, camera: Camera, opzioni: OpzioniSnap, origine: Punto, angolo: number,
 ): Punto {
   if (!opzioni.griglia) return p;
   const passo = passoGriglia(camera.zoom);
-  const lung = Math.hypot(p.x - origine.x, p.y - origine.y);
-  const lungAgganciata = Math.round(lung / passo) * passo;
-  if (lungAgganciata <= 0) return p;
-  return {
-    x: origine.x + lungAgganciata * Math.cos(angolo),
-    y: origine.y + lungAgganciata * Math.sin(angolo),
-  };
+  const c = Math.cos(angolo), s = Math.sin(angolo);
+  const dx = p.x - origine.x, dy = p.y - origine.y;
+  const lung = Math.hypot(dx, dy);
+  if (lung <= 0) return p;
+
+  const QUASI = 1e-12;
+  const assiale = Math.abs(c) < QUASI || Math.abs(s) < QUASI;
+  const diagonale = Math.abs(Math.abs(c) - Math.abs(s)) < QUASI;
+
+  if (assiale) {
+    // la componente non nulla si quantizza, l'altra resta esattamente zero
+    const lungoX = Math.abs(c) >= Math.abs(s);
+    const k = Math.max(1, Math.round(lung / passo));
+    return pulisci(lungoX
+      ? { x: origine.x + Math.sign(c) * k * passo, y: origine.y }
+      : { x: origine.x, y: origine.y + Math.sign(s) * k * passo });
+  }
+
+  if (diagonale) {
+    // stesso multiplo sulle due componenti: l'angolo resta esatto per
+    // costruzione, perché |dx| = |dy|
+    const k = Math.max(1, Math.round(Math.abs(dx) / passo));
+    return pulisci({
+      x: origine.x + Math.sign(c) * k * passo,
+      y: origine.y + Math.sign(s) * k * passo,
+    });
+  }
+
+  const k = Math.round(lung / passo);
+  if (k <= 0) return p;
+  return pulisci({ x: origine.x + k * passo * c, y: origine.y + k * passo * s });
 }
 
 interface Segmento { a: Punto; b: Punto; astaId: ElementId }
