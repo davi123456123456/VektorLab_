@@ -16,6 +16,7 @@ import { useStore } from '../state/store.js';
 import { coefficienteCritico, type EsitoCoefficiente, type SezioneCritica }
   from '../core/checks/coefficiente.js';
 import { Bottone, Riga, Selettore } from './Pannelli.js';
+import { etichette } from '../state/etichette.js';
 import type { RisultatoAnalisi } from '../core/model/results.js';
 
 export function BloccoCoefficiente({ r }: { r: RisultatoAnalisi }) {
@@ -26,6 +27,7 @@ export function BloccoCoefficiente({ r }: { r: RisultatoAnalisi }) {
   const seleziona = (ids: string[]) =>
     selezionaStore({ aste: ids as never });
 
+  const nomeAsta = etichette(progetto).asta;
   const c = useMemo(
     () => coefficienteCritico(progetto, r, {
       modoTaglio,
@@ -74,7 +76,11 @@ export function BloccoCoefficiente({ r }: { r: RisultatoAnalisi }) {
                       <div key={i} className="flex justify-between gap-2 leading-relaxed">
                         <span style={{ color: 'var(--testo-debole)' }}>{riga.formula}</span>
                         <span className="numerico shrink-0 text-right"
-                              style={{ color: 'var(--testo)' }}>{riga.valore}</span>
+                              style={{ color: 'var(--testo)' }}>
+                          {riga.formula === 'asta'
+                            ? conEtichetta(riga.valore, nomeAsta)
+                            : riga.valore}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -89,6 +95,24 @@ export function BloccoCoefficiente({ r }: { r: RisultatoAnalisi }) {
       )}
     </div>
   );
+}
+
+/**
+ * §1 — l'id interno non arriva sotto gli occhi dell'utente.
+ *
+ * Il passo 1 del procedimento nasce nel modulo di calcolo, che di etichette
+ * non sa niente e non deve saperne: là un'asta è il suo id. La traduzione si
+ * fa qui, dove si disegna, sostituendo il primo token della riga — che è
+ * l'identificatore — con l'etichetta corrispondente.
+ */
+function conEtichetta(valore: string, nome: (id: never) => string): string {
+  const spazio = valore.search(/[^A-Za-z0-9_-]/);
+  if (spazio <= 0) return valore;
+  const id = valore.slice(0, spazio);
+  // il marcatore di lato (− oppure +) resta attaccato all'etichetta
+  const grezzo = id.replace(/[−+]$/, '');
+  const lato = id.slice(grezzo.length);
+  return `${nome(grezzo as never)}${lato}${valore.slice(spazio)}`;
 }
 
 /** Le due sezioni candidate, e se coincidono. */
@@ -126,12 +150,13 @@ function Sezioni({ c, onSeleziona }: {
 function Candidata({ etichetta, s, valore, onClick }: {
   etichetta: string; s: SezioneCritica; valore: string; onClick: () => void;
 }) {
+  const nome = etichette(useStore((x) => x.progetto)).asta;
   return (
     <button type="button" onClick={onClick}
             className="flex w-full items-baseline justify-between gap-2 rounded px-1 py-0.5
                        text-left transition-colors hover:bg-[var(--sfondo-attivo)]">
       <span style={{ color: 'var(--testo-debole)' }}>
-        {etichetta} — <span className="numerico">{s.astaId}{s.lato}</span>
+        {etichetta} — <span className="numerico">{nome(s.astaId as never)}{s.lato}</span>
         {' '}a <span className="numerico">{s.x.toFixed(3)}</span> m
       </span>
       <span className="numerico shrink-0" style={{ color: 'var(--testo)' }}>{valore}</span>

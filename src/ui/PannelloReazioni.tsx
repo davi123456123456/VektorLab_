@@ -7,6 +7,7 @@
  * reazioni significa cose diverse su una isostatica e su una iperstatica.
  */
 
+import { etichette } from '../state/etichette.js';
 import { useStore } from '../state/store.js';
 import { Bottone, Interruttore, Pannello } from './Pannelli.js';
 import type { ComponenteReazione } from '../core/statica/reazioni.js';
@@ -28,17 +29,20 @@ const NOME_COMPONENTE: Record<ComponenteReazione['componente'], string> = {
  */
 function usaNomePunto(): (nodoId: string) => string {
   const statico = useStore((s) => s.statico);
+  const eti = etichette(useStore((s) => s.progetto));
   return (nodoId: string) => {
-    if (!statico) return nodoId;
+    if (!statico) return eti.nodo(nodoId as never);
     const v = statico.modello.espansione.nodiVincolo.get(nodoId as never);
     if (v) {
-      return `${v.astaId as unknown as string} · ${(v.s * 100).toFixed(0)} %`;
+      return `${eti.asta(v.astaId)} · ${(v.s * 100).toFixed(0)} %`;
     }
     const c = statico.modello.espansione.nodiSconnessione.get(nodoId as never);
     if (c) {
-      return `${c.astaId as unknown as string} · ${(c.s * 100).toFixed(0)} %`;
+      return `${eti.asta(c.astaId)} · ${(c.s * 100).toFixed(0)} %`;
     }
-    return nodoId;
+    // un nodo del modello di CALCOLO non ha un'etichetta d'autore: si mostra
+    // com'è, perché inventargliene una lo confonderebbe con un nodo disegnato
+    return eti.nodo(nodoId as never);
   };
 }
 

@@ -34,6 +34,7 @@ import {
 import type { ComponenteReazione, ForzaDiSconnessione } from '../core/statica/reazioni.js';
 import type { CorpoRigido } from '../core/model/results.js';
 import { asteNelNodo } from '../core/model/deduzione.js';
+import type { Etichette } from '../state/etichette.js';
 import { calcolaTratteggiata, latoEffettivo } from '../core/model/tratteggiata.js';
 import { gruppiSconnessione } from '../core/model/partizione.js';
 import type { Tronco } from '../core/statica/elementino.js';
@@ -112,6 +113,14 @@ export interface StatoDisegno {
   mostraValoriRisultati: boolean;
   /** §2.3 — la tratteggiata, il riferimento locale reso visibile */
   mostraTratteggiata: boolean;
+  /**
+   * §1 — le etichette VISIBILI, che non sono gli id interni.
+   *
+   * Il disegno non deve mai mostrare un id: quelli servono a referenziare e
+   * non ripartono da uno quando il modello si svuota. Ciò che l'utente legge
+   * è una numerazione compatta, ricalcolata a ogni modifica.
+   */
+  etichette: Etichette;
   // ── modalità reazioni ──
   /**
    * Componenti di reazione dei vincoli esterni. Non è la risultante per nodo:
@@ -857,7 +866,7 @@ function disegnaNodi(
     // Le etichette dei nodi compaiono solo da vicino, e comunque solo su nodi
     // selezionati o notevoli quando il modello è fitto.
     if (s.mostraEtichetteNodi) {
-      etichetta(ctx, n.etichetta ?? String(n.id), sp.x + 8, sp.y - 9, t.accento, t.sfondo);
+      etichetta(ctx, s.etichette.nodo(n.id), sp.x + 8, sp.y - 9, t.accento, t.sfondo);
     }
   }
 }

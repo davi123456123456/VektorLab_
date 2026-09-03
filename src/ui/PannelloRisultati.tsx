@@ -27,6 +27,7 @@ import { fattoreAutomatico } from '../render/deformata.js';
 import { BloccoCoefficiente } from './BloccoCoefficiente.js';
 import { coefficienteCritico } from '../core/checks/coefficiente.js';
 import { invertiTratteggiata } from '../state/commands.js';
+import { etichette } from '../state/etichette.js';
 import {
   espressioniPerAsta, scrivi, type Polinomio,
 } from '../core/statica/espressioni.js';
@@ -279,6 +280,7 @@ function ControlliVista({ r }: { r: RisultatoAnalisi }) {
 function TabellaReazioni({ r }: { r: RisultatoAnalisi }) {
   const cifre = useStore((s) => s.cifreRisultati);
   const progetto = useStore((s) => s.progetto);
+  const eti = etichette(progetto);
   if (r.reazioni.length === 0) return null;
 
   return (
@@ -302,7 +304,7 @@ function TabellaReazioni({ r }: { r: RisultatoAnalisi }) {
           return (
             <tr key={x.nodoId as string} style={{ color: 'var(--testo-attenuato)' }}>
               <td className="pl-3 pr-2">{nodo?.vincolo?.tipo ?? '—'}</td>
-              <td className="pr-2 truncate">{x.nodoId as string}</td>
+              <td className="pr-2 truncate">{eti.nodo(x.nodoId)}</td>
               <td className="py-0.5 pr-2 text-right">{sig(x.fx / 1e3, cifre)}</td>
               <td className="py-0.5 pr-2 text-right">{sig(x.fy / 1e3, cifre)}</td>
               <td className="py-0.5 pr-2 text-right">{sig(x.mz / 1e3, cifre)}</td>
@@ -324,6 +326,7 @@ function TabellaReazioni({ r }: { r: RisultatoAnalisi }) {
 function ValoriNotevoli({ r }: { r: RisultatoAnalisi }) {
   const cifre = useStore((s) => s.cifreRisultati);
   const selezione = useStore((s) => s.selezione);
+  const eti = etichette(useStore.getState().progetto);
   const aste = selezione.aste.size > 0
     ? r.aste.filter((a) => selezione.aste.has(a.astaId))
     : r.aste;
@@ -334,7 +337,7 @@ function ValoriNotevoli({ r }: { r: RisultatoAnalisi }) {
       {aste.map((a) => (
         <div key={a.astaId as string}>
           <div className="numerico px-3 text-[10px]" style={{ color: 'var(--testo-debole)' }}>
-            {a.astaId as string} · L = {sig(a.lunghezza, cifre)} m
+            {eti.asta(a.astaId)} · L = {sig(a.lunghezza, cifre)} m
           </div>
           <table className="numerico w-full text-[10px]">
             <thead>

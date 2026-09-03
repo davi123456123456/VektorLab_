@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react';
+import { etichette } from '../state/etichette.js';
 import { useStore } from '../state/store.js';
 import { Pannello } from './Pannelli.js';
 
@@ -12,6 +13,7 @@ export function Outliner() {
   const progetto = useStore((s) => s.progetto);
   const selezione = useStore((s) => s.selezione);
   const seleziona = useStore((s) => s.seleziona);
+  const eti = etichette(progetto);
   const [apertoNodi, setApertoNodi] = useState(true);
   const [aperteAste, setAperteAste] = useState(true);
 
@@ -38,7 +40,7 @@ export function Outliner() {
             style={stileVoce(selezione.nodi.has(n.id))}
           >
             <span className="w-16 shrink-0 truncate" title={String(n.id)}>
-              {n.etichetta ?? n.id}
+              {eti.nodo(n.id)}
             </span>
             <span className="shrink-0 opacity-60">
               {n.x.toFixed(2)}, {n.y.toFixed(2)}
@@ -65,7 +67,7 @@ export function Outliner() {
                        text-left text-[11px] hover:brightness-125"
             style={stileVoce(selezione.aste.has(a.id))}
           >
-            <span className="w-8 shrink-0">{a.id}</span>
+            <span className="w-8 shrink-0">{eti.asta(a.id)}</span>
             <span className="min-w-0 flex-1 truncate opacity-60"
                   title={`${a.nodoIniziale} → ${a.nodoFinale}`}>
               {a.nodoIniziale} → {a.nodoFinale}

@@ -25,6 +25,7 @@ import {
   applicaVincolo, concludiTrascinamentoSuAsta, confermaOperazione, posaSuAsta,
 } from '../state/azioni.js';
 import { nomeVincolo } from '../render/simboli.js';
+import { etichette } from '../state/etichette.js';
 import { leggiPuntatore, scriviPuntatore } from '../state/puntatore.js';
 import { DURATE, registro } from '../anim/registro.js';
 import { MOLLE } from '../anim/molla.js';
@@ -178,6 +179,7 @@ export function CanvasView() {
       mostraReazioni: st.mostraReazioni,
       mostraValoriRisultati: st.mostraValoriRisultati,
       mostraTratteggiata: st.mostraTratteggiata,
+      etichette: etichette(st.progetto),
       // §5 — sotto i diagrammi il modello si può togliere di mezzo. La
       // dissolvenza è breve (~200 ms) e interrompibile: chi accende e spegne
       // la spunta per confrontare due letture non deve aspettare.

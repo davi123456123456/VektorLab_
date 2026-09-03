@@ -21,6 +21,7 @@ import {
 } from '../state/commands.js';
 import { asteNelNodo } from '../core/model/deduzione.js';
 import { contaVincoli } from '../core/model/integrita.js';
+import { etichette } from '../state/etichette.js';
 import { gruppiSconnessione } from '../core/model/partizione.js';
 import { nomeVincolo } from '../render/simboli.js';
 import { orientamentoVincolo } from '../core/model/orientamento.js';
@@ -33,6 +34,7 @@ const gradiDi = (tipo: string): string =>
 
 export function ElencoVincoli() {
   const progetto = useStore((s) => s.progetto);
+  const eti = etichette(progetto);
   const suAstaSel = useStore((s) => s.suAstaSelezionato);
   const nodaleSel = useStore((s) => s.sconnessioneNodaleSelezionata);
   const selezione = useStore((s) => s.selezione);
@@ -70,7 +72,7 @@ export function ElencoVincoli() {
               onEsci={() => evidenzia(null)}
               onClic={() => useStore.getState().seleziona({ nodi: new Set([n.id]) })}
               nome={nomeVincolo(n.vincolo!.tipo, 'esterno')}
-              dove={n.etichetta ?? (n.id as unknown as string)}
+              dove={eti.nodo(n.id)}
               angolo={orientamentoVincolo(n.vincolo!.angolo).gradi}
               gdv={gradiDi(n.vincolo!.tipo)}
             />
@@ -86,7 +88,7 @@ export function ElencoVincoli() {
             onEsci={() => useStore.getState().evidenziaSuAsta(null)}
             onClic={() => useStore.getState().selezionaSuAsta(suAstaSel === v.id ? null : v.id)}
             nome={nomeVincolo(v.vincolo.tipo, 'esterno')}
-            dove={`${v.astaId as unknown as string} · ${(v.s * 100).toFixed(0)} %`}
+            dove={`${eti.asta(v.astaId)} · ${(v.s * 100).toFixed(0)} %`}
             angolo={orientamentoVincolo(v.vincolo.angolo).gradi}
             gdv={gradiDi(v.vincolo.tipo)}
           />
@@ -101,7 +103,7 @@ export function ElencoVincoli() {
             onEsci={() => useStore.getState().evidenziaSuAsta(null)}
             onClic={() => useStore.getState().selezionaSuAsta(suAstaSel === c.id ? null : c.id)}
             nome={nomeVincolo(c.tipo, 'interno')}
-            dove={`${c.astaId as unknown as string} · ${(c.s * 100).toFixed(0)} %`}
+            dove={`${eti.asta(c.astaId)} · ${(c.s * 100).toFixed(0)} %`}
             angolo={null}
             gdv="2"
           />
@@ -121,7 +123,7 @@ export function ElencoVincoli() {
                 onClic={() => useStore.getState().selezionaSconnessioneNodale(
                   nodaleSel === v.id ? null : v.id)}
                 nome={nomeVincolo(v.tipo, 'interno')}
-                dove={nodo?.etichetta ?? (v.nodoId as unknown as string)}
+                dove={eti.nodo(v.nodoId)}
                 angolo={null}
                 gdv={`${2 * Math.max(0, gruppi.length - 1)}`}
               />
@@ -148,6 +150,7 @@ export function ElencoVincoli() {
  */
 function Gruppi({ id, gruppi }: { id: string; gruppi: ElementId[][] }) {
   const esegui = useStore((s) => s.esegui);
+  const eti = etichette(useStore((s) => s.progetto));
 
   const indiceDi = (asta: ElementId) =>
     gruppi.findIndex((g) => g.includes(asta));
@@ -186,7 +189,7 @@ function Gruppi({ id, gruppi }: { id: string; gruppi: ElementId[][] }) {
                 background: 'var(--sfondo-elevato)',
                 color: 'var(--testo-attenuato)',
               }}
-            >{a as unknown as string}</button>
+            >{eti.asta(a)}</button>
           ))}
         </div>
       ))}
