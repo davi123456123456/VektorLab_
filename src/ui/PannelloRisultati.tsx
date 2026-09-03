@@ -112,7 +112,13 @@ export function PannelloRisultati() {
             <Blocco titolo="Valori notevoli">
               <ValoriNotevoli r={risultato} />
             </Blocco>
-            <Blocco titolo="Coefficiente di sicurezza">
+            {/*
+              §3 — aperto di default insieme a «Vista». Sono i due blocchi che
+              si guardano sempre: l'uno per decidere cosa vedere, l'altro
+              perché il coefficiente di sicurezza è la domanda per cui si è
+              fatta l'analisi. Gli altri restano chiusi.
+            */}
+            <Blocco titolo="Coefficiente di sicurezza" aperto>
               <BloccoCoefficiente r={risultato} />
             </Blocco>
             <Blocco titolo="Diagnostica">

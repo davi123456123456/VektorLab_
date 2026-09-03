@@ -563,9 +563,19 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
     calcoloInCorso: false,
     tempoCalcolo: 0,
     erroreCalcolo: null,
-    diagrammiVisibili: new Set<Componente>(['M']),
+    /*
+     * §4 — all'apertura si vedono l'asse della struttura, la tratteggiata e i
+     * TRE diagrammi. Vincoli, carichi, reazioni e deformata restano nascosti.
+     *
+     * Sostituisce il predefinito dell'iterazione 7 §5, dove il modello era
+     * acceso: con N, T e M sovrapposti insieme, simboli e frecce erano il
+     * rumore da cui le curve dovevano emergere. Le spunte restano tutte, e
+     * lo stato scelto è ricordato per foglio: il predefinito vale al primo
+     * accesso, che è l'unico momento in cui una scelta di fabbrica conta.
+     */
+    diagrammiVisibili: new Set<Componente>(['N', 'T', 'M']),
     scalaDiagrammi: 1,
-    mostraDeformata: true,
+    mostraDeformata: false,
     fattoreDeformata: 0,
     lambdaDeformata: 1,
     mostraReazioni: true,

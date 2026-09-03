@@ -51,14 +51,14 @@ describe('elenco degli interni', () => {
     expect(interni.map((v) => v.nome)).toEqual([
       'Cerniera interna',
       'Cerniera',
+      'Carrello interno',
       'Doppio pendolo interno',
       'Pattino interno',
-      'Carrello interno',
     ]);
   });
 
   it('con questi gradi di vincolo', () => {
-    expect(interni.map((v) => v.gdv)).toEqual(['2(g−1)', '2m', '2', '2', '1']);
+    expect(interni.map((v) => v.gdv)).toEqual(['2(g−1)', '2m', '1', '2', '2']);
   });
 
   it('il carrello interno è l unico interno da un grado', () => {

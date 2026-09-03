@@ -1,252 +1,277 @@
 /**
- * Confronto fra materiali a struttura e carichi invariati.
+ * Confronto fra materiali SULLA STRUTTURA IN ESAME.
  *
- * Serve a vedere un COMPROMESSO, non un vincitore: l'acciaio è resistente e
- * pesante, l'alluminio leggero e cedevole, il legno economico e poco rigido.
- * Nessun materiale vince su tutte le colonne, e il senso del pannello è
- * proprio rendere visibile dove ciascuno perde.
+ * Ogni riga si ottiene rieseguendo l'analisi con quel materiale assegnato a
+ * tutte le aste: geometria, vincoli, carichi e sezioni sono quelli veri. Non
+ * c'è nessun calcolo semplificato parallelo — sarebbe un secondo motore da
+ * tenere allineato, e prima o poi divergerebbe da quello vero.
  *
- * DUE FAMIGLIE DI GRANDEZZE, e non vanno confuse:
+ * PERCHÉ PRIMA SEMBRAVA NON CAMBIARE MAI. Il calcolo era già questo; era la
+ * presentazione a ingannare. La vista si apriva sulla RESISTENZA, che è una
+ * proprietà del materiale: 275 MPa per l'S275 su qualunque struttura, oggi e
+ * domani. Allungando un'asta non cambiava nulla di ciò che si stava
+ * guardando, e la conclusione naturale era che il confronto fosse finto.
  *
- *   · le PROPRIETÀ del materiale — resistenza, rigidezza, densità, prezzo —
- *     che sono dati di targa e non dipendono dalla struttura;
- *   · gli ESITI su questa struttura — peso, freccia, sfruttamento, costo —
- *     che si ottengono rifacendo l'analisi con quel materiale, perché in una
- *     struttura iperstatica la ripartizione delle sollecitazioni dipende
- *     dalle rigidezze.
- *
- * E due grandezze specifiche, che sono quelle su cui si sceglie davvero:
- * resistenza e rigidezza divise per la densità.
- *
- * IL COLORE HA UN SOLO SIGNIFICATO: verde è meglio, rosso è peggio. Quale dei
- * due estremi sia il migliore dipende dalla grandezza — per il peso vince il
- * minimo, per la resistenza il massimo — e la scala lo ribalta di
- * conseguenza. Prima il verde marcava il minimo di ogni colonna, e sulla
- * resistenza segnalava quindi il materiale peggiore.
+ * Qui le colonne sono ESITI sulla struttura — peso, tensione massima,
+ * sfruttamento, coefficiente di sicurezza, freccia, costo — e cambiano tutte
+ * appena si tocca il modello. Le proprietà di targa restano consultabili nel
+ * suggerimento della riga, dove non si confondono con i risultati.
  */
 
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../state/store.js';
 import { confrontaMateriali, type RigaConfronto } from '../core/checks/confronto.js';
-import { MATERIALI } from '../core/materials/materials.js';
+import { MATERIALI, materialePerId } from '../core/materials/materials.js';
 import { Bottone } from './Pannelli.js';
 
-interface Grandezza {
-  chiave: string;
-  nome: string;
-  unita: string;
-  /** true se un valore ALTO è preferibile */
-  altoMeglio: boolean;
-  valore: (r: RigaConfronto) => number;
-  /** come si scrive il numero */
-  scrivi: (v: number) => string;
-  spiegazione: string;
-}
+type Colonna = 'nome' | 'massa' | 'sigma' | 'sfruttamento' | 'cs' | 'freccia' | 'costo';
 
-const GRANDEZZE: Grandezza[] = [
-  {
-    chiave: 'resistenza', nome: 'resistenza', unita: 'MPa', altoMeglio: true,
-    valore: (r) => r.resistenza / 1e6,
-    scrivi: (v) => v.toFixed(0),
-    spiegazione: 'Snervamento, o rottura dove lo snervamento non è definito.',
-  },
-  {
-    chiave: 'rigidezza', nome: 'rigidezza E', unita: 'GPa', altoMeglio: true,
-    valore: (r) => r.E / 1e9,
-    scrivi: (v) => v.toFixed(0),
-    spiegazione: 'Modulo di Young: governa la freccia, non la resistenza.',
-  },
-  {
-    chiave: 'densita', nome: 'densità', unita: 'kg/m³', altoMeglio: false,
-    valore: (r) => r.rho,
-    scrivi: (v) => v.toFixed(0),
-    spiegazione: 'Proprietà del materiale, indipendente dalla struttura.',
-  },
-  {
-    chiave: 'resistenzaSpecifica', nome: 'resistenza / densità', unita: 'kNm/kg',
-    altoMeglio: true,
-    valore: (r) => r.resistenza / r.rho / 1e3,
-    scrivi: (v) => v.toFixed(1),
-    spiegazione: 'Quanto rende ogni chilo. È il criterio con cui si sceglie '
-      + 'quando il peso conta: l\'alluminio batte l\'acciaio pur essendo più debole.',
-  },
-  {
-    chiave: 'rigidezzaSpecifica', nome: 'rigidezza / densità', unita: 'MNm/kg',
-    altoMeglio: true,
-    valore: (r) => r.E / r.rho / 1e6,
-    scrivi: (v) => v.toFixed(1),
-    spiegazione: 'Quasi identica per tutti i metalli: è il motivo per cui '
-      + 'cambiare lega non riduce la freccia a parità di peso.',
-  },
-  {
-    chiave: 'prezzoKg', nome: 'prezzo', unita: '€/kg', altoMeglio: false,
-    valore: (r) => r.costoEuroKg ?? NaN,
-    scrivi: (v) => v.toFixed(2),
-    spiegazione: 'Prezzo indicativo di materia prima, non di opera finita.',
-  },
-  {
-    chiave: 'massa', nome: 'peso della struttura', unita: 'kg', altoMeglio: false,
-    valore: (r) => r.massa,
-    scrivi: (v) => v.toFixed(0),
-    spiegazione: 'Con queste sezioni e questa geometria.',
-  },
-  {
-    chiave: 'freccia', nome: 'freccia massima', unita: 'mm', altoMeglio: false,
-    valore: (r) => r.spostamentoMassimo * 1e3,
-    scrivi: (v) => v.toFixed(1),
-    spiegazione: 'Spostamento massimo sotto i carichi correnti.',
-  },
-  {
-    chiave: 'sfruttamento', nome: 'sfruttamento', unita: '%', altoMeglio: false,
-    valore: (r) => r.sfruttamentoMassimo * 100,
-    scrivi: (v) => v.toFixed(0),
-    spiegazione: 'Oltre il 100 % la sezione non verifica.',
-  },
-  {
-    chiave: 'costo', nome: 'costo della struttura', unita: '€', altoMeglio: false,
-    valore: (r) => r.costo ?? NaN,
-    scrivi: (v) => v.toFixed(0),
-    spiegazione: 'Peso per prezzo specifico.',
-  },
-];
+interface Riga extends RigaConfronto {
+  /** tensione massima raggiunta [Pa], dedotta da sfruttamento e resistenza */
+  sigma: number;
+  gammaM: number;
+}
 
 /**
- * Verde per il migliore, rosso per il peggiore, con i toni intermedi in mezzo.
- * La posizione è normalizzata sull'intervallo dei valori presenti, così la
- * scala usa tutta la sua gamma anche quando i materiali si somigliano.
+ * σ_max dallo sfruttamento.
+ *
+ * `sfruttamento = σ / f_d` e `f_d = resistenza / γ_M`, quindi
+ * `σ = sfruttamento · resistenza / γ_M`. Si ricava qui invece di aggiungere
+ * un campo al modulo di verifica, che in questa iterazione non va toccato —
+ * ed è comunque una definizione, non un calcolo nuovo.
  */
-function tinta(posizione: number): string {
-  const p = Math.min(1, Math.max(0, posizione));
-  // da 140° (verde) a 8° (rosso), passando per il giallo
-  const tono = 140 - 132 * p;
-  return `hsl(${tono.toFixed(0)}, 62%, 58%)`;
+function conTensione(r: RigaConfronto): Riga {
+  const m = MATERIALI.find((x) => (x.id as unknown as string) === r.materialeId);
+  const gammaM = m?.gammaM ?? 1;
+  return { ...r, gammaM, sigma: (r.sfruttamentoMassimo * r.resistenza) / gammaM };
 }
+
+const num = (v: number, cifre = 1): string =>
+  (Number.isFinite(v) ? v.toFixed(cifre) : '—');
+
+/*
+  La freccia spazia su quattro ordini di grandezza: 12 mm per un acciaio,
+  1225 mm per un PETG che non verifica. Il decimo di millimetro conta sul
+  primo e non significa nulla sul secondo, dove per giunta faceva sbordare
+  il numero sulla colonna del costo. Sotto i 100 mm un decimale, sopra
+  nessuno.
+*/
+const freccia = (metri: number): string => {
+  if (!Number.isFinite(metri)) return '—';
+  const mm = metri * 1e3;
+  return num(mm, Math.abs(mm) >= 100 ? 0 : 1);
+};
 
 export function ConfrontoMateriali() {
   const progetto = useStore((s) => s.progetto);
   const sorgente = useStore((s) => s.sorgenteRisultati);
-  const [righe, setRighe] = useState<RigaConfronto[] | null>(null);
+  const materialeAssegnato = useStore((s) => s.progetto.aste[0]?.materialeId);
+
+  const [righe, setRighe] = useState<Riga[]>([]);
   const [inCorso, setInCorso] = useState(false);
-  const [scelta, setScelta] = useState(GRANDEZZE[0].chiave);
+  const [ordine, setOrdine] = useState<Colonna>('sfruttamento');
+  const [crescente, setCrescente] = useState(true);
+  const generazione = useRef(0);
 
-  const calcola = () => {
-    setInCorso(true);
-    // il calcolo è sincrono ma pesante: si lascia respirare l'interfaccia
-    setTimeout(() => {
-      try {
-        setRighe(confrontaMateriali(progetto, sorgente, MATERIALI));
-      } finally {
-        setInCorso(false);
+  /*
+   * RICALCOLO AUTOMATICO, un materiale per volta.
+   *
+   * Rianalizzare quindici strutture di seguito blocca l'interfaccia per
+   * qualche decimo di secondo, che su un pannello che si aggiorna a ogni
+   * modifica si sente. Spezzando in un materiale per `setTimeout` il thread
+   * respira fra l'uno e l'altro, e le righe compaiono man mano invece che
+   * tutte insieme dopo l'attesa.
+   *
+   * `generazione` scarta i risultati di un ciclo superato: modificando il
+   * modello mentre il confronto gira, le righe vecchie non devono mescolarsi
+   * a quelle nuove.
+   */
+  useEffect(() => {
+    const mio = ++generazione.current;
+    const avvio = setTimeout(() => {
+      setRighe([]);
+      setInCorso(true);
+      let i = 0;
+      const passo = () => {
+        if (generazione.current !== mio) return;
+        if (i >= MATERIALI.length) { setInCorso(false); return; }
+        const m = MATERIALI[i++];
+        try {
+          const [r] = confrontaMateriali(progetto, sorgente, [m]);
+          if (r) setRighe((precedenti) => [...precedenti, conTensione(r)]);
+        } catch {
+          // un materiale che non si riesce ad analizzare non ferma gli altri
+        }
+        setTimeout(passo, 0);
+      };
+      passo();
+    }, 250);   // attesa breve: si ricalcola a modifica finita, non a ogni tasto
+    return () => clearTimeout(avvio);
+  }, [progetto, sorgente]);
+
+  const ordinate = useMemo(() => {
+    const chiave = (r: Riga): number | string => {
+      switch (ordine) {
+        case 'nome': return r.nome;
+        case 'massa': return r.massa;
+        case 'sigma': return r.sigma;
+        case 'sfruttamento': return r.sfruttamentoMassimo;
+        case 'cs': return r.coefficienteMinimo;
+        case 'freccia': return r.spostamentoMassimo;
+        case 'costo': return r.costo ?? Number.POSITIVE_INFINITY;
       }
-    }, 0);
-  };
+    };
+    return [...righe].sort((a, b) => {
+      const x = chiave(a), y = chiave(b);
+      const c = typeof x === 'string' && typeof y === 'string'
+        ? x.localeCompare(y)
+        // i valori non calcolabili vanno in fondo in ogni caso, non in cima
+        : (Number.isFinite(x as number) ? (x as number) : Infinity)
+          - (Number.isFinite(y as number) ? (y as number) : Infinity);
+      return crescente ? c : -c;
+    });
+  }, [righe, ordine, crescente]);
 
-  const g = GRANDEZZE.find((x) => x.chiave === scelta) ?? GRANDEZZE[0];
+  const senzaResistenza = righe.filter((r) => !Number.isFinite(r.resistenza));
 
-  const misurate = (righe ?? [])
-    .map((r) => ({ r, v: g.valore(r) }))
-    .filter((x) => Number.isFinite(x.v));
-  const senzaDato = (righe ?? []).filter((r) => !Number.isFinite(g.valore(r)));
-
-  const valori = misurate.map((x) => x.v);
-  const min = valori.length ? Math.min(...valori) : 0;
-  const max = valori.length ? Math.max(...valori) : 1;
-  const gamma = max - min || 1;
-
-  // ordinate dalla migliore alla peggiore: l'ordine È l'informazione, e
-  // lasciarlo alfabetico costringerebbe a leggere tutte le righe per trovarla
-  const ordinate = [...misurate].sort((a, b) => (g.altoMeglio ? b.v - a.v : a.v - b.v));
+  const intestazione = (c: Colonna, testo: string, unita?: string) => (
+    <th
+      className={`font-normal leading-tight ${
+        c === 'nome' ? 'pl-3 text-left' : 'pr-1.5 text-right'}`}
+      style={{ color: ordine === c ? 'var(--accento)' : 'var(--testo-debole)' }}
+    >
+      <button type="button" onClick={() => {
+        if (ordine === c) setCrescente((v) => !v); else { setOrdine(c); setCrescente(true); }
+      }}>
+        {testo}{unita ? <span className="opacity-60"> {unita}</span> : null}
+        {ordine === c ? (crescente ? ' ↑' : ' ↓') : ''}
+      </button>
+    </th>
+  );
 
   return (
     <div>
-      <div className="px-3 pb-2">
-        <Bottone larghezzaPiena attivo={!righe} onClick={calcola}>
-          {inCorso ? 'confronto in corso…' : righe ? 'ricalcola confronto' : 'confronta i materiali'}
+      <p className="px-3 pb-1 text-[9.5px] leading-relaxed"
+         style={{ color: 'var(--testo-debole)' }}>
+        Stessa geometria, stessi vincoli, stessi carichi, stesse sezioni: cambia
+        solo il materiale di tutte le aste, e l'analisi viene rifatta per
+        ciascuno. Modificando la struttura questi numeri cambiano.
+      </p>
+
+      <div className="flex items-center gap-2 px-3 pb-1.5">
+        <span className="numerico text-[9.5px]" style={{ color: 'var(--testo-debole)' }}>
+          {inCorso ? `${righe.length}/${MATERIALI.length}…` : `${righe.length} materiali`}
+        </span>
+        <Bottone onClick={() => { generazione.current++; setRighe([]); setInCorso(false); }}
+                 titolo="Interrompe il ricalcolo in corso">
+          {inCorso ? 'ferma' : 'aggiornato'}
         </Bottone>
       </div>
 
-      {righe && (
-        <>
-          <div className="flex flex-wrap gap-1 px-3 pb-1.5">
-            {GRANDEZZE.map((x) => (
-              <Bottone key={x.chiave} attivo={scelta === x.chiave}
-                       titolo={x.spiegazione}
-                       onClick={() => setScelta(x.chiave)}>
-                {x.nome}
-              </Bottone>
-            ))}
-          </div>
-
-          <div className="px-3 pb-1">
-            <div className="flex items-baseline justify-between text-[10px]">
-              <span style={{ color: 'var(--testo-attenuato)' }}>
-                {g.nome} <span style={{ color: 'var(--testo-debole)' }}>[{g.unita}]</span>
-              </span>
-              <span style={{ color: 'var(--testo-debole)' }}>
-                {g.altoMeglio ? 'più alto è meglio' : 'più basso è meglio'}
-              </span>
-            </div>
-            <p className="pt-0.5 text-[9.5px] leading-relaxed"
-               style={{ color: 'var(--testo-debole)' }}>
-              {g.spiegazione}
-            </p>
-          </div>
-
-          <div className="space-y-[3px] px-3 pt-1">
-            {ordinate.map(({ r, v }, i) => {
-              // posizione nella scala: 0 = il migliore, 1 = il peggiore
-              const posizione = g.altoMeglio ? (max - v) / gamma : (v - min) / gamma;
-              // la barra è lunga in proporzione al VALORE, non al merito:
-              // altrimenti «densità 7850» e «densità 2700» darebbero barre di
-              // lunghezza invertita rispetto al numero scritto accanto
-              const lunghezza = max > 0 ? Math.max(2, (v / max) * 100) : 2;
-              const colore = tinta(posizione);
-              const fallisce = !r.verificato || !r.stabile;
+      <div className="overflow-x-auto">
+        {/*
+          LARGHEZZE ESPLICITE. Senza, il nome più lungo dettava la larghezza
+          della colonna e spingeva il costo fuori dal pannello; con
+          `table-fixed` da solo, la colonna del nome si stringeva fino a
+          «Acc…», che non distingue un S275 da un S355. Il nome ha lo spazio
+          che gli serve per essere riconoscibile, i numeri quello che serve
+          alle loro cifre, e il totale sta nei 288 px del pannello.
+        */}
+        <table className="numerico w-full table-fixed text-[10px]">
+          <colgroup>
+            <col style={{ width: '31%' }} />
+            <col style={{ width: '11%' }} />
+            <col style={{ width: '12%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '12%' }} />
+            <col style={{ width: '11%' }} />
+          </colgroup>
+          <thead>
+            <tr>
+              {intestazione('nome', 'materiale')}
+              {intestazione('massa', 'peso', 'kg')}
+              {intestazione('sigma', 'σmax', 'MPa')}
+              {intestazione('sfruttamento', 'sfrutt', '%')}
+              {intestazione('cs', 'C.S.')}
+              {intestazione('freccia', 'δ', 'mm')}
+              {intestazione('costo', '€')}
+            </tr>
+          </thead>
+          <tbody>
+            {ordinate.map((r) => {
+              const assegnato = r.materialeId === (materialeAssegnato as unknown as string);
+              const passa = r.verificato && r.stabile;
+              const motivo = !Number.isFinite(r.resistenza)
+                ? 'S_y non dichiarata'
+                : !r.verificato ? 'non verifica a resistenza'
+                : !r.stabile ? 'instabile a compressione' : '';
               return (
-                <div key={r.materialeId}
-                     title={`${r.comportamento}`
-                       + (r.errore ? ` — ${r.errore}` : '')
-                       + (!r.verificato ? ' — non verifica a resistenza' : '')
-                       + (!r.stabile ? ' — instabile a compressione' : '')}>
-                  <div className="flex items-baseline justify-between gap-2 text-[10px]">
-                    <span className="truncate"
-                          style={{ color: i === 0 ? 'var(--testo)' : 'var(--testo-attenuato)' }}>
-                      {fallisce && (
-                        <span style={{ color: 'var(--errore)' }} title="non verifica">✗ </span>
-                      )}
-                      {r.nome}
-                    </span>
-                    <span className="numerico shrink-0" style={{ color: colore }}>
-                      {g.scrivi(v)}
-                    </span>
-                  </div>
-                  <div className="h-[3px] w-full rounded-full"
-                       style={{ background: 'var(--sfondo-elevato)' }}>
-                    <div className="h-full rounded-full"
-                         style={{ width: `${lunghezza}%`, background: colore }} />
-                  </div>
-                </div>
+                <tr key={r.materialeId}
+                    title={`${r.nome} — E ${(materialePerId(r.materialeId as never).E / 1e9).toFixed(0)} GPa`
+                      + ` · ρ ${r.rho} kg/m³`
+                      + `${Number.isFinite(r.resistenza) ? ` · f ${(r.resistenza / 1e6).toFixed(0)} MPa` : ''}`
+                      + `${motivo ? ` — ${motivo}` : ''}`}
+                    style={{
+                      background: assegnato ? 'var(--sfondo-elevato)' : 'transparent',
+                    }}>
+                  {/*
+                    Il nome si TRONCA invece di andare a capo. Con «Acciaio
+                    inox AISI 304» su tre righe la tabella diventava alta il
+                    doppio e la colonna del costo finiva fuori dal pannello:
+                    una riga per materiale è ciò che rende la tabella
+                    confrontabile a colpo d'occhio, ed è il motivo per cui è
+                    una tabella. Il nome intero resta nel suggerimento.
+                  */}
+                  <td className="truncate py-0.5 pl-3 pr-1.5"
+                      style={{ color: assegnato ? 'var(--accento)' : 'var(--testo-attenuato)' }}>
+                    {!passa && <span style={{ color: 'var(--errore)' }}>✗ </span>}
+                    {r.nome}
+                  </td>
+                  <td className="pr-1.5 text-right" style={{ color: 'var(--testo-attenuato)' }}>
+                    {num(r.massa, 0)}
+                  </td>
+                  <td className="pr-1.5 text-right" style={{ color: 'var(--testo-attenuato)' }}>
+                    {Number.isFinite(r.sigma) ? num(r.sigma / 1e6, 0) : '—'}
+                  </td>
+                  <td className="pr-1.5 text-right"
+                      style={{ color: r.verificato ? 'var(--testo-attenuato)' : 'var(--errore)' }}>
+                    {Number.isFinite(r.sfruttamentoMassimo)
+                      ? num(r.sfruttamentoMassimo * 100, 0) : '—'}
+                  </td>
+                  <td className="pr-1.5 text-right"
+                      style={{ color: passa ? 'var(--ok)' : 'var(--errore)' }}>
+                    {Number.isFinite(r.coefficienteMinimo)
+                      ? num(r.coefficienteMinimo, 2) : '—'}
+                  </td>
+                  <td className="pr-1.5 text-right" style={{ color: 'var(--testo-attenuato)' }}>
+                    {freccia(r.spostamentoMassimo)}
+                  </td>
+                  <td className="pr-3 text-right" style={{ color: 'var(--testo-attenuato)' }}>
+                    {r.costo !== null ? num(r.costo, 0) : '—'}
+                  </td>
+                </tr>
               );
             })}
-          </div>
+          </tbody>
+        </table>
+      </div>
 
-          {senzaDato.length > 0 && (
-            <p className="px-3 pt-2 text-[9.5px] leading-relaxed"
-               style={{ color: 'var(--testo-debole)' }}>
-              Senza dato per questa grandezza:{' '}
-              {senzaDato.map((r) => r.nome).join(', ')}.
-            </p>
-          )}
-
-          <p className="px-3 pt-2 text-[9.5px] leading-relaxed"
-             style={{ color: 'var(--testo-debole)' }}>
-            Verde il migliore, rosso il peggiore. La croce rossa marca i
-            materiali che non verificano o che sbandano a compressione: possono
-            comunque risultare i più leggeri o i più economici, ed è
-            esattamente il motivo per cui le due informazioni stanno vicine.
-          </p>
-        </>
+      {senzaResistenza.length > 0 && (
+        <p className="px-3 pt-1.5 text-[9.5px] leading-relaxed"
+           style={{ color: 'var(--errore)' }}>
+          Senza tensione di snervamento, e quindi senza verifica:{' '}
+          {senzaResistenza.map((r) => r.nome).join(', ')}. Il dato va inserito
+          in Materiali; qui non viene inventato.
+        </p>
       )}
+
+      <p className="px-3 pt-1.5 text-[9.5px] leading-relaxed"
+         style={{ color: 'var(--testo-debole)' }}>
+        La croce rossa marca chi non verifica o sbanda a compressione: può
+        essere comunque il più leggero o il più economico, ed è il motivo per
+        cui le colonne stanno vicine. Riga evidenziata: il materiale assegnato.
+      </p>
     </div>
   );
 }

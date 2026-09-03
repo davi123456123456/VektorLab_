@@ -409,22 +409,62 @@ export function disegnaSconnessione(
       }
     }
   } else if (tipo === 'carrelloInterno') {
-    // §1 — carrello interno: un perno che scorre su un piano. Il perno dice
-    // che la rotazione è libera, il piano con i due rulli che è libero anche
-    // lo scorrimento. NESSUNA tratteggiatura di terra: non tocca il terreno,
-    // ed è l'unica cosa che lo distingue dal carrello a telaio.
+    /*
+     * §2.1 — CARRELLO INTERNO: la forma del carrello esterno, senza terra e
+     * con le aste sopra.
+     *
+     * Tre elementi, e ciascuno dice una cosa:
+     *
+     *   · il triangolo con i due rulli è la stessa forma del carrello a
+     *     telaio, perché il comportamento è quello — passa la sola componente
+     *     perpendicolare al piano di scorrimento;
+     *   · NON c'è la tratteggiatura del terreno, perché non collega a terra;
+     *   · sopra, le due estremità delle aste che vi appoggiano, come nella
+     *     cerniera interna, perché quello che collega sono due membri fra
+     *     loro.
+     *
+     * Il criterio è che affiancando le due icone la differenza si veda subito:
+     * tratteggiatura nel carrello esterno, aste sovrastanti in questo.
+     */
+    const r = 2.8;
+    // le due estremità delle aste, che si fermano sul perno
+    ctx.lineWidth = 1.6;
+    for (const verso of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(verso * (r + 1.4), -7.5);
+      ctx.lineTo(verso * 11, -7.5);
+      ctx.stroke();
+    }
+    ctx.lineWidth = evidenziato ? 2.6 : 2;
+
+    // il perno
     ctx.beginPath();
-    ctx.arc(0, -4.5, 3.4, 0, Math.PI * 2);
+    ctx.arc(0, -7.5, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+
+    // il triangolo, che parte sotto il perno e lo tocca col vertice
+    ctx.beginPath();
+    ctx.moveTo(0, -7.5 + r);
+    ctx.lineTo(-8, 2);
+    ctx.lineTo(8, 2);
+    ctx.closePath();
+    ctx.fillStyle = sfondo;
+    ctx.fill();
+    ctx.strokeStyle = colore;
+    ctx.stroke();
+
+    // i due rulli, e il piano di scorrimento su cui corrono
     for (const x of [-4, 4]) {
       ctx.beginPath();
-      ctx.arc(x, 2.4, 2.4, 0, Math.PI * 2);
+      ctx.arc(x, 4.6, 2.4, 0, Math.PI * 2);
+      ctx.fillStyle = sfondo;
       ctx.fill();
+      ctx.strokeStyle = colore;
       ctx.stroke();
     }
     ctx.beginPath();
-    ctx.moveTo(-9, 6); ctx.lineTo(9, 6);
+    ctx.moveTo(-10, 7.6); ctx.lineTo(10, 7.6);
     ctx.stroke();
   } else {
     // pattino: la guida è perpendicolare all'asse, lo scorrimento è assiale

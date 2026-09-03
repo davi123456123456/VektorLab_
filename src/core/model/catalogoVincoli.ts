@@ -128,6 +128,14 @@ export const CATALOGO_VINCOLI: readonly DefinizioneVincolo[] = [
       + 'attraversarlo. Con m aste convergenti vale 2m.',
   },
   {
+    id: 'carrelloInterno', categoria: 'interno', nome: 'Carrello interno',
+    gdv: '1', separa: true, orientabile: true, soloDisegno: false,
+    icona: { genere: 'sconnessione', tipo: 'carrelloInterno' },
+    descrizione: 'Libera la rotazione relativa E lo scorrimento nel piano: '
+      + "trasmette la sola forza perpendicolare al piano. È l'unico vincolo "
+      + "interno da un grado. L'angolo definisce il piano di scorrimento.",
+  },
+  {
     id: 'bipendoloInterno', categoria: 'interno', nome: 'Doppio pendolo interno',
     gdv: '2', separa: true, orientabile: false, soloDisegno: false,
     icona: { genere: 'sconnessione', tipo: 'bipendolo' },
@@ -138,14 +146,6 @@ export const CATALOGO_VINCOLI: readonly DefinizioneVincolo[] = [
     gdv: '2', separa: true, orientabile: false, soloDisegno: false,
     icona: { genere: 'sconnessione', tipo: 'pattino' },
     descrizione: 'Trasmette il taglio e il momento, non lo sforzo normale.',
-  },
-  {
-    id: 'carrelloInterno', categoria: 'interno', nome: 'Carrello interno',
-    gdv: '1', separa: true, orientabile: true, soloDisegno: false,
-    icona: { genere: 'sconnessione', tipo: 'carrelloInterno' },
-    descrizione: 'Libera la rotazione relativa E lo scorrimento nel piano: '
-      + "trasmette la sola forza perpendicolare al piano. È l'unico vincolo "
-      + "interno da un grado. L'angolo definisce il piano di scorrimento.",
   },
 ];
 
