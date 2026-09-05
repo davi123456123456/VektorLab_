@@ -1,0 +1,6 @@
+Roboto — Copyright 2011 Google Inc.
+Licensed under the Apache License, Version 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+
+Incorporato nel PDF generato da VektorLab perché il documento resti
+identico su qualunque computer, come previsto dal §4.2 dell'iterazione 12.

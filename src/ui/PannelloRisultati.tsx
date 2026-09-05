@@ -28,6 +28,7 @@ import { BloccoCoefficiente } from './BloccoCoefficiente.js';
 import { coefficienteCritico } from '../core/checks/coefficiente.js';
 import { invertiTratteggiata } from '../state/commands.js';
 import { etichette } from '../state/etichette.js';
+import { ScaricaRelazione } from './EsportaRelazione.js';
 import {
   espressioniPerAsta, scrivi, type Polinomio,
 } from '../core/statica/espressioni.js';
@@ -126,6 +127,15 @@ export function PannelloRisultati() {
             </Blocco>
           </>
         )}
+        {/*
+          §1 — «Scarica relazione» sta IN FONDO e c'è sempre, anche senza
+          risultati: spento e con il motivo nel suggerimento. Nasconderlo
+          quando non si può usare lascerebbe l'utente a chiedersi se la
+          funzione esista.
+        */}
+        <div className="border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
+          <ScaricaRelazione />
+        </div>
       </div>
     </Pannello>
   );

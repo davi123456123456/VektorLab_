@@ -7,3 +7,5 @@ dist/
 .vercel/
 tsconfig.tsbuildinfo
 screenshots/
+# uscita di `npm run pdf-check`: si rigenera, non si versiona
+pdf-prova/
