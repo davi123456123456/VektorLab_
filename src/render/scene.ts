@@ -104,6 +104,15 @@ export interface StatoDisegno {
 
   // ── risultati ──
   risultato: RisultatoAnalisi | null;
+  /**
+   * §5 — il modello a cui `risultato` si riferisce: quello ESPANSO.
+   *
+   * Le aste nate da una suddivisione hanno id che nel modello d'autore non
+   * esistono; cercandone la geometria lì non si trovavano e i loro tratti non
+   * venivano disegnati affatto. null quando non è disponibile: allora vale il
+   * modello d'autore, che per una struttura senza suddivisioni è lo stesso.
+   */
+  modelloRisultati: Progetto | null;
   diagrammiVisibili: ReadonlySet<Componente>;
   scalaDiagrammi: number;
   mostraDeformata: boolean;
@@ -269,7 +278,11 @@ function disegnaRisultati(
       ? s.fattoreDeformata
       : fattoreAutomatico(s.progetto, r);
     disegnaDeformata(ctx, {
-      progetto: s.progetto, camera: s.camera, risultato: r,
+      progetto: s.modelloRisultati ?? s.progetto,
+      // l'indeformata resta quella d'autore: è la struttura che l'utente ha
+      // disegnato, e le suddivisioni non le appartengono
+      progettoAutore: s.progetto,
+      camera: s.camera, risultato: r,
       fattore, lambda: s.lambdaDeformata,
       colore: t.deformata, coloreIndeformata: t.asta, mostraIndeformata: true,
     });
@@ -281,7 +294,8 @@ function disegnaRisultati(
     if (!s.diagrammiVisibili.has(c)) continue;
     const scala = scalaAutomatica(s.progetto, r, c) * s.scalaDiagrammi;
     disegnaDiagrammi(ctx, {
-      progetto: s.progetto, camera: s.camera, risultato: r,
+      progetto: s.modelloRisultati ?? s.progetto,
+      camera: s.camera, risultato: r,
       componente: c, scala,
       fibreTese: s.momentoDallaParteDelleFibreTese,
       colore: coloreComponente(t, c), sfondo: t.sfondo, testo: t.testo,

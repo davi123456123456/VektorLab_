@@ -23,8 +23,7 @@ import { useStore } from '../state/store.js';
 import { confrontaMateriali, type RigaConfronto } from '../core/checks/confronto.js';
 import { MATERIALI, materialePerId } from '../core/materials/materials.js';
 import { Bottone } from './Pannelli.js';
-
-type Colonna = 'nome' | 'massa' | 'sigma' | 'sfruttamento' | 'cs' | 'freccia' | 'costo';
+import { COLONNE, type Colonna } from './colonneConfronto.js';
 
 interface Riga extends RigaConfronto {
   /** tensione massima raggiunta [Pa], dedotta da sfruttamento e resistenza */
@@ -69,7 +68,7 @@ export function ConfrontoMateriali() {
 
   const [righe, setRighe] = useState<Riga[]>([]);
   const [inCorso, setInCorso] = useState(false);
-  const [ordine, setOrdine] = useState<Colonna>('sfruttamento');
+  const [ordine, setOrdine] = useState<Colonna>('utilizzo');
   const [crescente, setCrescente] = useState(true);
   const generazione = useRef(0);
 
@@ -115,9 +114,12 @@ export function ConfrontoMateriali() {
         case 'nome': return r.nome;
         case 'massa': return r.massa;
         case 'sigma': return r.sigma;
-        case 'sfruttamento': return r.sfruttamentoMassimo;
+        case 'resistenza': return r.resistenza;
+        case 'utilizzo': return r.sfruttamentoMassimo;
         case 'cs': return r.coefficienteMinimo;
-        case 'freccia': return r.spostamentoMassimo;
+        case 'spostamento': return r.spostamentoMassimo;
+        // chi verifica prima, chi no dopo: è l'ordinamento utile
+        case 'esito': return (r.verificato && r.stabile) ? 0 : 1;
         case 'costo': return r.costo ?? Number.POSITIVE_INFINITY;
       }
     };
@@ -134,17 +136,22 @@ export function ConfrontoMateriali() {
 
   const senzaResistenza = righe.filter((r) => !Number.isFinite(r.resistenza));
 
-  const intestazione = (c: Colonna, testo: string, unita?: string) => (
+  const intestazione = (c: typeof COLONNE[number]) => (
     <th
-      className={`font-normal leading-tight ${
-        c === 'nome' ? 'pl-3 text-left' : 'pr-1.5 text-right'}`}
-      style={{ color: ordine === c ? 'var(--accento)' : 'var(--testo-debole)' }}
+      key={c.id}
+      title={c.spiega}
+      className={`whitespace-nowrap px-2 align-bottom font-normal leading-tight ${
+        c.id === 'nome' ? 'pl-3 text-left' : 'text-right'}`}
+      style={{ color: ordine === c.id ? 'var(--accento)' : 'var(--testo-debole)' }}
     >
       <button type="button" onClick={() => {
-        if (ordine === c) setCrescente((v) => !v); else { setOrdine(c); setCrescente(true); }
+        if (ordine === c.id) setCrescente((v) => !v);
+        else { setOrdine(c.id); setCrescente(true); }
       }}>
-        {testo}{unita ? <span className="opacity-60"> {unita}</span> : null}
-        {ordine === c ? (crescente ? ' ↑' : ' ↓') : ''}
+        <span className="block">
+          {c.testo}{ordine === c.id ? (crescente ? ' ↑' : ' ↓') : ''}
+        </span>
+        {c.unita ? <span className="block opacity-60">{c.unita}</span> : null}
       </button>
     </th>
   );
@@ -170,32 +177,17 @@ export function ConfrontoMateriali() {
 
       <div className="overflow-x-auto">
         {/*
-          LARGHEZZE ESPLICITE. Senza, il nome più lungo dettava la larghezza
-          della colonna e spingeva il costo fuori dal pannello; con
-          `table-fixed` da solo, la colonna del nome si stringeva fino a
-          «Acc…», che non distingue un S275 da un S355. Il nome ha lo spazio
-          che gli serve per essere riconoscibile, i numeri quello che serve
-          alle loro cifre, e il totale sta nei 288 px del pannello.
+          NOVE COLONNE CON L'INTESTAZIONE PER ESTESO non stanno nei 288 px del
+          pannello, e stringerle le riduceva a sigle («sfrutt», «δ») che è
+          proprio ciò che il §3.1 chiede di togliere. La tabella prende la
+          larghezza che le serve e SCORRE dentro il suo contenitore: un nome
+          leggibile che va cercato scorrendo vale più di una sigla sempre
+          visibile e da interpretare.
         */}
-        <table className="numerico w-full table-fixed text-[10px]">
-          <colgroup>
-            <col style={{ width: '31%' }} />
-            <col style={{ width: '11%' }} />
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '11%' }} />
-          </colgroup>
+        <table className="numerico w-max min-w-full text-[10px]">
           <thead>
             <tr>
-              {intestazione('nome', 'materiale')}
-              {intestazione('massa', 'peso', 'kg')}
-              {intestazione('sigma', 'σmax', 'MPa')}
-              {intestazione('sfruttamento', 'sfrutt', '%')}
-              {intestazione('cs', 'C.S.')}
-              {intestazione('freccia', 'δ', 'mm')}
-              {intestazione('costo', '€')}
+              {COLONNE.map(intestazione)}
             </tr>
           </thead>
           <tbody>
@@ -216,38 +208,49 @@ export function ConfrontoMateriali() {
                       background: assegnato ? 'var(--sfondo-elevato)' : 'transparent',
                     }}>
                   {/*
-                    Il nome si TRONCA invece di andare a capo. Con «Acciaio
-                    inox AISI 304» su tre righe la tabella diventava alta il
-                    doppio e la colonna del costo finiva fuori dal pannello:
-                    una riga per materiale è ciò che rende la tabella
-                    confrontabile a colpo d'occhio, ed è il motivo per cui è
-                    una tabella. Il nome intero resta nel suggerimento.
+                    Il nome NON va a capo: una riga per materiale è ciò che
+                    rende la tabella confrontabile a colpo d'occhio, ed è il
+                    motivo per cui è una tabella e non un elenco di schede.
                   */}
-                  <td className="truncate py-0.5 pl-3 pr-1.5"
+                  <td className="whitespace-nowrap py-0.5 px-2 pl-3"
                       style={{ color: assegnato ? 'var(--accento)' : 'var(--testo-attenuato)' }}>
-                    {!passa && <span style={{ color: 'var(--errore)' }}>✗ </span>}
                     {r.nome}
                   </td>
-                  <td className="pr-1.5 text-right" style={{ color: 'var(--testo-attenuato)' }}>
+                  <td className="px-2 text-right" style={{ color: 'var(--testo-attenuato)' }}>
                     {num(r.massa, 0)}
                   </td>
-                  <td className="pr-1.5 text-right" style={{ color: 'var(--testo-attenuato)' }}>
+                  <td className="px-2 text-right" style={{ color: 'var(--testo-attenuato)' }}>
                     {Number.isFinite(r.sigma) ? num(r.sigma / 1e6, 0) : '—'}
                   </td>
-                  <td className="pr-1.5 text-right"
+                  <td className="px-2 text-right" style={{ color: 'var(--testo-attenuato)' }}>
+                    {Number.isFinite(r.resistenza) ? num(r.resistenza / 1e6, 0) : '—'}
+                  </td>
+                  <td className="px-2 text-right"
                       style={{ color: r.verificato ? 'var(--testo-attenuato)' : 'var(--errore)' }}>
                     {Number.isFinite(r.sfruttamentoMassimo)
                       ? num(r.sfruttamentoMassimo * 100, 0) : '—'}
                   </td>
-                  <td className="pr-1.5 text-right"
+                  <td className="px-2 text-right"
                       style={{ color: passa ? 'var(--ok)' : 'var(--errore)' }}>
                     {Number.isFinite(r.coefficienteMinimo)
                       ? num(r.coefficienteMinimo, 2) : '—'}
                   </td>
-                  <td className="pr-1.5 text-right" style={{ color: 'var(--testo-attenuato)' }}>
+                  <td className="px-2 text-right" style={{ color: 'var(--testo-attenuato)' }}>
                     {freccia(r.spostamentoMassimo)}
                   </td>
-                  <td className="pr-3 text-right" style={{ color: 'var(--testo-attenuato)' }}>
+                  {/*
+                    L'ESITO in chiaro. Prima era una crocetta davanti al nome,
+                    e una crocetta non dice se il materiale non verifica o se
+                    sbanda: il motivo sta nel suggerimento, la colonna dice
+                    almeno quale delle due cose è.
+                  */}
+                  <td className="whitespace-nowrap px-2 text-right"
+                      title={motivo || 'verifica a resistenza ed è stabile'}
+                      style={{ color: passa ? 'var(--ok)' : 'var(--errore)' }}>
+                    {passa ? '✓' : !Number.isFinite(r.resistenza) ? '— S_y'
+                      : !r.verificato ? '✗ resist.' : '✗ instab.'}
+                  </td>
+                  <td className="px-2 pr-3 text-right" style={{ color: 'var(--testo-attenuato)' }}>
                     {r.costo !== null ? num(r.costo, 0) : '—'}
                   </td>
                 </tr>
@@ -268,9 +271,11 @@ export function ConfrontoMateriali() {
 
       <p className="px-3 pt-1.5 text-[9.5px] leading-relaxed"
          style={{ color: 'var(--testo-debole)' }}>
-        La croce rossa marca chi non verifica o sbanda a compressione: può
-        essere comunque il più leggero o il più economico, ed è il motivo per
-        cui le colonne stanno vicine. Riga evidenziata: il materiale assegnato.
+        La colonna Esito dice se il materiale verifica: «resist.» non passa la
+        verifica di resistenza, «instab.» sbanda a compressione. Uno che non
+        verifica può essere comunque il più leggero o il più economico, ed è il
+        motivo per cui le colonne stanno vicine. Riga evidenziata: il materiale
+        assegnato. La tabella scorre in orizzontale.
       </p>
     </div>
   );

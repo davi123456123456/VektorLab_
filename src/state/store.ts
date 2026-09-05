@@ -207,6 +207,20 @@ export interface Stato {
     agganciato: boolean;
   } | null;
   /** vincolo o sconnessione su asta selezionato */
+  /**
+   * §5 — il MODELLO DI CALCOLO, quello a cui i risultati appartengono.
+   *
+   * Deformata e diagrammi vengono campionati sulle aste del modello ESPANSO:
+   * un'asta con un vincolo o una sconnessione in campata lì è divisa in due
+   * tratti, con id che nel modello d'autore non esistono. Disegnare i
+   * risultati cercando la geometria nel modello d'autore faceva sparire
+   * proprio quei tratti, e la struttura appariva spezzata: era il «traslano
+   * separatamente» del §5.1.
+   *
+   * È lo stesso modello già costruito per il conteggio, conservato invece che
+   * buttato via: non costa un calcolo in più.
+   */
+  modelloDiCalcolo: Progetto | null;
   suAstaSelezionato: string | null;
   suAstaEvidenziato: string | null;
   /** trascinamento in corso lungo l'asta: ascissa provvisoria */
@@ -520,6 +534,7 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
     posaSuAsta: 'vincolo',
     sconnessioneCorrente: 'cerniera',
     rotazioneVincolo: null,
+    modelloDiCalcolo: null,
     suAstaSelezionato: null,
     sconnessioneNodaleSelezionata: null,
     suAstaEvidenziato: null,
@@ -607,6 +622,7 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
         risultato: null, cinematica: null, verifiche: null,
         ...STATICA_AZZERATA,
       });
+      ripulisciSelezione(set, get);
       get().ricalcolaConteggio();
       if (get().modalita === 'reazioni') void get().calcolaRisultati();
     },
@@ -967,7 +983,7 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
       if (progetto.aste.length === 0) {
         set({
           cinematica: null, partizioneCorpi: [], topologia: null,
-          normalizzazione: null,
+          normalizzazione: null, modelloDiCalcolo: null,
         });
         return;
       }
@@ -988,11 +1004,12 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
           partizioneCorpi: p.segmenti,
           topologia: p.topologia,
           normalizzazione,
+          modelloDiCalcolo: espansione.progetto,
         });
       } catch {
         set({
           cinematica: null, partizioneCorpi: [], topologia: null,
-          normalizzazione: null,
+          normalizzazione: null, modelloDiCalcolo: null,
         });
       }
     },
@@ -1265,19 +1282,50 @@ if (import.meta.env?.DEV) {
   (globalThis as Record<string, unknown>).vektorlab = { useStore, registro };
 }
 
-/** Dopo undo/redo la selezione può puntare a oggetti non più esistenti. */
+/**
+ * Dopo ogni modifica del modello la selezione può puntare a oggetti che non
+ * esistono più.
+ *
+ * §1 (iterazione 11-bis) — QUI stava la regressione del tasto Canc. La
+ * potatura c'era, ma guardava i soli nodi e aste e girava soltanto dopo
+ * undo/redo. Un vincolo su asta creato e poi annullato lasciava
+ * `suAstaSelezionato` che puntava a un id sparito; l'eliminazione dava la
+ * precedenza a quel puntatore, eseguiva un comando a vuoto e usciva prima di
+ * arrivare all'asta davvero selezionata. Il sintomo era «Canc non elimina le
+ * aste», la causa un riferimento pendente in un campo che nessuno ripuliva.
+ *
+ * Un id che non trova più il suo oggetto viene azzerato: è l'unico stato
+ * onesto: «non c'è nulla di selezionato lì».
+ */
 function ripulisciSelezione(
   set: (partial: Partial<Stato>) => void,
   get: () => Stato,
 ): void {
-  const { progetto, selezione } = get();
-  const nodi = new Set(progetto.nodi.map((n) => n.id as string));
-  const aste = new Set(progetto.aste.map((a) => a.id as string));
+  const st = get();
+  const p = st.progetto;
+  const nodi = new Set(p.nodi.map((n) => n.id as string));
+  const aste = new Set(p.aste.map((a) => a.id as string));
+  const suAsta = new Set<string>([
+    ...(p.vincoliSuAsta ?? []).map((v) => v.id),
+    ...(p.sconnessioni ?? []).map((c) => c.id),
+  ]);
+  const interni = new Set((p.vincoliInterni ?? []).map((v) => v.id));
+  const carichi = new Set(p.carichi.map((c) => c.id as unknown as string));
+
   set({
     selezione: {
-      nodi: new Set([...selezione.nodi].filter((id) => nodi.has(id as string))),
-      aste: new Set([...selezione.aste].filter((id) => aste.has(id as string))),
+      nodi: new Set([...st.selezione.nodi].filter((id) => nodi.has(id as string))),
+      aste: new Set([...st.selezione.aste].filter((id) => aste.has(id as string))),
     },
+    suAstaSelezionato:
+      st.suAstaSelezionato && suAsta.has(st.suAstaSelezionato)
+        ? st.suAstaSelezionato : null,
+    sconnessioneNodaleSelezionata:
+      st.sconnessioneNodaleSelezionata && interni.has(st.sconnessioneNodaleSelezionata)
+        ? st.sconnessioneNodaleSelezionata : null,
+    caricoSelezionato:
+      st.caricoSelezionato && carichi.has(st.caricoSelezionato as unknown as string)
+        ? st.caricoSelezionato : null,
   });
 }
 

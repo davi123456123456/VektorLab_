@@ -22,6 +22,7 @@
  */
 
 import { etichettaSuSfondo } from './frecce.js';
+import { quotaAsseNeutro } from './sezioneDisegno.js';
 import type { PuntoTensione } from '../core/checks/index.js';
 
 export interface OpzioniFibre {
@@ -33,6 +34,16 @@ export interface OpzioniFibre {
   EA: number;
   /** altezza della sezione [m] */
   altezza: number;
+  /**
+   * §4.2 — le due quote estreme misurate DAL BARICENTRO.
+   *
+   * Su una sezione a T o a L il baricentro non sta a metà altezza, e prendere
+   * ±H/2 metteva la fibra estrema dove non è: la fibra più sollecitata
+   * risultava quella sbagliata, cioè proprio il numero che questa figura
+   * dovrebbe spiegare. Vengono dal modulo delle sezioni, non ricalcolate qui.
+   */
+  ySup: number;
+  yInf: number;
   /** distribuzione delle tensioni sulla sezione */
   distribuzione: PuntoTensione[];
   /** avanzamento dell'animazione, 0 = indeformato, 1 = deformato */
@@ -136,8 +147,15 @@ export function disegnaFibre(
 
   const quotaY = (u: number) => cy + u * cosPhi;
   const semi = (u: number) => meta + u * sinPhi;
-  const uSup = -altezzaDisegno / 2;
-  const uInf = altezzaDisegno / 2;
+  /*
+   * La mappatura quota fisica → quota sul disegno passa per il baricentro,
+   * non per la mezzeria del rettangolo: `u = 0` è il baricentro, e le due
+   * estremità stanno a distanze diverse quando la sezione è asimmetrica.
+   */
+  const arco = (o.ySup + o.yInf) || o.altezza || 1;
+  const aDisegno = (yFisico: number) => -(yFisico / arco) * altezzaDisegno;
+  const uSup = aDisegno(o.ySup);
+  const uInf = aDisegno(-o.yInf);
 
   // ── contorno del concio ──
   // Il bordo è una linea sua, sottile e neutra. Prima il contorno era il
@@ -159,8 +177,10 @@ export function disegnaFibre(
   const nFibre = 17;
   for (let i = 0; i < nFibre; i++) {
     const t = i / (nFibre - 1);          // 0 = fibra inferiore
-    const yRel = t - 0.5;                // −0.5 … +0.5
-    const u = -yRel * altezzaDisegno;
+    // dalla fibra più bassa (−yInf) alla più alta (+ySup): sono le quote
+    // vere della sezione, che su una T non sono simmetriche
+    const yFisico = -o.yInf + t * arco;
+    const u = aDisegno(yFisico);
 
     // le fibre estreme coincidono con il contorno: disegnarle sopra lo
     // sporcherebbe, e sono già rappresentate dal profilo
@@ -169,8 +189,6 @@ export function disegnaFibre(
     const y = quotaY(u);
     const semiLunghezza = semi(u);
 
-    // tensione alla quota corrispondente
-    const yFisico = yRel * o.altezza;
     const sigma = interpolaSigma(punti, yFisico);
     ctx.strokeStyle = coloreFibra(sigma, sigmaMax, colori.trazione, colori.compressione);
     ctx.lineWidth = i === (nFibre - 1) / 2 ? 1 : 2.4;
@@ -191,13 +209,20 @@ export function disegnaFibre(
     ctx.stroke();
   }
 
-  // ── asse neutro ──
+  /*
+   * ── ASSE NEUTRO ──
+   * Dove σ si annulla, che è il baricentro solo se N è nullo. Con uno sforzo
+   * normale la fibra indeformata si sposta, e disegnarla sempre a metà
+   * direbbe il contrario di quello che il conto ha trovato.
+   */
+  const yn = quotaAsseNeutro(punti);
+  const yAsse = yn === null ? cy : quotaY(aDisegno(yn));
   ctx.strokeStyle = colori.neutro;
   ctx.setLineDash([5, 4]);
   ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(4, cy);
-  ctx.lineTo(W - 6, cy);
+  ctx.moveTo(4, yAsse);
+  ctx.lineTo(W - 6, yAsse);
   ctx.stroke();
   ctx.setLineDash([]);
 

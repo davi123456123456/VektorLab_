@@ -12,6 +12,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b",
     "analyze": "tsx cli/analyze.ts",
+    "baseline:write": "tsx strumenti/baseline.ts --scrivi",
+    "baseline:check": "tsx strumenti/baseline.ts",
     "screenshots": "tsx strumenti/screenshots.ts"
   },
   "devDependencies": {

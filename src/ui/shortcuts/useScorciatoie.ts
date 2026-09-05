@@ -91,11 +91,29 @@ interface Opzioni {
   alternaOutliner: () => void;
 }
 
-function inCampoDiTesto(e: KeyboardEvent): boolean {
-  const t = e.target as HTMLElement | null;
+/**
+ * Il bersaglio dell'evento è un campo in cui si sta scrivendo?
+ *
+ * §1.3 — è la guardia che impedisce a Canc di eliminare la struttura mentre
+ * l'utente sta correggendo un numero nell'ispettore. Va interrogata PRIMA di
+ * qualunque altra cosa nel gestore: una scorciatoia che ruba un tasto a un
+ * campo di testo è peggio di una scorciatoia che manca.
+ *
+ * È esportata per poterla mettere alla prova da sola: l'ambiente di test non
+ * ha un DOM, e il collegamento fra questa e il gestore si verifica nel
+ * browser, dove è reale.
+ */
+export function inCampoDiTesto(e: { target: unknown }): boolean {
+  const t = e.target as {
+    tagName?: string; isContentEditable?: boolean; closest?: (s: string) => unknown;
+  } | null;
   if (!t) return false;
   const tag = t.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  if (t.isContentEditable) return true;
+  // un campo può avere dentro di sé altri elementi: chi scrive in un editor
+  // ricco vede l'evento partire da uno span, non dal contenitore modificabile
+  return typeof t.closest === 'function' && t.closest('[contenteditable="true"]') !== null;
 }
 
 export function useScorciatoie(o: Opzioni): void {

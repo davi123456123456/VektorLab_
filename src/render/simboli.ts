@@ -17,6 +17,7 @@
  */
 
 import type { TipoSconnessione, Vincolo } from '../core/model/types.js';
+import { vincoliDi } from '../core/model/catalogoVincoli.js';
 import type { Punto } from './camera.js';
 import { orientamentoVincolo } from '../core/model/orientamento.js';
 
@@ -125,6 +126,17 @@ export function disegnaCernieraSconnessa(
   ctx: CanvasRenderingContext2D, p: Punto, angoloSchermo: number,
   colore: string, sfondo: string, coloreAsta: string,
   evidenziato = false, scala = 1, conMozziconi = false,
+  /**
+   * §2.1 — il CARRELLO INTERNO è questo stesso simbolo con due rulli fra la
+   * base del triangolo e la linea inferiore, e nient'altro di diverso.
+   *
+   * Passa da qui invece di avere un disegno proprio perché «identico in ogni
+   * elemento» non si ottiene ridisegnando la stessa forma una seconda volta:
+   * si ottiene disegnandola una volta sola. È lo stesso rapporto che lega il
+   * carrello esterno alla cerniera esterna, e infatti là il codice è già
+   * condiviso.
+   */
+  conRulli = false,
 ): void {
   ctx.save();
   ctx.translate(p.x, p.y);
@@ -150,16 +162,29 @@ export function disegnaCernieraSconnessa(
   ctx.strokeStyle = colore;
   ctx.fillStyle = colore;
   const r = 3.6;
+  // con i rulli la base sale, e sotto ci stanno i cerchietti e il piano di
+  // scorrimento: sono le stesse quote del carrello a telaio
+  const base = conRulli ? 14 : 15;
   ctx.beginPath();
   ctx.moveTo(0, r);
-  ctx.lineTo(-10, 15);
-  ctx.lineTo(10, 15);
+  ctx.lineTo(-10, base);
+  ctx.lineTo(10, base);
   ctx.closePath();
   ctx.fillStyle = sfondo;
   ctx.fill();
   ctx.strokeStyle = colore;
   ctx.stroke();
-  terreno(c, 15);
+  if (conRulli) {
+    // ESATTAMENTE DUE. Il perno sopra non è un rullo: è la cerniera del
+    // simbolo, e c'è anche nella «Cerniera» da cui questo deriva.
+    for (const x of [-5, 5]) cerchietto(c, x, 17.2, 3.2);
+    ctx.strokeStyle = colore;
+    ctx.beginPath();
+    ctx.moveTo(-16, 20.4);
+    ctx.lineTo(16, 20.4);
+    ctx.stroke();
+  }
+  terreno(c, conRulli ? 20.4 : 15);
   cerchietto(c, 0, 0, r);
   ctx.restore();
 }
@@ -313,24 +338,28 @@ function molla(c: Contesto, v: Vincolo): void {
 }
 
 /** Etichette per la tavolozza dei vincoli. */
+/**
+ * §2.2 — I VINCOLI, DERIVATI DAL CATALOGO.
+ *
+ * Qui c'erano due elenchi scritti a mano che ripetevano nomi e gradi già
+ * presenti nel catalogo, ed erano già divergenti: il bipendolo interno si
+ * chiamava «Bipendolo interno» in uno e «Doppio pendolo interno» nell'altro, e
+ * il carrello interno nel secondo elenco non compariva affatto. È il motivo
+ * per cui una correzione fatta nel catalogo non si vedeva nell'interfaccia.
+ *
+ * Ora c'è una sola fonte. Aggiungere un vincolo significa aggiungere una voce
+ * al catalogo, e basta.
+ */
 export const VINCOLI_DISPONIBILI: {
   tipo: Vincolo['tipo']; nome: string; gradi: number; descrizione: string;
-}[] = [
-  { tipo: 'cerniera', nome: 'Cerniera a telaio', gradi: 2,
-    descrizione: 'Blocca entrambe le traslazioni, lascia libera la rotazione. L\'angolo è ininfluente.' },
-  { tipo: 'carrello', nome: 'Carrello', gradi: 1,
-    descrizione: 'L\'angolo è l\'inclinazione del PIANO DI SCORRIMENTO: blocca la traslazione normale al piano.' },
-  { tipo: 'incastro', nome: 'Incastro', gradi: 3,
-    descrizione: 'Blocca tutto: due traslazioni e la rotazione. L\'angolo serve solo al disegno.' },
-  { tipo: 'bipendolo', nome: 'Doppio pendolo a telaio', gradi: 2,
-    descrizione: 'Blocca la traslazione normale al piano e la rotazione. Identico al pattino nella cinematica.' },
-  { tipo: 'pattino', nome: 'Pattino a telaio', gradi: 2,
-    descrizione: 'Blocca la traslazione normale alla guida e la rotazione. Identico al doppio pendolo nella cinematica.' },
-  { tipo: 'biella', nome: 'Biella', gradi: 1,
-    descrizione: 'L\'angolo è la direzione dell\'ASSE: blocca la traslazione lungo di esso.' },
-  { tipo: 'molla', nome: 'Molla', gradi: 0,
-    descrizione: 'Vincolo elastico: non entra nel conteggio dei gradi di vincolo, ma irrigidisce la struttura.' },
-];
+}[] = vincoliDi('telaio').map((v) => ({
+  tipo: (v.icona.genere === 'telaio' ? v.icona.tipo : 'cerniera') as Vincolo['tipo'],
+  nome: v.nome,
+  // la molla non entra nel conteggio: `gdv` dice 'elastico', che come numero
+  // vale zero — è la stessa cosa che diceva l'elenco scritto a mano
+  gradi: Number.parseInt(v.gdv, 10) || 0,
+  descrizione: v.descrizione,
+}));
 
 /**
  * Il nome che il vincolo porta, secondo l'ambito.
@@ -344,29 +373,15 @@ export function nomeVincolo(
   tipo: Vincolo['tipo'] | TipoSconnessione | 'biella',
   ambito: 'esterno' | 'interno',
 ): string {
-  // il carrello interno esiste SOLO interno: non ha una controparte a telaio
-  // da cui derivare il nome, e chiamarlo «Carrello» lo confonderebbe con
-  // quello, che è un'altra cosa
-  if (tipo === 'carrelloInterno') return 'Carrello interno';
-  const base = VINCOLI_DISPONIBILI.find((v) => v.tipo === tipo)?.nome ?? tipo;
-  if (ambito === 'esterno') return base;
-  const senzaTelaio = base.replace(' a telaio', '');
-  return `${senzaTelaio} ${tipo === 'cerniera' ? 'interna' : 'interno'}`;
+  const voci = vincoliDi(ambito === 'esterno' ? 'telaio' : 'interno');
+  const v = ambito === 'esterno'
+    ? voci.find((x) => x.icona.genere === 'telaio' && x.icona.tipo === tipo)
+    : voci.find((x) => x.sconnessione === tipo);
+  return v?.nome ?? String(tipo);
 }
 
 // ═══════════════════ SCONNESSIONI INTERNE ═══════════════════
 
-export const SCONNESSIONI_DISPONIBILI: {
-  tipo: TipoSconnessione; nome: string;
-  trasmette: string; descrizione: string;
-}[] = [
-  { tipo: 'cerniera', nome: 'Cerniera interna', trasmette: 'N e T, non M',
-    descrizione: 'Consente la rotazione relativa fra i due tronchi: in quel punto il momento flettente è esattamente nullo.' },
-  { tipo: 'bipendolo', nome: 'Bipendolo interno', trasmette: 'N e M, non T',
-    descrizione: 'Consente la traslazione relativa perpendicolare: in quel punto il taglio è nullo.' },
-  { tipo: 'pattino', nome: 'Pattino interno', trasmette: 'T e M, non N',
-    descrizione: 'Consente lo scorrimento relativo assiale: in quel punto lo sforzo normale è nullo.' },
-];
 
 /**
  * Simbolo di una sconnessione interna, disegnato SUL contorno dell'asta.
@@ -410,62 +425,15 @@ export function disegnaSconnessione(
     }
   } else if (tipo === 'carrelloInterno') {
     /*
-     * §2.1 — CARRELLO INTERNO: la forma del carrello esterno, senza terra e
-     * con le aste sopra.
-     *
-     * Tre elementi, e ciascuno dice una cosa:
-     *
-     *   · il triangolo con i due rulli è la stessa forma del carrello a
-     *     telaio, perché il comportamento è quello — passa la sola componente
-     *     perpendicolare al piano di scorrimento;
-     *   · NON c'è la tratteggiatura del terreno, perché non collega a terra;
-     *   · sopra, le due estremità delle aste che vi appoggiano, come nella
-     *     cerniera interna, perché quello che collega sono due membri fra
-     *     loro.
-     *
-     * Il criterio è che affiancando le due icone la differenza si veda subito:
-     * tratteggiatura nel carrello esterno, aste sovrastanti in questo.
+     * §2.1 — non ridisegnato qui: è la «Cerniera» con i due rulli, e lo si
+     * ottiene chiamando quella. Un secondo disegno della stessa forma è
+     * esattamente il modo in cui le due icone finivano per non somigliarsi.
      */
-    const r = 2.8;
-    // le due estremità delle aste, che si fermano sul perno
-    ctx.lineWidth = 1.6;
-    for (const verso of [-1, 1]) {
-      ctx.beginPath();
-      ctx.moveTo(verso * (r + 1.4), -7.5);
-      ctx.lineTo(verso * 11, -7.5);
-      ctx.stroke();
-    }
-    ctx.lineWidth = evidenziato ? 2.6 : 2;
-
-    // il perno
-    ctx.beginPath();
-    ctx.arc(0, -7.5, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // il triangolo, che parte sotto il perno e lo tocca col vertice
-    ctx.beginPath();
-    ctx.moveTo(0, -7.5 + r);
-    ctx.lineTo(-8, 2);
-    ctx.lineTo(8, 2);
-    ctx.closePath();
-    ctx.fillStyle = sfondo;
-    ctx.fill();
-    ctx.strokeStyle = colore;
-    ctx.stroke();
-
-    // i due rulli, e il piano di scorrimento su cui corrono
-    for (const x of [-4, 4]) {
-      ctx.beginPath();
-      ctx.arc(x, 4.6, 2.4, 0, Math.PI * 2);
-      ctx.fillStyle = sfondo;
-      ctx.fill();
-      ctx.strokeStyle = colore;
-      ctx.stroke();
-    }
-    ctx.beginPath();
-    ctx.moveTo(-10, 7.6); ctx.lineTo(10, 7.6);
-    ctx.stroke();
+    ctx.restore();
+    disegnaCernieraSconnessa(
+      ctx, p, angoloSchermo, colore, sfondo, colore, evidenziato, scala, false, true,
+    );
+    return;
   } else {
     // pattino: la guida è perpendicolare all'asse, lo scorrimento è assiale
     ctx.beginPath();

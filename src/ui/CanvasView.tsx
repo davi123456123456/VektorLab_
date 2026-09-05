@@ -160,6 +160,7 @@ export function CanvasView() {
       anteprimaSuAsta: st.anteprimaSuAsta,
       apparizione: (id) => registro.apparizione(id),
 
+      modelloRisultati: st.modelloDiCalcolo,
       risultato: st.modalita === 'risultati'
         ? mescolaRisultati(
             st.risultatoPrecedente, st.risultato!,

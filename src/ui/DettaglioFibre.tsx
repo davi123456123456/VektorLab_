@@ -12,8 +12,9 @@ import { registro } from '../anim/registro.js';
 import { Bottone } from './Pannelli.js';
 import type { EsitoVerifica } from '../core/checks/index.js';
 
-export function DettaglioFibre({ v, EI, EA, altezza }: {
+export function DettaglioFibre({ v, EI, EA, altezza, ySup, yInf }: {
   v: EsitoVerifica; EI: number; EA: number; altezza: number;
+  ySup: number; yInf: number;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [riproduci, setRiproduci] = useState(true);
@@ -31,8 +32,8 @@ export function DettaglioFibre({ v, EI, EA, altezza }: {
    *
    * Con il ref il ciclo parte una volta sola e legge sempre l'ultimo valore.
    */
-  const dati = useRef({ v, EI, EA, altezza, curvatura, riproduci, animazioni });
-  dati.current = { v, EI, EA, altezza, curvatura, riproduci, animazioni };
+  const dati = useRef({ v, EI, EA, altezza, ySup, yInf, curvatura, riproduci, animazioni });
+  dati.current = { v, EI, EA, altezza, ySup, yInf, curvatura, riproduci, animazioni };
 
   useEffect(() => {
     const c = canvas.current;
@@ -67,6 +68,7 @@ export function DettaglioFibre({ v, EI, EA, altezza }: {
         : 1;
       disegnaFibre(ctx, {
         curvatura: d.curvatura, N: d.v.sezione.N, EA: d.EA, altezza: d.altezza,
+        ySup: d.ySup, yInf: d.yInf,
         distribuzione: d.v.distribuzione.punti,
         lambda, larghezza: W, altezzaCanvas: H, colori,
       });

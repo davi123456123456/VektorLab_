@@ -15,6 +15,9 @@ import {
 } from '../core/materials/sezioniParametriche.js';
 import { CampoNumero, Riga, Selettore } from './Pannelli.js';
 
+/** Millimetri senza la coda binaria della conversione da metri. */
+const arrotonda = (mm: number): number => Number(mm.toFixed(3));
+
 export function EditorSezione({ parametri, densita, onChange }: {
   parametri: ParametriSezione;
   /** densità del materiale, per il peso al metro */
@@ -71,7 +74,16 @@ export function EditorSezione({ parametri, densita, onChange }: {
       {descrizione.misure.map((m) => (
         <Riga key={m.chiave} etichetta={`${m.etichetta}  ${m.simbolo}`}>
           <CampoNumero
-            valore={((parametri as unknown as Record<string, number>)[m.chiave] ?? 0) * 1000}
+            /*
+              Il valore si ARROTONDA prima di andare nel campo. Le misure sono
+              in metri e si mostrano in millimetri: 0.0062 × 1000 non fa 6.2,
+              fa 6.200000000000001, e quella coda finiva dentro la casella di
+              testo. Tre decimali sul millimetro sono il micrometro, che è
+              oltre qualunque misura di un profilo.
+            */
+            valore={arrotonda(
+              ((parametri as unknown as Record<string, number>)[m.chiave] ?? 0) * 1000,
+            )}
             passo={1}
             suffisso="mm"
             onChange={(v) => cambiaMisura(m.chiave, v / 1000)}

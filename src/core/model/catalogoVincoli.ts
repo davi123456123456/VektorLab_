@@ -30,8 +30,13 @@ export type IconaVincolo =
   | { genere: 'telaio'; tipo: TipoVincolo }
   /** pallino sul nodo, senza terra */
   | { genere: 'sconnessione'; tipo: TipoSconnessione }
-  /** cerniera a terra CHE SCONNETTE: simbolo a telaio, aste che si fermano */
-  | { genere: 'cernieraSconnessa' };
+  /**
+   * Cerniera a terra CHE SCONNETTE: simbolo a telaio, aste che si fermano sul
+   * perno. Con `rulli` è il carrello interno: §2.1 chiede che sia lo stesso
+   * simbolo con l'aggiunta di due cerchietti, e passare per lo stesso genere
+   * è ciò che impedisce ai due disegni di divergere.
+   */
+  | { genere: 'cernieraSconnessa'; rulli?: boolean };
 
 export interface DefinizioneVincolo {
   /** chiave stabile: è quella che finisce nello stato dell'interfaccia */
@@ -53,6 +58,15 @@ export interface DefinizioneVincolo {
    */
   soloDisegno: boolean;
   icona: IconaVincolo;
+  /**
+   * Per le voci interne: il tipo che finisce nel modello.
+   *
+   * «Cerniera interna» e «Cerniera» sono due voci di tavolozza diverse che
+   * producono la stessa sconnessione — cambia che cosa altro si posa insieme
+   * a essa — e questo campo è ciò che le riporta entrambe al modello senza
+   * bisogno di un secondo elenco che le traduca.
+   */
+  sconnessione?: TipoSconnessione;
   descrizione: string;
 }
 
@@ -116,6 +130,7 @@ export const CATALOGO_VINCOLI: readonly DefinizioneVincolo[] = [
     id: 'cernieraInterna', categoria: 'interno', nome: 'Cerniera interna',
     gdv: '2(g−1)', separa: true, orientabile: false, soloDisegno: false,
     icona: { genere: 'sconnessione', tipo: 'cerniera' },
+    sconnessione: 'cerniera',
     descrizione: 'Libera la rotazione relativa fra le aste convergenti, senza '
       + 'collegare niente a terra. Con g gruppi rigidi vale 2(g−1).',
   },
@@ -123,6 +138,7 @@ export const CATALOGO_VINCOLI: readonly DefinizioneVincolo[] = [
     id: 'cernieraSconnessa', categoria: 'interno', nome: 'Cerniera',
     gdv: '2m', separa: true, orientabile: true, soloDisegno: true,
     icona: { genere: 'cernieraSconnessa' },
+    sconnessione: 'cerniera',
     descrizione: 'Il carrello senza le ruote: due reazioni a terra E rotazione '
       + 'relativa libera fra le aste. Le aste si fermano sul perno invece di '
       + 'attraversarlo. Con m aste convergenti vale 2m.',
@@ -130,7 +146,8 @@ export const CATALOGO_VINCOLI: readonly DefinizioneVincolo[] = [
   {
     id: 'carrelloInterno', categoria: 'interno', nome: 'Carrello interno',
     gdv: '1', separa: true, orientabile: true, soloDisegno: false,
-    icona: { genere: 'sconnessione', tipo: 'carrelloInterno' },
+    icona: { genere: 'cernieraSconnessa', rulli: true },
+    sconnessione: 'carrelloInterno',
     descrizione: 'Libera la rotazione relativa E lo scorrimento nel piano: '
       + "trasmette la sola forza perpendicolare al piano. È l'unico vincolo "
       + "interno da un grado. L'angolo definisce il piano di scorrimento.",
@@ -139,12 +156,14 @@ export const CATALOGO_VINCOLI: readonly DefinizioneVincolo[] = [
     id: 'bipendoloInterno', categoria: 'interno', nome: 'Doppio pendolo interno',
     gdv: '2', separa: true, orientabile: false, soloDisegno: false,
     icona: { genere: 'sconnessione', tipo: 'bipendolo' },
+    sconnessione: 'bipendolo',
     descrizione: 'Trasmette lo sforzo normale e il momento, non il taglio.',
   },
   {
     id: 'pattinoInterno', categoria: 'interno', nome: 'Pattino interno',
     gdv: '2', separa: true, orientabile: false, soloDisegno: false,
     icona: { genere: 'sconnessione', tipo: 'pattino' },
+    sconnessione: 'pattino',
     descrizione: 'Trasmette il taglio e il momento, non lo sforzo normale.',
   },
 ];

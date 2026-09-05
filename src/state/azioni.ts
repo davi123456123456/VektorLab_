@@ -17,7 +17,7 @@ import {
   aggiungiCarico, aggiungiSconnessione, aggiungiSconnessioneNodale,
   aggiungiVincoloSuAsta, duplica, elimina, eliminaCarichi,
   componi, eliminaSconnessioneNodale, eliminaSuAsta, estrudi, impostaVincolo,
-  spostaSuAsta, svuotaModello, trasformaNodi,
+  spostaSuAsta, svuotaModello, trasformaNodi, type Comando,
 } from './commands.js';
 import {
   asteNelNodo, deduciAzioneSuNodo, type AzioneSuNodo,
@@ -81,44 +81,52 @@ export function annullaOperazione(): void {
   }
 }
 
+/**
+ * GESTORE UNICO DI ELIMINAZIONE.
+ *
+ * §1 (iterazione 11-bis). Prima c'erano tre percorsi che si escludevano a
+ * vicenda: il vincolo su asta, la sconnessione nodale e la geometria, ognuno
+ * con il suo `return`. Il primo che trovava qualcosa da fare usciva, e gli
+ * altri non venivano mai raggiunti — così una selezione mista perdeva pezzi, e
+ * un puntatore rimasto appeso a un id inesistente faceva uscire il gestore
+ * senza eliminare nulla di ciò che era davvero selezionato.
+ *
+ * Ora si RACCOLGONO tutti i bersagli e si eliminano insieme, in un unico passo
+ * di cronologia. La precedenza del §4.2 dell'iterazione 9 resta, ma cambia
+ * natura: non è più «solo questo», è «prima questo», e riguarda soltanto
+ * l'etichetta con cui l'operazione entra nella cronologia.
+ *
+ * Ogni id viene confrontato con il modello prima di essere usato: un
+ * riferimento che non trova più il suo oggetto viene ignorato, non eseguito a
+ * vuoto.
+ */
 export function eliminaSelezione(): void {
   const st = useStore.getState();
+  const p = st.progetto;
 
-  // §4.2 — un VINCOLO selezionato ha la precedenza sulla selezione di nodi e
-  // aste: chi ha appena cliccato un carrello nell'elenco e preme Canc vuole
-  // togliere quel carrello, non la geometria che gli sta sotto.
-  if (st.suAstaSelezionato) {
-    const p = st.progetto;
-    const v = (p.vincoliSuAsta ?? []).find((x) => x.id === st.suAstaSelezionato);
-    const c = (p.sconnessioni ?? []).find((x) => x.id === st.suAstaSelezionato);
-    const nome = v ? nomeVincolo(v.vincolo.tipo, 'esterno')
-      : c ? nomeVincolo(c.tipo, 'interno') : 'vincolo';
-    const dove = (v?.astaId ?? c?.astaId) as unknown as string | undefined;
-    st.esegui({
-      ...eliminaSuAsta(st.suAstaSelezionato),
-      etichetta: `eliminato ${nome}${dove ? ` su ${dove}` : ''}`,
-    });
-    st.selezionaSuAsta(null);
-    return;
-  }
-  if (st.sconnessioneNodaleSelezionata) {
-    const v = (st.progetto.vincoliInterni ?? [])
-      .find((x) => x.id === st.sconnessioneNodaleSelezionata);
-    const nodo = st.progetto.nodi.find((n) => n.id === v?.nodoId);
-    st.esegui({
-      ...eliminaSconnessioneNodale(st.sconnessioneNodaleSelezionata),
-      etichetta: `eliminata ${v ? nomeVincolo(v.tipo, 'interno') : 'sconnessione'}`
-        + `${nodo ? ` in ${nodo.etichetta ?? (nodo.id as unknown as string)}` : ''}`,
-    });
-    st.selezionaSconnessioneNodale(null);
-    return;
-  }
+  // ── raccolta dei bersagli, ciascuno solo se esiste ancora ──
+  const vincoloSuAsta = (p.vincoliSuAsta ?? [])
+    .find((v) => v.id === st.suAstaSelezionato);
+  const sconnessione = (p.sconnessioni ?? [])
+    .find((c) => c.id === st.suAstaSelezionato);
+  const suAsta = vincoloSuAsta ?? sconnessione ? st.suAstaSelezionato : null;
 
-  if (contaSelezione(st.selezione) === 0) return;
+  const interno = (p.vincoliInterni ?? [])
+    .find((v) => v.id === st.sconnessioneNodaleSelezionata);
+
+  const carico = p.carichi.find(
+    (c) => (c.id as unknown as string) === (st.caricoSelezionato as unknown as string),
+  );
+
+  const nodi = [...st.selezione.nodi].filter((id) => p.nodi.some((n) => n.id === id));
+  const aste = [...st.selezione.aste].filter((id) => p.aste.some((a) => a.id === id));
+
+  const quanti = nodi.length + aste.length
+    + (suAsta ? 1 : 0) + (interno ? 1 : 0) + (carico ? 1 : 0);
+  if (quanti === 0) return;
 
   // §4.2 — conferma solo oltre i cinque elementi: sotto quella soglia c'è
   // l'undo, e una finestra a ogni cancellazione stanca più di quanto protegga
-  const quanti = contaSelezione(st.selezione);
   if (quanti > 5) {
     const ok = globalThis.confirm?.(`Eliminare ${quanti} elementi?`);
     if (ok === false) return;
@@ -129,16 +137,58 @@ export function eliminaSelezione(): void {
   // dimenticata perché qualcosa sopravvivesse, e non c'è modo di accorgersene
   // guardando lo schermo: ciò che resta è invisibile proprio perché ha perso
   // il nodo o l'asta che lo portava.
-  const p = st.progetto;
   const tuttiNodi = p.nodi.every((n) => st.selezione.nodi.has(n.id));
   const tutteAste = p.aste.every((a) => st.selezione.aste.has(a.id)
     || st.selezione.nodi.has(a.nodoIniziale) || st.selezione.nodi.has(a.nodoFinale));
   if (p.nodi.length > 0 && tuttiNodi && tutteAste) {
     st.esegui(svuotaModello());
-  } else {
-    st.esegui(elimina([...st.selezione.nodi], [...st.selezione.aste]));
+    st.svuotaSelezione();
+    st.selezionaSuAsta(null);
+    st.selezionaSconnessioneNodale(null);
+    st.selezionaCarico(null);
+    return;
   }
+
+  // ── un solo comando, quindi un solo passo di undo ──
+  const parti: Comando[] = [];
+  const nomi: string[] = [];
+
+  if (suAsta) {
+    const nome = vincoloSuAsta
+      ? nomeVincolo(vincoloSuAsta.vincolo.tipo, 'esterno')
+      : nomeVincolo(sconnessione!.tipo, 'interno');
+    const dove = (vincoloSuAsta?.astaId ?? sconnessione?.astaId) as unknown as string;
+    parti.push(eliminaSuAsta(suAsta));
+    nomi.push(`${nome}${dove ? ` su ${dove}` : ''}`);
+  }
+  if (interno) {
+    const nodo = p.nodi.find((n) => n.id === interno.nodoId);
+    parti.push(eliminaSconnessioneNodale(interno.id));
+    nomi.push(`${nomeVincolo(interno.tipo, 'interno')}`
+      + `${nodo ? ` in ${nodo.etichetta ?? (nodo.id as unknown as string)}` : ''}`);
+  }
+  if (carico) {
+    parti.push(eliminaCarichi([carico.id]));
+    nomi.push('carico');
+  }
+  if (nodi.length > 0 || aste.length > 0) {
+    // `elimina` è già a cascata (§1.3 dell'iterazione 8): porta via carichi e
+    // vincoli che insistono su ciò che sparisce, e non lascia entità orfane
+    parti.push(elimina(nodi, aste));
+    const q: string[] = [];
+    if (aste.length > 0) q.push(`${aste.length} ${aste.length === 1 ? 'asta' : 'aste'}`);
+    if (nodi.length > 0) q.push(`${nodi.length} ${nodi.length === 1 ? 'nodo' : 'nodi'}`);
+    nomi.push(q.join(' e '));
+  }
+
+  st.esegui(parti.length === 1
+    ? { ...parti[0], etichetta: `eliminato ${nomi[0]}` }
+    : componi(`eliminati ${nomi.join(', ')}`, ...parti));
+
   st.svuotaSelezione();
+  st.selezionaSuAsta(null);
+  st.selezionaSconnessioneNodale(null);
+  st.selezionaCarico(null);
 }
 
 /**

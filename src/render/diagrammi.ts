@@ -22,6 +22,7 @@ import { type Camera, type Punto, mondoASchermo } from './camera.js';
 export type Componente = 'N' | 'T' | 'M';
 
 export interface OpzioniDiagramma {
+  /** modello a cui appartengono i risultati: quello ESPANSO (§5) */
   progetto: Progetto;
   camera: Camera;
   risultato: RisultatoAnalisi;

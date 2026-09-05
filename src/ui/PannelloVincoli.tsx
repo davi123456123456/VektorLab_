@@ -169,7 +169,7 @@ export function PannelloVincoli() {
 function IconaVincolo({ icona }: { icona: TipoIconaVincolo }) {
   if (icona.genere === 'telaio') return <AnteprimaVincolo tipo={icona.tipo} angolo={0} />;
   if (icona.genere === 'sconnessione') return <AnteprimaSconnessione tipo={icona.tipo} />;
-  return <AnteprimaCernieraSconnessa />;
+  return <AnteprimaCernieraSconnessa rulli={icona.rulli ?? false} />;
 }
 
 /**
@@ -177,7 +177,7 @@ function IconaVincolo({ icona }: { icona: TipoIconaVincolo }) {
  * cerniera a telaio, ma coi due mozziconi d'asta che si FERMANO sul perno. È
  * l'unico modo di distinguere le due voci in un'icona di quarantasei pixel.
  */
-function AnteprimaCernieraSconnessa() {
+function AnteprimaCernieraSconnessa({ rulli = false }: { rulli?: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = canvas.current;
@@ -194,9 +194,9 @@ function AnteprimaCernieraSconnessa() {
       stile.getPropertyValue('--vincolo').trim() || '#ff5f56',
       stile.getPropertyValue('--sfondo-elevato').trim() || '#232830',
       stile.getPropertyValue('--asta').trim() || '#c8d0dc',
-      false, 0.72, true,
+      false, 0.72, true, rulli,
     );
-  }, []);
+  }, [rulli]);
   return <canvas ref={canvas} style={{ width: 46, height: 34 }} />;
 }
 

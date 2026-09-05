@@ -14,7 +14,16 @@ import { type Camera, type Punto, mondoASchermo } from './camera.js';
 import { arcoMomento, etichettaSuSfondo, frecciaPiena } from './frecce.js';
 
 export interface OpzioniDeformata {
+  /** modello a cui appartengono i risultati: quello ESPANSO */
   progetto: Progetto;
+  /**
+   * Modello d'autore, per la sola indeformata tratteggiata.
+   *
+   * Le suddivisioni nate dall'espansione non fanno parte della struttura che
+   * l'utente ha disegnato: mostrarle nell'indeformata aggiungerebbe nodi che
+   * non ha messo. Assente, vale il modello dei risultati.
+   */
+  progettoAutore?: Progetto;
   camera: Camera;
   risultato: RisultatoAnalisi;
   /** fattore di amplificazione */
@@ -84,6 +93,7 @@ export function disegnaDeformata(
   const aste = new Map(o.progetto.aste.map((a) => [a.id, a]));
   const fattore = o.fattore * o.lambda;
 
+  const autore = o.progettoAutore ?? o.progetto;
   if (o.mostraIndeformata) {
     ctx.save();
     ctx.strokeStyle = o.coloreIndeformata;
@@ -91,8 +101,9 @@ export function disegnaDeformata(
     ctx.globalAlpha = 0.5;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    for (const a of o.progetto.aste) {
-      const ni = nodi.get(a.nodoIniziale), nj = nodi.get(a.nodoFinale);
+    const nodiAutore = new Map(autore.nodi.map((n) => [n.id, n]));
+    for (const a of autore.aste) {
+      const ni = nodiAutore.get(a.nodoIniziale), nj = nodiAutore.get(a.nodoFinale);
       if (!ni || !nj) continue;
       const p = mondoASchermo(o.camera, { x: ni.x, y: ni.y });
       const q = mondoASchermo(o.camera, { x: nj.x, y: nj.y });
@@ -120,7 +131,12 @@ export function disegnaDeformata(
     ctx.stroke();
   }
 
-  // nodi spostati
+  /*
+   * NODI SPOSTATI. L'indice nel vettore degli spostamenti è la POSIZIONE del
+   * nodo nel modello di calcolo, non nel modello d'autore: prenderli in
+   * parallelo funziona finché i due elenchi coincidono e mente in silenzio
+   * appena l'espansione ne aggiunge uno. Si guarda l'indice per id.
+   */
   ctx.fillStyle = o.colore;
   const sp = o.risultato.spostamenti;
   o.progetto.nodi.forEach((n, k) => {

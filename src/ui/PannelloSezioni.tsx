@@ -529,7 +529,7 @@ function DisegnoSezione({ v, parametri }: {
   useEffect(() => {
     const c = canvas.current;
     if (!c) return;
-    const W = 264, H = 168;
+    const W = 264, H = 210;
     const dpr = window.devicePixelRatio || 1;
     c.width = W * dpr; c.height = H * dpr;
     const ctx = c.getContext('2d');
@@ -551,12 +551,17 @@ function DisegnoSezione({ v, parametri }: {
         critico: col('--reazione', '#ffd23f'),
         testo: col('--testo-attenuato', '#9aa3b2'),
         griglia: col('--bordo-chiaro', '#3d4552'),
+        // le stesse tinte delle fibre: teso e compresso devono avere lo
+        // stesso colore ovunque compaiano, o il confronto fra le due figure
+        // costa più di quanto valga
+        trazione: col('--errore', '#ff5f56'),
+        compressione: col('--sforzo-normale', '#4a9eff'),
       },
     });
   }, [v, parametri]);
   return (
     <>
-      <canvas ref={canvas} style={{ width: 264, height: 168 }} />
+      <canvas ref={canvas} style={{ width: 264, height: 210 }} />
       <p className="px-1 text-[10px] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
         Sezione, andamento di σ e di τ sull'altezza. La linea gialla marca la
         quota in cui la tensione ideale è massima.
@@ -612,6 +617,8 @@ function FibreDellAsta({ v, sezione, materialeId }: {
       EI={materiale.E * q.I}
       EA={materiale.E * q.A}
       altezza={q.H}
+      ySup={q.ySup}
+      yInf={q.yInf}
     />
   );
 }
