@@ -30,69 +30,87 @@ export function BarraModalita({ onAiuto, onLogo }: {
   const alternaAnimazioni = useStore((s) => s.alternaAnimazioni);
 
   return (
-    <div className="flex min-h-10 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-1"
-         style={{ borderColor: 'var(--bordo)', background: 'var(--sfondo-pannello)' }}>
+    <div className="flex shrink-0 flex-wrap items-center border-b"
+         style={{
+           borderColor: 'var(--bordo)', background: 'var(--sfondo-pannello)',
+           gap: 'var(--s2)', padding: 'var(--s2) var(--s3)',
+         }}>
       <Logo onClick={onLogo} />
-      <span className="max-w-[24ch] truncate text-[12px]"
-            style={{ color: 'var(--testo-attenuato)' }}>{nome}</span>
+      <span className="max-w-[24ch] truncate"
+            style={{
+              color: 'var(--testo-attenuato)', fontSize: 'var(--t-etichetta)',
+              marginRight: 'var(--s1)',
+            }}>{nome}</span>
       {/*
         §4 — il `+` sta QUI, accanto al nome del modello, e non dentro la barra
         delle schede: quella si nasconde quando il foglio è uno solo, e il
         pulsante per aprirne un secondo finiva nascosto insieme a lei. Era il
         motivo per cui i fogli multipli sembravano non esserci.
       */}
-      <button
-        type="button"
-        onClick={() => useFogli.getState().nuovo()}
-        title="Nuovo foglio di lavoro (Ctrl+T)"
-        className="-ml-1 rounded px-1.5 text-[13px] leading-none transition-colors
-                   hover:bg-[var(--sfondo-elevato)]"
-        style={{ color: 'var(--testo-debole)' }}
-      >+</button>
+      <Bottone minore titolo="Nuovo foglio di lavoro (Ctrl+T)"
+               onClick={() => useFogli.getState().nuovo()}>+</Bottone>
 
-      <div className="flex overflow-hidden rounded border" style={{ borderColor: 'var(--bordo)' }}>
+      {/* le modalità sono UNA scelta: stanno in un gruppo, non in sette bottoni */}
+      <div className="btn-gruppo" role="group" aria-label="Modalità">
         {MODALITA.map((m) => (
           <button
             key={m.id}
             type="button"
             onClick={() => impostaModalita(m.id as Modalita)}
             title={`${m.nome} (${m.tasto})`}
-            className="px-2.5 py-1 text-[11px] transition-colors"
-            style={{
-              background: modalita === m.id ? 'var(--accento-scuro)' : 'transparent',
-              color: modalita === m.id ? '#fff' : 'var(--testo-attenuato)',
-            }}
+            aria-pressed={modalita === m.id}
+            className={`btn${modalita === m.id ? ' attivo' : ''}`}
           >
             {m.nome}
           </button>
         ))}
       </div>
 
-      <div className="flex gap-1">
+      <div className="btn-gruppo" role="group" aria-label="Strumento">
         {STRUMENTI.map((s) => (
-          <Bottone key={s.id} attivo={strumento === s.id} titolo={s.suggerimento}
-                   onClick={() => impostaStrumento(s.id)}>
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => impostaStrumento(s.id)}
+            title={s.suggerimento}
+            aria-pressed={strumento === s.id}
+            className={`btn${strumento === s.id ? ' attivo' : ''}`}
+          >
             {s.nome} <span className="opacity-50">{s.tasto}</span>
-          </Bottone>
+          </button>
         ))}
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
-        <span className="text-[10px] uppercase tracking-wider"
-              style={{ color: 'var(--testo-debole)' }}>aggancio</span>
-        {([
-          ['griglia', 'griglia'], ['nodi', 'nodi'], ['puntiMedi', 'punti medi'],
-          ['intersezioni', 'intersez.'], ['ortogonale', 'ortogonale'],
-        ] as const).map(([chiave, etichetta]) => (
-          <Bottone
-            key={chiave}
-            attivo={snap[chiave]}
-            onClick={() => impostaSnap({ [chiave]: !snap[chiave] })}
-            titolo="Ctrl tenuto premuto inverte temporaneamente l'aggancio"
-          >
-            {etichetta}
-          </Bottone>
-        ))}
+      <div className="riga-controlli" style={{ marginLeft: 'auto' }}>
+        {/*
+          La parola «AGGANCIO» è sparita: il gruppo la dichiara già a chi usa
+          un lettore di schermo, e a chi guarda la dicevano i nomi dentro —
+          «griglia», «nodi», «punti medi» non possono essere altro. Settanta
+          pixel recuperati sono, a 1440, la differenza fra una riga e due.
+        */}
+        {/*
+          Gli agganci sono SEI INTERRUTTORI DELLO STESSO INSIEME: raccolti in un
+          gruppo occupano quaranta pixel in meno di sei bottoni separati — che a
+          1440 è la differenza fra una riga e due — e si leggono come una scelta
+          sola invece che come sei azioni indipendenti.
+        */}
+        <div className="btn-gruppo" role="group" aria-label="Aggancio">
+          {([
+            ['griglia', 'griglia'], ['nodi', 'nodi'], ['puntiMedi', 'punti medi'],
+            ['intersezioni', 'intersez.'], ['ortogonale', 'ortogonale'],
+          ] as const).map(([chiave, etichetta]) => (
+            <button
+              key={chiave}
+              type="button"
+              onClick={() => impostaSnap({ [chiave]: !snap[chiave] })}
+              title="Ctrl tenuto premuto inverte temporaneamente l'aggancio"
+              aria-pressed={snap[chiave]}
+              className={`btn${snap[chiave] ? ' attivo' : ''}`}
+            >
+              {etichetta}
+            </button>
+          ))}
+        </div>
         <Bottone
           attivo={animazioni}
           onClick={alternaAnimazioni}

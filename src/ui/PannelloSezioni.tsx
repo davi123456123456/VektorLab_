@@ -19,6 +19,7 @@ import { MATERIALI } from '../core/materials/materials.js';
 import { EditorMateriale, materialiDisponibili } from './EditorMateriale.js';
 import { NOME_CRITERIO, type EsitoVerifica } from '../core/checks/index.js';
 import { disegnaSezione } from '../render/sezioneDisegno.js';
+import { TabellaMateriali } from './TabellaMateriali.js';
 import { ConfrontoMateriali } from './ConfrontoMateriali.js';
 import { DettaglioFibre } from './DettaglioFibre.js';
 import { proprietaDa } from '../core/materials/sezioniParametriche.js';
@@ -71,8 +72,8 @@ export function PannelloSezioni() {
                   onMouseEnter={() => useStore.getState().evidenziaAste(
                     progetto.aste.filter((x) => x.sezioneId === s.id).map((x) => x.id))}
                   onMouseLeave={() => useStore.getState().evidenziaAste([])}
-                  className="numerico flex w-full items-center gap-2 whitespace-nowrap px-3
-                             py-[3px] text-left text-[11px] hover:brightness-125"
+                  className="numerico flex min-h-8 w-full items-center gap-2 whitespace-nowrap px-3
+                             py-[3px] text-left text-[length:var(--t-minuto)] hover:brightness-125"
                   style={{
                     background: attiva ? 'var(--accento-scuro)' : 'transparent',
                     color: attiva ? '#fff' : 'var(--testo-attenuato)',
@@ -86,14 +87,14 @@ export function PannelloSezioni() {
               );
             })}
             {sezioni.length === 0 && (
-              <p className="px-3 text-[11px]" style={{ color: 'var(--testo-debole)' }}>
+              <p className="px-3 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
                 Nessuna sezione definita per misure. Creane una: senza le misure
                 la verifica tensionale non è possibile.
               </p>
             )}
           </div>
 
-          <p className="px-3 pt-1.5 text-[10px] leading-relaxed"
+          <p className="px-3 pt-2 text-[length:var(--t-minuto)] leading-relaxed"
              style={{ color: 'var(--testo-debole)' }}>
             La sezione <b>predefinita</b> vale per tutte le aste. Con{' '}
             <b>+ sezione</b> se ne crea una assegnata soltanto alle aste
@@ -209,7 +210,7 @@ export function PannelloSezioni() {
             <Bottone onClick={() => void calcola()}>ricalcola</Bottone>
           </div>
           {!verifiche && (
-            <p className="px-3 text-[11px]" style={{ color: 'var(--testo-debole)' }}>
+            <p className="px-3 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
               Serve prima un'analisi. Premi «ricalcola».
             </p>
           )}
@@ -227,7 +228,7 @@ export function PannelloSezioni() {
 function Blocco({ titolo, children }: { titolo: string; children: React.ReactNode }) {
   return (
     <div className="border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
-      <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider"
+      <div className="mb-1 px-3 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
            style={{ color: 'var(--testo-debole)' }}>{titolo}</div>
       {children}
     </div>
@@ -249,7 +250,7 @@ function RisultatoVerifiche({ v, sezioni }: {
 
   return (
     <div className="space-y-2">
-      <div className="mx-3 rounded border px-2 py-1.5 text-[10px]"
+      <div className="mx-3 rounded-[var(--raggio-controllo)] border px-2 py-2 text-[length:var(--t-minuto)]"
            style={{ borderColor: v.tutteVerificate ? 'var(--ok)' : 'var(--errore)' }}>
         <span style={{ color: v.tutteVerificate ? 'var(--ok)' : 'var(--errore)' }}>
           {v.tutteVerificate
@@ -257,13 +258,13 @@ function RisultatoVerifiche({ v, sezioni }: {
             : `${v.perAsta.filter((x) => !x.verificato).length} aste NON verificano`}
         </span>
         {v.peggiore && (
-          <div className="numerico mt-0.5" style={{ color: 'var(--testo-debole)' }}>
+          <div className="numerico mt-1" style={{ color: 'var(--testo-debole)' }}>
             peggiore: {v.peggiore.astaId} — sfruttamento{' '}
             {(v.peggiore.sfruttamento * 100).toFixed(1)} %
           </div>
         )}
         {v.instabilita.size > 0 && (
-          <div className="mt-0.5"
+          <div className="mt-1"
                style={{ color: v.tutteStabili ? 'var(--ok)' : 'var(--errore)' }}>
             {v.tutteStabili
               ? `${v.instabilita.size} aste compresse, tutte stabili`
@@ -272,21 +273,21 @@ function RisultatoVerifiche({ v, sezioni }: {
           </div>
         )}
         {!v.tutteInEsercizio && (
-          <div className="mt-0.5" style={{ color: 'var(--avviso)' }}>
+          <div className="mt-1" style={{ color: 'var(--avviso)' }}>
             alcune aste superano il limite di freccia
           </div>
         )}
       </div>
 
       {v.nonVerificabili.length > 0 && (
-        <div className="mx-3 rounded border px-2 py-1 text-[10px]"
+        <div className="mx-3 rounded-[var(--raggio-controllo)] border px-2 py-1 text-[length:var(--t-minuto)]"
              style={{ borderColor: 'var(--avviso)', color: 'var(--avviso)' }}>
           {v.nonVerificabili.length} aste non verificabili: {v.nonVerificabili[0].motivo}
         </div>
       )}
 
       <div className="px-3">
-        <table className="numerico w-full text-[10px]">
+        <table className="numerico w-full text-[length:var(--t-minuto)]">
           <thead>
             <tr style={{ color: 'var(--testo-debole)' }}>
               <th className="text-left font-normal">asta</th>
@@ -307,13 +308,13 @@ function RisultatoVerifiche({ v, sezioni }: {
                       color: attiva ? '#fff'
                         : x.verificato ? 'var(--testo-attenuato)' : 'var(--errore)',
                     }}>
-                  <td className="py-0.5">{x.astaId}</td>
-                  <td className="py-0.5 text-right">{MPa(x.sigmaIdeale)}</td>
-                  <td className="py-0.5 text-right">
+                  <td className="py-1">{x.astaId}</td>
+                  <td className="py-1 text-right">{MPa(x.sigmaIdeale)}</td>
+                  <td className="py-1 text-right">
                     {Number.isFinite(x.coefficienteSicurezza)
                       ? x.coefficienteSicurezza.toFixed(2) : '∞'}
                   </td>
-                  <td className="py-0.5 text-right">
+                  <td className="py-1 text-right">
                     {(x.sfruttamento * 100).toFixed(0)} %
                   </td>
                 </tr>
@@ -339,17 +340,17 @@ function Dettaglio({ v, progetto, sezioni }: {
 
   return (
     <div className="mt-1 border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
-      <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider"
+      <div className="mb-1 px-3 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
            style={{ color: 'var(--testo-debole)' }}>
         Dettaglio — asta {v.astaId}
       </div>
 
-      <div className="px-3 pb-1 text-[10px] leading-relaxed"
+      <div className="px-3 pb-1 text-[length:var(--t-minuto)] leading-relaxed"
            style={{ color: 'var(--testo-debole)' }}>
         Sezione verificata: quella con <b>|M| massimo</b>, a x = {v.sezione.x.toFixed(3)} m.
       </div>
 
-      <table className="numerico w-full px-3 text-[10px]">
+      <table className="numerico w-full px-3 text-[length:var(--t-minuto)]">
         <tbody style={{ color: 'var(--testo-attenuato)' }}>
           <Voce n="N" v={`${(v.sezione.N / 1e3).toFixed(2)} kN`} />
           <Voce n="T" v={`${(v.sezione.T / 1e3).toFixed(2)} kN`} />
@@ -373,9 +374,9 @@ function Dettaglio({ v, progetto, sezioni }: {
         </tbody>
       </table>
 
-      <div className="mx-3 mt-2 rounded border px-2 py-1.5"
+      <div className="mx-3 mt-2 rounded-[var(--raggio-controllo)] border px-2 py-2"
            style={{ borderColor: v.verificato ? 'var(--ok)' : 'var(--errore)' }}>
-        <div className="numerico flex justify-between text-[11px]">
+        <div className="numerico flex justify-between text-[length:var(--t-minuto)]">
           <span style={{ color: 'var(--testo-attenuato)' }}>coefficiente di sicurezza</span>
           <span className="font-semibold"
                 style={{ color: v.verificato ? 'var(--ok)' : 'var(--errore)' }}>
@@ -389,7 +390,7 @@ function Dettaglio({ v, progetto, sezioni }: {
           più un numero: si accorcia l'etichetta e si impedisce al valore di
           spezzarsi.
         */}
-        <div className="numerico flex justify-between gap-2 text-[10px]"
+        <div className="numerico flex justify-between gap-2 text-[length:var(--t-minuto)]"
              style={{ color: 'var(--testo-debole)' }}>
           <span title="rapporto fra tensione ideale e resistenza di progetto">
             sfruttamento
@@ -401,13 +402,13 @@ function Dettaglio({ v, progetto, sezioni }: {
       </div>
 
       {v.avvisoSezione && (
-        <div className="mx-3 mt-2 rounded border px-2 py-1 text-[10px] leading-relaxed"
+        <div className="mx-3 mt-2 rounded-[var(--raggio-controllo)] border px-2 py-1 text-[length:var(--t-minuto)] leading-relaxed"
              style={{ borderColor: 'var(--avviso)', color: 'var(--avviso)' }}>
           {v.avvisoSezione}
         </div>
       )}
       {v.note.map((n, i) => (
-        <p key={i} className="px-3 pt-1.5 text-[10px] leading-relaxed"
+        <p key={i} className="px-3 pt-2 text-[length:var(--t-minuto)] leading-relaxed"
            style={{ color: 'var(--testo-debole)' }}>{n}</p>
       ))}
 
@@ -419,7 +420,7 @@ function Dettaglio({ v, progetto, sezioni }: {
 
       {sezione?.parametri && asta && (
         <div className="mt-2 border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
-          <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider"
+          <div className="mb-1 px-3 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
                style={{ color: 'var(--testo-debole)' }}>
             Che cosa succede alle fibre
           </div>
@@ -445,16 +446,16 @@ function AltreVerifiche({ astaId }: { astaId: string }) {
   return (
     <>
       <div className="mt-2 border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
-        <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider"
+        <div className="mb-1 px-3 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
              style={{ color: 'var(--testo-debole)' }}>Instabilità</div>
         {!inst && (
-          <p className="px-3 text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+          <p className="px-3 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
             L'asta non è compressa: la verifica non si applica.
           </p>
         )}
         {inst && (
           <>
-            <table className="numerico w-full text-[10px]">
+            <table className="numerico w-full text-[length:var(--t-minuto)]">
               <tbody style={{ color: 'var(--testo-attenuato)' }}>
                 <Voce n="N compressione" v={`${(inst.NEd / 1e3).toFixed(1)} kN`} />
                 <Voce n="L₀ = β·L" v={`${inst.L0.toFixed(3)} m  (β ${inst.beta})`} />
@@ -465,14 +466,14 @@ function AltreVerifiche({ astaId }: { astaId: string }) {
                 <Voce n="N b,Rd" v={`${(inst.NbRd / 1e3).toFixed(1)} kN`} />
               </tbody>
             </table>
-            <div className="mx-3 mt-1 rounded border px-2 py-1 text-[10px]"
+            <div className="mx-3 mt-1 rounded-[var(--raggio-controllo)] border px-2 py-1 text-[length:var(--t-minuto)]"
                  style={{ borderColor: inst.verificato ? 'var(--ok)' : 'var(--errore)',
                           color: inst.verificato ? 'var(--ok)' : 'var(--errore)' }}>
               {inst.verificato ? 'stabile' : 'INSTABILE'} — sfruttamento{' '}
               {(inst.sfruttamento * 100).toFixed(1)} %
             </div>
             {inst.note.map((n, i) => (
-              <p key={i} className="px-3 pt-1 text-[10px] leading-relaxed"
+              <p key={i} className="px-3 pt-1 text-[length:var(--t-minuto)] leading-relaxed"
                  style={{ color: 'var(--testo-debole)' }}>{n}</p>
             ))}
           </>
@@ -481,9 +482,9 @@ function AltreVerifiche({ astaId }: { astaId: string }) {
 
       {eser && (
         <div className="mt-2 border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
-          <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider"
+          <div className="mb-1 px-3 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
                style={{ color: 'var(--testo-debole)' }}>Deformabilità</div>
-          <table className="numerico w-full text-[10px]">
+          <table className="numerico w-full text-[length:var(--t-minuto)]">
             <tbody style={{ color: 'var(--testo-attenuato)' }}>
               <Voce n="freccia" v={`${(eser.frecciaMassima * 1000).toFixed(2)} mm`} />
               <Voce n="a x" v={`${eser.xFreccia.toFixed(3)} m`} />
@@ -492,7 +493,7 @@ function AltreVerifiche({ astaId }: { astaId: string }) {
               <Voce n="limite" v={`L/${eser.limite} = ${(eser.frecciaAmmessa * 1000).toFixed(2)} mm`} />
             </tbody>
           </table>
-          <div className="mx-3 mt-1 rounded border px-2 py-1 text-[10px]"
+          <div className="mx-3 mt-1 rounded-[var(--raggio-controllo)] border px-2 py-1 text-[length:var(--t-minuto)]"
                style={{ borderColor: eser.verificato ? 'var(--ok)' : 'var(--avviso)',
                         color: eser.verificato ? 'var(--ok)' : 'var(--avviso)' }}>
             {eser.verificato ? 'entro il limite' : 'FRECCIA ECCESSIVA'} — sfruttamento{' '}
@@ -513,8 +514,8 @@ function Voce({ n, v, evidenzia, separatore }: {
   }
   return (
     <tr>
-      <td className="py-0.5 pl-3">{n}</td>
-      <td className="py-0.5 pr-3 text-right"
+      <td className="py-1 pl-3">{n}</td>
+      <td className="py-1 pr-3 text-right"
           style={evidenzia ? { color: 'var(--momento)', fontWeight: 600 } : undefined}>
         {v}
       </td>
@@ -542,27 +543,27 @@ function DisegnoSezione({ v, parametri }: {
       distribuzione: v.distribuzione,
       larghezza: W, altezza: H,
       colori: {
-        sfondo: col('--sfondo', '#14171c'),
-        contorno: col('--asta', '#c8d0dc'),
-        riempimento: col('--sfondo-elevato', '#232830'),
-        sigma: col('--sforzo-normale', '#4a9eff'),
-        tau: col('--taglio', '#35c46a'),
-        ideale: col('--momento', '#ff8a3d'),
-        critico: col('--reazione', '#ffd23f'),
-        testo: col('--testo-attenuato', '#9aa3b2'),
-        griglia: col('--bordo-chiaro', '#3d4552'),
+        sfondo: col('--sfondo', 'var(--sfondo)'),
+        contorno: col('--asta', 'var(--asta)'),
+        riempimento: col('--sfondo-elevato', 'var(--sfondo-elevato)'),
+        sigma: col('--sforzo-normale', 'var(--accento)'),
+        tau: col('--taglio', 'var(--carico)'),
+        ideale: col('--momento', 'var(--momento)'),
+        critico: col('--reazione', 'var(--reazione)'),
+        testo: col('--testo-attenuato', 'var(--testo-attenuato)'),
+        griglia: col('--bordo-chiaro', 'var(--bordo-chiaro)'),
         // le stesse tinte delle fibre: teso e compresso devono avere lo
         // stesso colore ovunque compaiano, o il confronto fra le due figure
         // costa più di quanto valga
-        trazione: col('--errore', '#ff5f56'),
-        compressione: col('--sforzo-normale', '#4a9eff'),
+        trazione: col('--errore', 'var(--vincolo)'),
+        compressione: col('--sforzo-normale', 'var(--accento)'),
       },
     });
   }, [v, parametri]);
   return (
     <>
       <canvas ref={canvas} style={{ width: 264, height: 210 }} />
-      <p className="px-1 text-[10px] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
+      <p className="px-1 text-[length:var(--t-minuto)] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
         Sezione, andamento di σ e di τ sull'altezza. La linea gialla marca la
         quota in cui la tensione ideale è massima.
       </p>
@@ -589,7 +590,7 @@ function MaterialeInEvidenza({ asteSelezionate }: { asteSelezionate: Asta[] }) {
 
   if (!scelto) {
     return (
-      <p className="px-3 text-[11px] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
+      <p className="px-3 text-[length:var(--t-minuto)] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
         Seleziona un'asta per vederne il materiale. Per un acciaio di cui
         conosci solo lo snervamento, scegli <b>Acciaio generico</b> e creane una
         copia modificabile.
@@ -675,19 +676,19 @@ function MaterialeDelModello() {
           onChange={(v) => esegui(impostaMaterialePredefinito(v))}
         />
       </Riga>
-      <p className="px-3 pt-0.5 text-[10px] leading-relaxed"
+      <p className="px-3 pt-1 text-[length:var(--t-minuto)] leading-relaxed"
          style={{ color: 'var(--testo-debole)' }}>
         Vale per tutte le aste senza assegnazione specifica.
       </p>
 
-      <div className="mx-3 mt-2 rounded border px-2 py-2"
+      <div className="mx-3 mt-2 rounded-[var(--raggio-controllo)] border px-2 py-2"
            style={{
              borderColor: fy === undefined ? 'var(--vincolo)' : 'var(--bordo)',
            }}>
-        <div className="text-[11px] font-semibold" style={{ color: 'var(--testo)' }}>
+        <div className="text-[length:var(--t-minuto)] font-semibold" style={{ color: 'var(--testo)' }}>
           Inserisci il coefficiente di snervamento S_y
         </div>
-        <div className="flex items-center gap-2 pt-1.5">
+        <div className="flex items-center gap-2 pt-2">
           <input
             type="number"
             min={1}
@@ -698,7 +699,7 @@ function MaterialeDelModello() {
               const v = e.target.value.trim();
               scriviSnervamento(v === '' ? null : Number.parseFloat(v));
             }}
-            className="numerico w-24 rounded border px-1.5 py-0.5 text-[12px] outline-none
+            className="numerico w-24 rounded-[var(--raggio-controllo)] border px-2 py-1 text-[length:var(--t-etichetta)] outline-none
                        focus:border-[var(--accento)]"
             style={{
               background: 'var(--sfondo)',
@@ -706,9 +707,9 @@ function MaterialeDelModello() {
               color: 'var(--testo)',
             }}
           />
-          <span className="text-[11px]" style={{ color: 'var(--testo-attenuato)' }}>MPa</span>
+          <span className="text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-attenuato)' }}>MPa</span>
         </div>
-        <p className="pt-1 text-[10px] leading-relaxed"
+        <p className="pt-1 text-[length:var(--t-minuto)] leading-relaxed"
            style={{ color: fy === undefined ? 'var(--vincolo)' : 'var(--testo-debole)' }}>
           {fy === undefined
             ? 'Senza S_y il coefficiente di sicurezza non è calcolabile. Tutto il '
@@ -718,12 +719,15 @@ function MaterialeDelModello() {
         </p>
       </div>
 
-      <div className="numerico grid grid-cols-2 gap-x-3 px-3 pt-2 text-[10px]"
-           style={{ color: 'var(--testo-debole)' }}>
-        <span>E</span><span>{(materiale.E / 1e9).toFixed(0)} GPa</span>
-        <span>ν</span><span>{materiale.nu.toFixed(2)}</span>
-        <span>ρ</span><span>{materiale.rho.toFixed(0)} kg/m³</span>
-        <span>α</span><span>{(materiale.alpha * 1e6).toFixed(1)}·10⁻⁶ 1/°C</span>
+      {/*
+        §2 — LA TABELLA DELLE PROPRIETÀ, ripristinata.
+        Al posto delle quattro righe del solo materiale scelto: tutti i
+        materiali, con le barre che permettono il confronto senza leggere i
+        numeri, le grandezze scelte dall'utente e il materiale assegnato in
+        evidenza.
+      */}
+      <div style={{ paddingTop: 'var(--s2)' }}>
+        <TabellaMateriali />
       </div>
     </Blocco>
   );
@@ -746,8 +750,8 @@ function BottoneElimina({ disabilitato, motivo, quante, onElimina }: {
         type="button"
         disabled
         title={motivo}
-        className="rounded border px-2 py-1 text-[11px] opacity-40"
-        style={{ borderColor: 'var(--vincolo)', color: 'var(--vincolo)' }}
+        className="btn"
+        style={{ borderColor: 'var(--vincolo)', color: 'var(--vincolo)', opacity: 0.4 }}
       >
         Elimina
       </button>
@@ -756,7 +760,7 @@ function BottoneElimina({ disabilitato, motivo, quante, onElimina }: {
   if (conferma) {
     return (
       <div className="flex items-center gap-1">
-        <span className="text-[10px]" style={{ color: 'var(--vincolo)' }}>
+        <span className="text-[length:var(--t-minuto)]" style={{ color: 'var(--vincolo)' }}>
           {quante > 0
             ? `${quante} aste torneranno alla predefinita.`
             : 'Nessuna asta la usa.'}
@@ -764,8 +768,8 @@ function BottoneElimina({ disabilitato, motivo, quante, onElimina }: {
         <button
           type="button"
           onClick={() => { setConferma(false); onElimina(); }}
-          className="rounded px-2 py-1 text-[11px]"
-          style={{ background: 'var(--vincolo)', color: '#fff' }}
+          className="btn"
+          style={{ background: 'var(--vincolo)', borderColor: 'var(--vincolo)', color: '#fff' }}
         >
           conferma
         </button>
@@ -778,8 +782,7 @@ function BottoneElimina({ disabilitato, motivo, quante, onElimina }: {
       type="button"
       onClick={() => (quante > 0 ? setConferma(true) : onElimina())}
       title="Elimina la voce; le aste che la usavano tornano alla predefinita"
-      className="rounded border px-2 py-1 text-[11px] transition-colors
-                 hover:bg-[var(--vincolo)] hover:text-white"
+      className="btn"
       style={{ borderColor: 'var(--vincolo)', color: 'var(--vincolo)', background: 'transparent' }}
     >
       Elimina

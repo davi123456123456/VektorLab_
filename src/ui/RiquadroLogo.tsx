@@ -70,7 +70,7 @@ export function RiquadroLogo({ onChiudi }: { onChiudi: () => void }) {
         ref={riquadro}
         role="dialog"
         aria-label={`Informazioni su ${NOME}`}
-        className="relative mx-4 max-w-[30rem] rounded-2xl border px-8 py-9"
+        className="relative mx-4 max-w-[30rem] rounded-[var(--raggio-pannello)] border px-8 py-8"
         style={{
           background: 'var(--sfondo-pannello)',
           borderColor: 'var(--bordo)',
@@ -83,7 +83,7 @@ export function RiquadroLogo({ onChiudi }: { onChiudi: () => void }) {
           type="button"
           onClick={onChiudi}
           aria-label="Chiudi"
-          className="absolute right-3 top-3 rounded px-2 py-1 text-[13px] leading-none"
+          className="absolute right-3 top-3 rounded-[var(--raggio-controllo)] px-2 py-1 text-[length:var(--t-corpo)] leading-none"
           style={{ color: 'var(--testo-debole)' }}
         >
           ✕
@@ -91,9 +91,9 @@ export function RiquadroLogo({ onChiudi }: { onChiudi: () => void }) {
 
         <div className="italic" style={{ color: 'var(--testo)', lineHeight: 1.9 }}>
           {RIGHE.map((r, i) => (
-            <p key={i} className="text-[15px]">{r || ' '}</p>
+            <p key={i} className="text-[length:var(--t-titolo)]">{r || ' '}</p>
           ))}
-          <p className="text-[15px]">
+          <p className="text-[length:var(--t-titolo)]">
             <a
               href={`tel:${TELEFONO}`}
               className="underline decoration-dotted underline-offset-4"
@@ -104,7 +104,7 @@ export function RiquadroLogo({ onChiudi }: { onChiudi: () => void }) {
             <button
               type="button"
               onClick={copia}
-              className="ml-3 rounded border px-2 py-[2px] align-middle text-[10px] not-italic"
+              className="ml-3 rounded-[var(--raggio-controllo)] border px-2 py-[2px] align-middle text-[length:var(--t-minuto)] not-italic"
               style={{
                 borderColor: copiato ? 'var(--carico)' : 'var(--bordo)',
                 color: copiato ? 'var(--carico)' : 'var(--testo-debole)',

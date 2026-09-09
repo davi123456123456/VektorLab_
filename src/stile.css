@@ -47,6 +47,201 @@
   --errore: #ff5f56;
   --avviso: #ffbd2e;
   --ok: #35c46a;
+
+  /*
+    ═══════════ TOKEN DI FORMA — §1 e §4.1 ═══════════
+
+    Da qui in giù non ci sono colori ma MISURE, ed esistono per lo stesso
+    motivo dei colori: perché ce ne sia una sola versione. Prima ogni bottone
+    portava le sue, scritte a occhio, e infatti nessuna correzione le
+    raggiungeva tutte.
+  */
+
+  /* spaziature: la scala è questa e non ammette valori intermedi */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s6: 24px;
+  --s8: 32px;
+
+  /* raggi: uno per i controlli, uno per i pannelli, e basta */
+  --raggio-controllo: 6px;
+  --raggio-pannello: 10px;
+
+  /*
+    ALTEZZA DEI CONTROLLI. 40 px è il bersaglio minimo comodo da colpire, ed è
+    la misura che il §1 chiede per la barra e per i bottoni dentro i pannelli.
+    I controlli minori — le crocette, i «+» — scendono a 32, che resta sopra la
+    soglia di un dito su schermo touch.
+  */
+  --h-controllo: 40px;
+  --h-controllo-minore: 32px;
+
+  /*
+    TIPOGRAFIA: quattro dimensioni, non una in più.
+    titolo → etichetta → corpo → minuto. I numeri usano `.numerico` e la
+    dimensione del corpo, così una colonna di valori resta incolonnata.
+  */
+  /*
+    La scala è salita di un punto rispetto a prima: l'applicazione viveva a
+    dieci pixel, che su uno schermo grande sono piccoli. Dodici è il corpo dei
+    pannelli, quattordici quello dei controlli — la stessa misura del testo dei
+    bottoni chiesta dal §1 — e sedici il titolo. Quattro dimensioni, non una in
+    più.
+  */
+  --t-titolo: 16px;
+  --t-corpo: 14px;
+  --t-etichetta: 13px;
+  --t-minuto: 12px;
+
+  /* una sola transizione per tutta l'applicazione */
+  --transizione: 150ms ease;
+}
+
+/*
+  ═══════════ CONTROLLI — §1 ═══════════
+
+  Un bottone si scrive `class="btn"`, e le varianti sono modificatori. È il
+  punto unico che il §1.3 chiede: cambiare l'altezza qui la cambia ovunque,
+  compresi i bottoni che qualcuno scriverà domani.
+*/
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  min-height: var(--h-controllo);
+  min-width: var(--h-controllo);
+  padding: 0 var(--s3);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio-controllo);
+  background: var(--sfondo-elevato);
+  color: var(--testo);
+  font-size: var(--t-corpo);
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--transizione), border-color var(--transizione),
+              color var(--transizione);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--bordo);
+  border-color: var(--bordo-chiaro);
+}
+
+/* premuto: si abbassa di un pelo, che è il modo più diretto di dirlo */
+.btn:active:not(:disabled) {
+  background: var(--bordo-chiaro);
+  transform: translateY(1px);
+}
+
+.btn[aria-pressed='true'], .btn.attivo {
+  background: var(--accento-scuro);
+  border-color: var(--accento);
+  color: #fff;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* il fuoco da tastiera si vede su OGNI controllo, non solo sui bottoni */
+.btn:focus-visible,
+button:focus-visible, a:focus-visible,
+input:focus-visible, select:focus-visible, textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accento);
+  outline-offset: 2px;
+}
+
+/* varianti di dimensione, per i controlli che non sono azioni principali */
+.btn-minore {
+  min-height: var(--h-controllo-minore);
+  min-width: var(--h-controllo-minore);
+  padding: 0 var(--s2);
+  font-size: var(--t-etichetta);
+}
+
+.btn-piena { width: 100%; }
+
+/*
+  GRUPPO DI BOTTONI: quelli attaccati fra loro — le modalità, gli strumenti.
+  Il bordo è del gruppo, i bottoni dentro sono separati da un filetto: così
+  restano una scelta sola invece di sembrare sette azioni indipendenti.
+*/
+.btn-gruppo {
+  display: inline-flex;
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio-controllo);
+  overflow: hidden;
+}
+.btn-gruppo > .btn {
+  border: 0;
+  border-radius: 0;
+  border-left: 1px solid var(--bordo);
+  background: transparent;
+}
+.btn-gruppo > .btn:first-child { border-left: 0; }
+.btn-gruppo > .btn:hover:not(:disabled) { background: var(--sfondo-elevato); }
+.btn-gruppo > .btn[aria-pressed='true'], .btn-gruppo > .btn.attivo {
+  background: var(--accento-scuro);
+  color: #fff;
+}
+
+/*
+  CAMPI E TENDINE: stessa altezza dei bottoni, o su una riga mista le basi non
+  si allineano e la barra sembra montata storta.
+*/
+.campo, .tendina {
+  min-height: var(--h-controllo);
+  padding: 0 var(--s2);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio-controllo);
+  background: var(--sfondo);
+  color: var(--testo);
+  font-size: var(--t-corpo);
+  transition: border-color var(--transizione);
+}
+.campo:hover, .tendina:hover { border-color: var(--bordo-chiaro); }
+
+/*
+  RIGA DI ELENCO — §1.3.
+
+  Le voci di un elenco (nodi, aste, vincoli, carichi) e le intestazioni
+  richiudibili sono cliccabili quanto un bottone, ma un elenco di venti voci a
+  quaranta pixel sarebbe alto ottocento: 32 è il compromesso, e raddoppia
+  comunque il bersaglio rispetto ai ventitré di prima.
+*/
+.riga-elenco {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--h-controllo-minore);
+  text-align: left;
+  transition: background var(--transizione), color var(--transizione);
+}
+.riga-elenco:hover { filter: brightness(1.25); }
+
+/*
+  CURSORI. La barra resta sottile — è il suo linguaggio — ma la ZONA in cui si
+  può afferrare è alta quanto un controllo: su un cursore da dieci pixel si
+  manca il pomello, e il valore salta.
+*/
+input[type='range'] {
+  height: var(--h-controllo);
+  accent-color: var(--accento);
+  cursor: pointer;
+}
+
+/* una riga di controlli: la spaziatura fra bottoni adiacenti è 8 px (§1.3) */
+.riga-controlli {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
 }
 
 html, body, #root {

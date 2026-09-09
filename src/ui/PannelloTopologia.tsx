@@ -31,7 +31,7 @@ export function PannelloTopologia() {
   if (!t) {
     return (
       <Pannello titolo="Topologia">
-        <p className="px-3 py-3 text-[11px]" style={{ color: 'var(--testo-attenuato)' }}>
+        <p className="px-3 py-3 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-attenuato)' }}>
           Nessun modello da ispezionare.
         </p>
       </Pannello>
@@ -46,7 +46,7 @@ export function PannelloTopologia() {
         <Anomalie />
 
         <div className="border-b px-3 py-2" style={{ borderColor: 'var(--bordo)' }}>
-          <div className="numerico grid grid-cols-2 gap-x-3 text-[10.5px]"
+          <div className="numerico grid grid-cols-2 gap-x-3 text-[length:var(--t-minuto)]"
                style={{ color: 'var(--testo-attenuato)' }}>
             <span>nodi</span><span>{calcolo.nodi.length}</span>
             <span>segmenti</span><span>{calcolo.aste.length}</span>
@@ -56,7 +56,7 @@ export function PannelloTopologia() {
         </div>
 
         <div className="border-b px-3 py-2" style={{ borderColor: 'var(--bordo)' }}>
-          <div className="pb-1 text-[10px] font-semibold uppercase tracking-wider"
+          <div className="pb-1 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
                style={{ color: 'var(--testo-debole)' }}>
             Corpi rigidi
           </div>
@@ -67,10 +67,10 @@ export function PannelloTopologia() {
               onMouseEnter={() => evidenzia(i)}
               onMouseLeave={() => evidenzia(null)}
               onClick={() => evidenzia(evidenziato === i ? null : i)}
-              className="numerico flex w-full items-start gap-2 py-[2px] text-left text-[10.5px]"
+              className="riga-elenco numerico flex w-full items-start gap-2  text-left text-[length:var(--t-minuto)]"
               style={{ background: evidenziato === i ? 'var(--accento-scuro)' : undefined }}
             >
-              <span className="mt-[3px] h-2 w-2 shrink-0 rounded-sm"
+              <span className="mt-[3px] h-2 w-2 shrink-0 rounded-[var(--raggio-controllo)]"
                     style={{ background: tintaCorpo(i) }} />
               <span className="w-6 shrink-0" style={{ color: 'var(--testo)' }}>
                 {romano(i)}
@@ -83,7 +83,7 @@ export function PannelloTopologia() {
         </div>
 
         <div className="px-3 py-2">
-          <div className="pb-1 text-[10px] font-semibold uppercase tracking-wider"
+          <div className="pb-1 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
                style={{ color: 'var(--testo-debole)' }}>
             Nodi ({t.nodi.length})
           </div>
@@ -115,7 +115,7 @@ function Nodo({ nodo, x, y, corpo }: {
 }) {
   const sconnesso = nodo.svincolate.length > 0;
   return (
-    <div className="numerico py-[3px] text-[10px] leading-relaxed">
+    <div className="numerico py-[3px] text-[length:var(--t-minuto)] leading-relaxed">
       <div className="flex gap-2">
         <span style={{ color: 'var(--testo)' }}>{nodo.nodoId as unknown as string}</span>
         <span style={{ color: 'var(--testo-debole)' }}>
@@ -136,7 +136,7 @@ function Nodo({ nodo, x, y, corpo }: {
       </div>
       {corpo !== null && (
         <div className="flex items-center gap-1.5 pl-3" style={{ color: 'var(--testo-debole)' }}>
-          <span className="h-2 w-2 rounded-sm" style={{ background: tintaCorpo(corpo) }} />
+          <span className="h-2 w-2 rounded-[var(--raggio-controllo)]" style={{ background: tintaCorpo(corpo) }} />
           corpo rigido {romano(corpo)}
         </div>
       )}
@@ -156,7 +156,7 @@ function Anomalie() {
 
   if (nulla) {
     return (
-      <div className="border-b px-3 py-2 text-[10.5px]"
+      <div className="border-b px-3 py-2 text-[length:var(--t-minuto)]"
            style={{ borderColor: 'var(--bordo)', color: 'var(--carico)' }}>
         Grafo integro: nessun nodo coincidente, nessun riferimento rotto.
       </div>
@@ -166,20 +166,20 @@ function Anomalie() {
   return (
     <div className="border-b px-3 py-2" style={{ borderColor: 'var(--bordo)' }}>
       {n.fusioni.size > 0 && (
-        <p className="text-[10.5px] leading-relaxed" style={{ color: 'var(--vincolo)' }}>
+        <p className="text-[length:var(--t-minuto)] leading-relaxed" style={{ color: 'var(--vincolo)' }}>
           <b>{n.fusioni.size} nodi coincidenti</b> fusi in fase di analisi: nel
           modello ci sono punti diversi alle stesse coordinate. Il disegno sembra
           collegato, il grafo no.
         </p>
       )}
       {n.asteScartate.length > 0 && (
-        <p className="pt-1 text-[10.5px] leading-relaxed" style={{ color: 'var(--vincolo)' }}>
+        <p className="pt-1 text-[length:var(--t-minuto)] leading-relaxed" style={{ color: 'var(--vincolo)' }}>
           <b>{n.asteScartate.length} segmenti scartati</b>:{' '}
           {n.asteScartate.map((a) => `${a.astaId as unknown as string} (${a.motivo})`).join(', ')}
         </p>
       )}
       {n.nodiSuAsta.length > 0 && (
-        <p className="pt-1 text-[10.5px] leading-relaxed" style={{ color: 'var(--momento)' }}>
+        <p className="pt-1 text-[length:var(--t-minuto)] leading-relaxed" style={{ color: 'var(--momento)' }}>
           <b>{n.nodiSuAsta.length} nodi appoggiati su un'asta</b> che non li
           referenzia:{' '}
           {n.nodiSuAsta.map(

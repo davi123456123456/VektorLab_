@@ -7,9 +7,9 @@ export function Pannello({ titolo, azione, children }: {
 }) {
   return (
     <div className="flex min-h-0 flex-col">
-      <div className="flex items-center justify-between border-b px-3 py-1.5"
+      <div className="flex items-center justify-between border-b px-3 py-2"
            style={{ borderColor: 'var(--bordo)' }}>
-        <span className="text-[11px] font-semibold uppercase tracking-wider"
+        <span className="text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
               style={{ color: 'var(--testo-attenuato)' }}>{titolo}</span>
         {azione}
       </div>
@@ -21,7 +21,7 @@ export function Pannello({ titolo, azione, children }: {
 export function Riga({ etichetta, children }: { etichetta: string; children: ReactNode }) {
   return (
     <div className="flex items-center gap-2 px-3 py-1">
-      <span className="w-28 shrink-0 text-[11px]" style={{ color: 'var(--testo-attenuato)' }}>
+      <span className="w-28 shrink-0 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-attenuato)' }}>
         {etichetta}
       </span>
       <div className="min-w-0 flex-1">{children}</div>
@@ -44,14 +44,10 @@ export function CampoNumero({ valore, onChange, passo = 0.1, suffisso, disabilit
           const v = Number.parseFloat(e.target.value);
           if (Number.isFinite(v)) onChange(v);
         }}
-        className="numerico w-full rounded border px-1.5 py-0.5 text-[12px] outline-none
-                   focus:border-[var(--accento)] disabled:opacity-40"
-        style={{
-          background: 'var(--sfondo)', borderColor: 'var(--bordo)', color: 'var(--testo)',
-        }}
+        className="numerico campo w-full outline-none disabled:opacity-40"
       />
       {suffisso && (
-        <span className="shrink-0 text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+        <span className="shrink-0 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
           {suffisso}
         </span>
       )}
@@ -66,9 +62,7 @@ export function Selettore<T extends string>({ valore, opzioni, onChange }: {
     <select
       value={valore}
       onChange={(e) => onChange(e.target.value as T)}
-      className="w-full rounded border px-1.5 py-0.5 text-[12px] outline-none
-                 focus:border-[var(--accento)]"
-      style={{ background: 'var(--sfondo)', borderColor: 'var(--bordo)', color: 'var(--testo)' }}
+      className="tendina w-full outline-none"
     >
       {opzioni.map((o) => (
         <option key={o.valore} value={o.valore}>{o.etichetta}</option>
@@ -81,7 +75,7 @@ export function Interruttore({ attivo, onChange, etichetta }: {
   attivo: boolean; onChange: (v: boolean) => void; etichetta: string;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 px-3 py-0.5 text-[12px]">
+    <label className="flex cursor-pointer items-center gap-2 px-3 py-1 text-[length:var(--t-etichetta)]">
       <input
         type="checkbox"
         checked={attivo}
@@ -95,22 +89,32 @@ export function Interruttore({ attivo, onChange, etichetta }: {
   );
 }
 
-export function Bottone({ children, onClick, attivo, titolo, larghezzaPiena }: {
+/**
+ * §1 — IL BOTTONE, uno solo per tutta l'applicazione.
+ *
+ * Forma, altezza e stati stanno nella classe `.btn` del foglio di stile: qui
+ * non si scrive nessuna misura. È la condizione perché «alza i bottoni di
+ * quattro pixel» sia una modifica in un punto e non in venti.
+ *
+ * `minore` è per i controlli che non sono azioni — una crocetta, un «+» — e
+ * resta comunque sopra la soglia di un dito.
+ */
+export function Bottone({
+  children, onClick, attivo, titolo, larghezzaPiena, minore, disabilitato,
+}: {
   children: ReactNode; onClick: () => void; attivo?: boolean;
-  titolo?: string; larghezzaPiena?: boolean;
+  titolo?: string; larghezzaPiena?: boolean; minore?: boolean;
+  disabilitato?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       title={titolo}
-      className={`rounded border px-2 py-1 text-[11px] transition-colors
-                  ${larghezzaPiena ? 'w-full' : ''}`}
-      style={{
-        background: attivo ? 'var(--accento-scuro)' : 'var(--sfondo-elevato)',
-        borderColor: attivo ? 'var(--accento)' : 'var(--bordo)',
-        color: attivo ? '#fff' : 'var(--testo)',
-      }}
+      disabled={disabilitato}
+      aria-pressed={attivo === undefined ? undefined : attivo}
+      className={`btn${minore ? ' btn-minore' : ''}`
+        + `${larghezzaPiena ? ' btn-piena' : ''}${attivo ? ' attivo' : ''}`}
     >
       {children}
     </button>

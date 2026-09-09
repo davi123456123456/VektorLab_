@@ -92,7 +92,7 @@ export function PannelloCarichi() {
 
         {/* ── tipo di carico ── */}
         <div className="border-t px-3 pt-2" style={{ borderColor: 'var(--bordo)' }}>
-          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider"
+          <div className="mb-2 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
                style={{ color: 'var(--testo-debole)' }}>Tipo</div>
           <div className="flex flex-wrap gap-1">
             {TIPI.map((t) => (
@@ -103,7 +103,7 @@ export function PannelloCarichi() {
               </Bottone>
             ))}
           </div>
-          <p className="pt-1.5 text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+          <p className="pt-2 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
             Clicca su un <b>{tipoScelto.bersaglio}</b> per applicarlo.
           </p>
         </div>
@@ -120,7 +120,7 @@ export function PannelloCarichi() {
                 <CampoNumero valore={(direzioneForza * 180) / Math.PI} passo={15} suffisso="°"
                              onChange={(v) => impostaValori({ direzioneForza: (v * Math.PI) / 180 })} />
               </Riga>
-              <p className="px-3 text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+              <p className="px-3 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
                 −90° = verso il basso. Il verso segue gli assi globali (y in alto).
               </p>
             </>
@@ -128,13 +128,13 @@ export function PannelloCarichi() {
           {caricoCorrente === 'momento' && <ValoriMomento />}
           {caricoCorrente === 'distribuito' && <ValoriDistribuito />}
           {caricoCorrente === 'termico' && (
-            <p className="px-3 text-[10px] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
+            <p className="px-3 text-[length:var(--t-minuto)] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
               Applica ΔT = +30 K uniforme. Modifica il valore nell'elenco qui sotto
               dopo averlo applicato.
             </p>
           )}
           {caricoCorrente === 'cedimento' && (
-            <p className="px-3 text-[10px] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
+            <p className="px-3 text-[length:var(--t-minuto)] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
               Applica un abbassamento di 10 mm. Ha effetto solo sui gradi di
               libertà effettivamente vincolati del nodo.
             </p>
@@ -143,12 +143,12 @@ export function PannelloCarichi() {
 
         {/* ── elenco dei carichi del caso ── */}
         <div className="mt-2 border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
-          <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider"
+          <div className="mb-1 px-3 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
                style={{ color: 'var(--testo-debole)' }}>
             Carichi del caso ({delCaso.length})
           </div>
           {delCaso.length === 0 && (
-            <p className="px-3 pb-2 text-[11px]" style={{ color: 'var(--testo-debole)' }}>
+            <p className="px-3 pb-2 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
               Nessun carico in questo caso.
             </p>
           )}
@@ -159,8 +159,8 @@ export function PannelloCarichi() {
               onMouseEnter={() => evidenziaCarico(c.id)}
               onMouseLeave={() => evidenziaCarico(null)}
               onClick={() => selezionaCarico(caricoSelezionato === c.id ? null : c.id)}
-              className="numerico flex w-full items-center gap-2 whitespace-nowrap px-3 py-[3px]
-                         text-left text-[11px] hover:brightness-125"
+              className="riga-elenco numerico flex w-full items-center gap-2 whitespace-nowrap px-3 
+                         text-left text-[length:var(--t-minuto)] hover:brightness-125"
               style={{
                 background: caricoSelezionato === c.id ? 'var(--accento-scuro)' : 'transparent',
                 color: caricoSelezionato === c.id ? '#fff' : 'var(--testo-attenuato)',
@@ -237,7 +237,7 @@ function ValoriMomento() {
           </Bottone>
         </div>
       </Riga>
-      <p className="px-3 text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+      <p className="px-3 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
         Segno interno: {verso === 'orario' ? '−' : '+'}{(Math.abs(valore) / 1e3).toFixed(1)} kNm.
       </p>
     </>
@@ -296,7 +296,7 @@ function ValoriDistribuito() {
   return (
     <>
       <div className="px-3 pb-1">
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider"
+        <div className="mb-1 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
              style={{ color: 'var(--testo-debole)' }}>Riferimento</div>
         <div className="flex flex-wrap gap-1">
           {MODI_RIFERIMENTO.map((m) => (
@@ -329,11 +329,11 @@ function ValoriDistribuito() {
                        onChange={(v) => imposta({ valoreDistribuito2: v * 1e3 })} />
         </Riga>
       )}
-      <div className="flex items-center gap-1 px-3 py-0.5">
+      <div className="flex items-center gap-1 px-3 py-1">
         <Bottone onClick={() => imposta({
           valoreDistribuito: -q1, valoreDistribuito2: -q2,
         })} titolo="Cambia segno a entrambe le intensità">inverti verso</Bottone>
-        <span className="text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+        <span className="text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
           {versoDescritto(modo, q1, alpha)}
         </span>
       </div>
@@ -348,7 +348,7 @@ function ValoriDistribuito() {
             etichetta="misurato in proiezione (neve)"
             onChange={(v) => imposta({ perProiezione: v })}
           />
-          <p className="px-3 pb-1 text-[10px] leading-relaxed"
+          <p className="px-3 pb-1 text-[length:var(--t-minuto)] leading-relaxed"
              style={{ color: 'var(--testo-debole)' }}>
             {perProiezione
               ? 'Risultante = q · L · |sin(asta, direzione)|: l\'intensità è per unità di proiezione, come la neve misurata in pianta.'
@@ -361,12 +361,12 @@ function ValoriDistribuito() {
         <div className="flex items-center gap-1">
           <CampoNumero valore={s0} passo={0.05}
                        onChange={(v) => imposta({ sInizialeCarico: Math.min(Math.max(v, 0), s1) })} />
-          <span className="text-[10px]" style={{ color: 'var(--testo-debole)' }}>→</span>
+          <span className="text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>→</span>
           <CampoNumero valore={s1} passo={0.05}
                        onChange={(v) => imposta({ sFinaleCarico: Math.max(Math.min(v, 1), s0) })} />
         </div>
       </Riga>
-      <p className="px-3 pb-1 text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+      <p className="px-3 pb-1 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
         Ascisse relative: 0 → 1 copre tutta l'asta.
       </p>
     </>
@@ -393,7 +393,7 @@ function Proprieta() {
 
   return (
     <div className="border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
-      <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider"
+      <div className="px-3 pb-1 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
            style={{ color: 'var(--testo-debole)' }}>
         Carico {carico.id as string}
       </div>
@@ -469,7 +469,7 @@ function ProprietaDistribuito({ carico, progetto, modifica }: {
   return (
     <>
       <div className="px-3 pb-1">
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider"
+        <div className="mb-1 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
              style={{ color: 'var(--testo-debole)' }}>Riferimento</div>
         <div className="flex flex-wrap gap-1">
           {MODI_RIFERIMENTO.map((m) => (
@@ -515,7 +515,7 @@ function ProprietaDistribuito({ carico, progetto, modifica }: {
                        onChange={(v) => modifica({
                          sIniziale: Math.min(Math.max(v, 0), carico.sFinale),
                        })} />
-          <span className="text-[10px]" style={{ color: 'var(--testo-debole)' }}>→</span>
+          <span className="text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>→</span>
           <CampoNumero valore={carico.sFinale} passo={0.05}
                        onChange={(v) => modifica({
                          sFinale: Math.max(Math.min(v, 1), carico.sIniziale),
@@ -534,11 +534,11 @@ function ProprietaDistribuito({ carico, progetto, modifica }: {
       )}
 
       {risultante && (
-        <div className="mx-3 mt-1.5 rounded border px-2 py-1.5"
+        <div className="mx-3 mt-2 rounded-[var(--raggio-controllo)] border px-2 py-2"
              style={{ borderColor: 'var(--bordo)' }}>
-          <div className="text-[10px] font-semibold uppercase tracking-wider"
+          <div className="text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
                style={{ color: 'var(--testo-debole)' }}>Risultante</div>
-          <div className="numerico grid grid-cols-2 gap-x-2 text-[10.5px]"
+          <div className="numerico grid grid-cols-2 gap-x-2 text-[length:var(--t-minuto)]"
                style={{ color: 'var(--testo-attenuato)' }}>
             <span>modulo</span>
             <span>{(Math.abs(risultante.modulo) / 1e3).toFixed(2)} kN</span>
@@ -573,7 +573,7 @@ function PerpendicolareAllAsta({ astaId, onCalcolato }: {
 
   const gradi = ((((valore * 180) / Math.PI) % 360) + 360) % 360;
   return (
-    <div className="px-3 py-0.5">
+    <div className="px-3 py-1">
       <Bottone
         onClick={() => onCalcolato(valore)}
         titolo={`Scrive ${gradi.toFixed(0)}°, perpendicolare a `

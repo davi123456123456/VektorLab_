@@ -70,14 +70,21 @@ export function PannelloVincoli() {
               type="button"
               title={v.descrizione}
               onClick={() => scegli(v.id)}
-              className="flex flex-col items-center gap-1 rounded border py-2 transition-colors"
+              className="flex flex-col items-center gap-1 rounded-[var(--raggio-controllo)] border py-2 transition-colors"
               style={{
                 background: sceltoId === v.id ? 'var(--accento-scuro)' : 'var(--sfondo-elevato)',
                 borderColor: sceltoId === v.id ? 'var(--accento)' : 'var(--bordo)',
               }}
             >
               <IconaVincolo icona={v.icona} />
-              <span className="text-[10px] leading-tight"
+              {/*
+                §1.2 — LA TAVOLOZZA DEI VINCOLI NON SI TOCCA. La scala
+                tipografica dell'iterazione è salita di un punto ovunque, ma
+                qui no: le piastrelle avevano già la dimensione giusta, e con
+                il testo più grande crescevano in altezza fino a spingere
+                l'orientamento fuori dalla vista. Undici pixel, come prima.
+              */}
+              <span className="text-[11px] leading-tight"
                     style={{ color: sceltoId === v.id ? '#fff' : 'var(--testo-attenuato)' }}>
                 {v.nome}
               </span>
@@ -86,7 +93,7 @@ export function PannelloVincoli() {
                 fondo blu: i gradi di vincolo diventavano illeggibili proprio
                 sul vincolo scelto, che è quello che si sta guardando.
               */}
-              <span className="numerico text-[9px]"
+              <span className="numerico text-[11px]"
                     style={{ color: sceltoId === v.id ? 'rgba(255,255,255,0.72)' : 'var(--testo-debole)' }}>
                 {v.gdv === 'elastico' ? 'elastico'
                   : /^\d+$/.test(v.gdv)
@@ -101,7 +108,7 @@ export function PannelloVincoli() {
           <div className="mt-3 border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
             <Orientamento />
             {scelto.soloDisegno && (
-              <p className="px-3 pt-1 text-[9.5px] leading-relaxed"
+              <p className="px-3 pt-1 text-[length:var(--t-minuto)] leading-relaxed"
                  style={{ color: 'var(--testo-debole)' }}>
                 Qui l'angolo orienta il simbolo: le reazioni non ne dipendono.
               </p>
@@ -111,7 +118,7 @@ export function PannelloVincoli() {
 
         <ElencoVincoli />
 
-        <div className="mt-3 border-t px-3 pt-2 text-[11px]"
+        <div className="mt-3 border-t px-3 pt-2 text-[length:var(--t-minuto)]"
              style={{ borderColor: 'var(--bordo)' }}>
           <div className="flex items-baseline justify-between">
             <span style={{ color: 'var(--testo-attenuato)' }}>gradi di vincolo esterni</span>
@@ -121,8 +128,8 @@ export function PannelloVincoli() {
             <button
               type="button"
               onClick={() => applicaVincolo([...selezione.nodi])}
-              className="mt-2 w-full rounded border py-1 text-[11px]"
-              style={{ background: 'var(--sfondo-elevato)', borderColor: 'var(--bordo)' }}
+              className="btn btn-piena"
+              style={{ marginTop: 'var(--s2)' }}
             >
               applica ai {selezione.nodi.size} nodi selezionati
             </button>
@@ -134,25 +141,22 @@ export function PannelloVincoli() {
             type="button"
             onClick={() => setAiuto((v) => !v)}
             aria-label="Spiegazione dei vincoli"
-            className="rounded-full border px-1.5 text-[10px] leading-tight"
-            style={{
-              borderColor: aiuto ? 'var(--accento)' : 'var(--bordo)',
-              color: aiuto ? 'var(--accento)' : 'var(--testo-debole)',
-            }}
+            className={`btn btn-minore${aiuto ? ' attivo' : ''}`}
+            aria-pressed={aiuto}
           >?</button>
           {aiuto && (
-            <div className="mt-1.5 rounded border p-2 text-[10px] leading-relaxed"
+            <div className="mt-2 rounded-[var(--raggio-controllo)] border p-2 text-[length:var(--t-minuto)] leading-relaxed"
                  style={{ borderColor: 'var(--bordo)', color: 'var(--testo-debole)' }}>
               <p>
                 Clicca un <b>nodo</b> per applicare il vincolo scelto, o un punto
                 qualunque di un'<b>asta</b> per posarlo lì.
               </p>
-              <p className="mt-1.5">
+              <p className="mt-2">
                 <b>Esterni</b> collegano a terra e non separano mai i corpi rigidi,
                 nemmeno posati in campata. <b>Interni</b> interrompono la
                 continuità fra le aste, e il conteggio cambia solo in quel caso.
               </p>
-              <p className="mt-1.5">
+              <p className="mt-2">
                 L'angolo è la direzione verso cui <b>punta</b> il vincolo, in
                 assoluto: 0° in alto, 90° a sinistra, 180° in basso, 270° a
                 destra. <b>F</b> ribalta di 180°.
@@ -191,9 +195,9 @@ function AnteprimaCernieraSconnessa({ rulli = false }: { rulli?: boolean }) {
     const stile = getComputedStyle(document.documentElement);
     disegnaCernieraSconnessa(
       ctx, { x: 23, y: 9 }, 0,
-      stile.getPropertyValue('--vincolo').trim() || '#ff5f56',
-      stile.getPropertyValue('--sfondo-elevato').trim() || '#232830',
-      stile.getPropertyValue('--asta').trim() || '#c8d0dc',
+      stile.getPropertyValue('--vincolo').trim() || 'var(--vincolo)',
+      stile.getPropertyValue('--sfondo-elevato').trim() || 'var(--sfondo-elevato)',
+      stile.getPropertyValue('--asta').trim() || 'var(--asta)',
       false, 0.72, true, rulli,
     );
   }, [rulli]);
@@ -216,8 +220,8 @@ function AnteprimaVincolo({ tipo, angolo }: { tipo: TipoVincolo; angolo: number 
     disegnaVincolo(
       ctx, { x: 23, y: 9 },
       { tipo, angolo: angolo as never },
-      stile.getPropertyValue('--vincolo').trim() || '#ff5f56',
-      stile.getPropertyValue('--sfondo-elevato').trim() || '#232830',
+      stile.getPropertyValue('--vincolo').trim() || 'var(--vincolo)',
+      stile.getPropertyValue('--sfondo-elevato').trim() || 'var(--sfondo-elevato)',
       false, 0.72,
     );
   }, [tipo, angolo]);
@@ -240,7 +244,7 @@ function AnteprimaSconnessione({ tipo }: {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, 40, 24);
     const stile = getComputedStyle(document.documentElement);
-    const colore = stile.getPropertyValue('--asta').trim() || '#c8d0dc';
+    const colore = stile.getPropertyValue('--asta').trim() || 'var(--asta)';
     // il pezzo d'asta sotto il simbolo: senza, la cerniera vuota non si
     // capisce che cosa stia interrompendo
     ctx.strokeStyle = colore;
@@ -250,8 +254,8 @@ function AnteprimaSconnessione({ tipo }: {
     ctx.stroke();
     disegnaSconnessione(
       ctx, { x: 20, y: 12 }, tipo, 0,
-      stile.getPropertyValue('--vincolo').trim() || '#ff5f56',
-      stile.getPropertyValue('--sfondo-elevato').trim() || '#232830',
+      stile.getPropertyValue('--vincolo').trim() || 'var(--vincolo)',
+      stile.getPropertyValue('--sfondo-elevato').trim() || 'var(--sfondo-elevato)',
       false, 1,
     );
   }, [tipo]);

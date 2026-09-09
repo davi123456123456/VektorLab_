@@ -25,16 +25,16 @@ export function AvvisoIntegrita() {
         onClick={() => setAperto((v) => !v)}
         className="flex w-full items-baseline justify-between gap-2 text-left"
       >
-        <span className="text-[10px] font-semibold uppercase tracking-wider"
+        <span className="text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
               style={{ color: 'var(--attenzione)' }}>
           Integrità del modello
         </span>
-        <span className="numerico text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+        <span className="numerico text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
           {aperto ? '−' : '+'}
         </span>
       </button>
 
-      <p className="mt-1 text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+      <p className="mt-1 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
         {rimosse > 0
           ? `${rimosse} ${rimosse === 1 ? 'entità rimossa' : 'entità rimosse'}`
             + ': riferimenti a nodi o aste che non esistono.'
@@ -42,9 +42,9 @@ export function AvvisoIntegrita() {
       </p>
 
       {aperto && (
-        <ul className="mt-1.5 space-y-1">
+        <ul className="mt-2 space-y-1">
           {anomalie.map((a, i) => (
-            <li key={`${a.id}-${i}`} className="text-[10px] leading-relaxed"
+            <li key={`${a.id}-${i}`} className="text-[length:var(--t-minuto)] leading-relaxed"
                 style={{ color: a.rimossa ? 'var(--errore)' : 'var(--testo-debole)' }}>
               {a.messaggio}
             </li>

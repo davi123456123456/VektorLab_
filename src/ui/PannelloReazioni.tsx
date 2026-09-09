@@ -57,7 +57,7 @@ export function PannelloReazioni() {
   if (!statico) {
     return (
       <Pannello titolo="Reazioni vincolari">
-        <p className="px-3 py-3 text-[11px]" style={{ color: 'var(--testo-attenuato)' }}>
+        <p className="px-3 py-3 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-attenuato)' }}>
           {calcoloInCorso ? 'Calcolo in corso…' : 'Nessun risultato disponibile.'}
         </p>
       </Pannello>
@@ -104,29 +104,29 @@ function Classificazione() {
   return (
     <div className="border-b px-3 py-2" style={{ borderColor: 'var(--bordo)' }}>
       <div className="flex flex-wrap items-baseline gap-x-2">
-        <span className="text-[13px] font-semibold" style={{ color: colore }}>
+        <span className="text-[length:var(--t-corpo)] font-semibold" style={{ color: colore }}>
           {e.classificazione}
         </span>
         {e.labilita > 0 && (
-          <span className="text-[11px]" style={{ color: 'var(--testo-attenuato)' }}>
+          <span className="text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-attenuato)' }}>
             {e.labilita} {e.labilita === 1 ? 'grado' : 'gradi'} di labilità
           </span>
         )}
         {e.iperstaticita > 0 && (
-          <span className="text-[11px]" style={{ color: 'var(--testo-attenuato)' }}>
+          <span className="text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-attenuato)' }}>
             {e.labilita > 0 ? 'e ' : ''}
             {e.iperstaticita} {e.iperstaticita === 1 ? 'volta' : 'volte'} iperstatica
           </span>
         )}
       </div>
 
-      <p className="pt-1 text-[10.5px] leading-relaxed"
+      <p className="pt-1 text-[length:var(--t-minuto)] leading-relaxed"
          style={{ color: 'var(--testo-attenuato)' }}>
         {e.messaggio}
       </p>
 
       {statico.elementino.sorgente === 'fem' && e.classificazione === 'iperstatica' && (
-        <p className="mt-1.5 rounded border px-2 py-1.5 text-[10.5px] leading-relaxed"
+        <p className="mt-2 rounded-[var(--raggio-controllo)] border px-2 py-2 text-[length:var(--t-minuto)] leading-relaxed"
            style={{ borderColor: 'var(--momento)', color: 'var(--testo)' }}>
           Le reazioni mostrate sono calcolate <b>per congruenza</b> dal metodo
           degli spostamenti: dipendono dalle rigidezze EA ed EI degli elementi.
@@ -135,7 +135,7 @@ function Classificazione() {
         </p>
       )}
 
-      <div className="numerico grid grid-cols-2 gap-x-3 pt-2 text-[10.5px]"
+      <div className="numerico grid grid-cols-2 gap-x-3 pt-2 text-[length:var(--t-minuto)]"
            style={{ color: 'var(--testo-debole)' }}>
         <span>corpi rigidi</span><span>{e.corpi.length}</span>
         <span>equazioni</span><span>{e.numeroEquazioni}</span>
@@ -155,15 +155,18 @@ function NienteNumeri() {
   const impostaModalita = useStore((s) => s.impostaModalita);
   return (
     <div className="border-b px-3 py-3" style={{ borderColor: 'var(--bordo)' }}>
-      <p className="text-[11px] leading-relaxed" style={{ color: 'var(--testo)' }}>
+      <p className="text-[length:var(--t-minuto)] leading-relaxed" style={{ color: 'var(--testo)' }}>
         Nessuna reazione viene mostrata: <b>non esiste</b>. I carichi applicati
         mettono in moto la struttura invece di essere equilibrati, e qualunque
         numero apparisse qui sarebbe un artefatto del calcolo.
       </p>
-      <p className="pt-1.5 text-[10.5px] leading-relaxed"
-         style={{ color: 'var(--testo-attenuato)' }}>
-        Il controllo «somma di carichi e reazioni nulla» fallisce per la stessa
-        ragione, ed è la conferma della diagnosi, non un errore del programma.
+      <p
+        className="pt-2"
+        title={'Il controllo «somma di carichi e reazioni nulla» fallisce per la stessa '
+          + 'ragione: è la conferma della diagnosi, non un errore del programma.'}
+        style={{ color: 'var(--testo-attenuato)', fontSize: 'var(--t-minuto)' }}
+      >
+        Anche l'equilibrio globale fallisce: è la conferma, non un errore.
       </p>
       <div className="pt-2">
         <Bottone onClick={() => impostaModalita('analisi')}
@@ -209,7 +212,7 @@ function Tabella({ componenti }: { componenti: ComponenteReazione[] }) {
   return (
     <div className="border-b pb-2 pt-1" style={{ borderColor: 'var(--bordo)' }}>
       <div className="flex items-center justify-between px-3 pb-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wider"
+        <span className="text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
               style={{ color: 'var(--testo-debole)' }}>
           Reazioni ({righe.length})
         </span>
@@ -219,11 +222,11 @@ function Tabella({ componenti }: { componenti: ComponenteReazione[] }) {
         </div>
       </div>
       {righe.length === 0 && (
-        <p className="px-3 text-[11px]" style={{ color: 'var(--testo-attenuato)' }}>
+        <p className="px-3 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-attenuato)' }}>
           Nessuna reazione: la struttura non è vincolata.
         </p>
       )}
-      <table className="numerico w-full text-[10.5px]">
+      <table className="numerico w-full text-[length:var(--t-minuto)]">
         <tbody>
           {righe.map((c) => (
             <tr key={`${c.nodoId}-${c.indice}`}>
@@ -243,7 +246,7 @@ function Tabella({ componenti }: { componenti: ComponenteReazione[] }) {
           ))}
         </tbody>
       </table>
-      <p className="px-3 pt-1 text-[10px] leading-relaxed"
+      <p className="px-3 pt-1 text-[length:var(--t-minuto)] leading-relaxed"
          style={{ color: 'var(--testo-debole)' }}>
         I moduli sono positivi: il verso è quello disegnato dalla freccia.
       </p>
@@ -259,13 +262,13 @@ function Sconnessioni() {
 
   return (
     <div className="border-b px-3 py-2" style={{ borderColor: 'var(--bordo)' }}>
-      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider"
+      <div className="mb-1 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
            style={{ color: 'var(--testo-debole)' }}>
         Sconnessioni interne
       </div>
-      <p className="pb-1.5 text-[10px] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
-        Non compaiono fra le reazioni esterne. Aprine una per vedere le due
-        forze che i tronchi si scambiano.
+      <p className="pb-2"
+         style={{ color: 'var(--testo-debole)', fontSize: 'var(--t-minuto)' }}>
+        Aprine una per vedere le forze che i tronchi si scambiano.
       </p>
       <div className="flex flex-wrap gap-1">
         {statico.equilibrio.sconnessioni.map((s) => (
@@ -283,7 +286,7 @@ function Sconnessioni() {
         const s = statico.equilibrio.sconnessioni.find((x) => x.nodoId === esplosa);
         if (!s) return null;
         return (
-          <div className="numerico grid grid-cols-2 gap-x-3 pt-2 text-[10.5px]"
+          <div className="numerico grid grid-cols-2 gap-x-3 pt-2 text-[length:var(--t-minuto)]"
                style={{ color: 'var(--testo-attenuato)' }}>
             <span>modulo</span><span>{(Math.hypot(s.fx, s.fy) / 1e3).toFixed(3)} kN</span>
             <span>componente x</span><span>{(s.fx / 1e3).toFixed(3)} kN</span>
@@ -298,7 +301,7 @@ function Sconnessioni() {
 
 function Istruzioni() {
   return (
-    <div className="px-3 py-2 text-[10.5px] leading-relaxed"
+    <div className="px-3 py-2 text-[length:var(--t-minuto)] leading-relaxed"
          style={{ color: 'var(--testo-debole)' }}>
       Clicca un punto qualunque di un'asta per vedere il <b>corpo libero</b> del
       tronco che compete a quella sezione, con tutte le forze considerate e i
@@ -333,7 +336,7 @@ function CorpoLibero() {
   return (
     <div className="border-b px-3 py-2" style={{ borderColor: 'var(--bordo)' }}>
       <div className="flex items-center justify-between pb-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wider"
+        <span className="text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
               style={{ color: 'var(--testo-debole)' }}>
           Corpo libero · {scelto.astaId} · s = {(scelto.s * 100).toFixed(0)} %
         </span>
@@ -346,7 +349,7 @@ function CorpoLibero() {
       </div>
 
       {!tronco.applicabile ? (
-        <p className="text-[10.5px] leading-relaxed" style={{ color: 'var(--vincolo)' }}>
+        <p className="text-[length:var(--t-minuto)] leading-relaxed" style={{ color: 'var(--vincolo)' }}>
           {tronco.motivo}
         </p>
       ) : (
@@ -356,11 +359,11 @@ function CorpoLibero() {
             N={tronco.N} T={tronco.T} M={tronco.M}
             angolo={angoloAsta(tronco.astaId as unknown as string)}
           />
-          <div className="pt-1.5 text-[10px] font-semibold uppercase tracking-wider"
+          <div className="pt-2 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
                style={{ color: 'var(--testo-debole)' }}>
             Forze sul tronco ({tronco.termini.length})
           </div>
-          <table className="numerico w-full text-[10px]">
+          <table className="numerico w-full text-[length:var(--t-minuto)]">
             <tbody>
               {tronco.termini.map((t, i) => (
                 <tr key={i}>
@@ -379,9 +382,9 @@ function CorpoLibero() {
               ))}
             </tbody>
           </table>
-          <p className="pt-1 text-[10px] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
-            L'ultima colonna è il contributo di ciascuna forza al momento nella
-            sezione: la loro somma è M.
+          <p className="pt-1"
+             style={{ color: 'var(--testo-debole)', fontSize: 'var(--t-minuto)' }}>
+            Ultima colonna: contributo al momento. La somma è M.
           </p>
         </>
       )}
@@ -399,11 +402,11 @@ function Azioni({ tronco }: { tronco: Tronco }) {
     <div className="numerico flex gap-3 pt-1">
       {voci.map(([nome, v, u, colore]) => (
         <div key={nome} className="flex items-baseline gap-1">
-          <span className="text-[10px]" style={{ color: 'var(--testo-debole)' }}>{nome}</span>
-          <span className="text-[12px] font-semibold" style={{ color: colore }}>
+          <span className="text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>{nome}</span>
+          <span className="text-[length:var(--t-etichetta)] font-semibold" style={{ color: colore }}>
             {(v / 1e3).toFixed(2)}
           </span>
-          <span className="text-[9px]" style={{ color: 'var(--testo-debole)' }}>{u}</span>
+          <span className="text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>{u}</span>
         </div>
       ))}
     </div>
@@ -422,9 +425,9 @@ function Autoverifiche() {
   return (
     <div className="px-3 pt-2">
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-wider"
+        <span className="text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
               style={{ color: 'var(--testo-debole)' }}>Autoverifiche</span>
-        <span className="text-[10px]"
+        <span className="text-[length:var(--t-minuto)]"
               style={{ color: v.tutteSuperate ? 'var(--carico)' : 'var(--vincolo)' }}>
           {v.verifiche.filter((x) => x.superata).length}/{v.verifiche.length}
         </span>
@@ -437,18 +440,22 @@ function Autoverifiche() {
                     : x.esaminati === 0 ? 'var(--testo-debole)' : 'var(--carico)',
                 }} />
           <div className="min-w-0">
-            <div className="text-[10.5px]" style={{ color: 'var(--testo-attenuato)' }}>
+            <div className="text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-attenuato)' }}>
               {x.descrizione}
             </div>
-            <div className="numerico text-[9.5px]" style={{ color: 'var(--testo-debole)' }}>
+            <div className="numerico text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
               {x.dettaglio}
             </div>
           </div>
         </div>
       ))}
-      <p className="pt-1.5 text-[10px] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
-        Pallino grigio: il controllo non ha trovato nulla da esaminare in questo
-        modello — non è un errore, ma non è nemmeno una conferma.
+      <p
+        className="pt-2"
+        title={'Il controllo non ha trovato nulla da esaminare in questo modello: '
+          + 'non è un errore, ma non è nemmeno una conferma.'}
+        style={{ color: 'var(--testo-debole)', fontSize: 'var(--t-minuto)' }}
+      >
+        Pallino grigio: niente da esaminare.
       </p>
     </div>
   );

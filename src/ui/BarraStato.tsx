@@ -114,7 +114,7 @@ export function BarraStato() {
   const snap = useStore((s) => s.ultimoSnap);
 
   return (
-    <div className="flex h-7 shrink-0 items-center gap-4 border-t px-3 text-[11px]"
+    <div className="flex h-7 shrink-0 items-center gap-4 border-t px-3 text-[length:var(--t-minuto)]"
          style={{ borderColor: 'var(--bordo)', background: 'var(--sfondo-pannello)' }}>
       <span className="numerico" style={{ color: 'var(--testo-attenuato)' }}>
         {coordinate} m
@@ -159,7 +159,7 @@ export function BarraStato() {
               : 'niente da annullare'}>
         cronologia {passato.length}/{passato.length + futuro.length}
         {passato.length > 0 && (
-          <span className="pl-1.5" style={{ color: 'var(--testo-attenuato)' }}>
+          <span className="pl-2" style={{ color: 'var(--testo-attenuato)' }}>
             ↶ {passato[passato.length - 1].etichetta}
           </span>
         )}

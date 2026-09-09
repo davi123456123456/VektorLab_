@@ -45,11 +45,15 @@ export function EditorMateriale({ materiale, personalizzato }: {
             crea copia modificabile
           </Bottone>
         </div>
-        <p className="px-3 pt-1 text-[10px] leading-relaxed"
-           style={{ color: 'var(--testo-debole)' }}>
-          I materiali della libreria non si modificano: hanno valori normati e
-          cambiarli renderebbe irriproducibile qualunque verifica. Creane una
-          copia per adattarla a un certificato di prova.
+        {/* §3.3 — la ragione sta nel suggerimento, non stampata ogni volta */}
+        <p
+          className="px-3 pt-1"
+          title={'I materiali della libreria hanno valori normati: cambiarli renderebbe '
+            + 'irriproducibile qualunque verifica. La copia si può adattare a un '
+            + 'certificato di prova.'}
+          style={{ color: 'var(--testo-debole)', fontSize: 'var(--t-minuto)' }}
+        >
+          La libreria non si modifica: cambiando un valore si crea una copia.
         </p>
       </div>
     );
@@ -62,16 +66,16 @@ export function EditorMateriale({ materiale, personalizzato }: {
           type="text"
           value={materiale.nome}
           onChange={(e) => modifica({ nome: e.target.value })}
-          className="w-full rounded border px-1.5 py-0.5 text-[12px] outline-none
+          className="w-full rounded-[var(--raggio-controllo)] border px-2 py-1 text-[length:var(--t-etichetta)] outline-none
                      focus:border-[var(--accento)]"
           style={{ background: 'var(--sfondo)', borderColor: 'var(--bordo)',
                    color: 'var(--testo)' }}
         />
       </Riga>
 
-      <div className="mx-3 my-1 rounded border px-2 py-1.5"
+      <div className="mx-3 my-1 rounded-[var(--raggio-controllo)] border px-2 py-2"
            style={{ borderColor: 'var(--accento)' }}>
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider"
+        <div className="mb-1 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
              style={{ color: 'var(--accento)' }}>
           Snervamento — il dato che serve
         </div>
@@ -83,10 +87,14 @@ export function EditorMateriale({ materiale, personalizzato }: {
             onChange={(v) => modifica({ resistenze: { ...materiale.resistenze, fy: v * 1e6 } })}
           />
         </Riga>
-        <p className="pt-1 text-[10px] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
-          È l'unico valore che distingue un acciaio da un altro nel calcolo
-          elastico. Se non lo conosci, 235 MPa è l'ipotesi cautelativa: sotto
-          quel valore non scende nessun acciaio da costruzione.
+        <p
+          className="pt-1"
+          title={'È l\'unico valore che distingue un acciaio da un altro nel calcolo '
+            + 'elastico. Sotto i 235 MPa non scende nessun acciaio da costruzione: è '
+            + 'l\'ipotesi cautelativa se il valore non è noto.'}
+          style={{ color: 'var(--testo-debole)', fontSize: 'var(--t-minuto)' }}
+        >
+          Se non lo conosci, 235 MPa è cautelativo.
         </p>
       </div>
 
@@ -167,7 +175,7 @@ function ProprietaSolaLettura({ m }: { m: Materiale }) {
   const r = m.resistenze;
   const MPa = (v?: number) => (v === undefined ? '—' : `${(v / 1e6).toFixed(0)} MPa`);
   return (
-    <table className="numerico w-full text-[10px]">
+    <table className="numerico w-full text-[length:var(--t-minuto)]">
       <tbody style={{ color: 'var(--testo-attenuato)' }}>
         <Voce n="comportamento" v={m.comportamento} />
         <Voce n="E" v={`${(m.E / 1e9).toFixed(0)} GPa`} />
@@ -187,8 +195,8 @@ function ProprietaSolaLettura({ m }: { m: Materiale }) {
 function Voce({ n, v, evidenzia }: { n: string; v: string; evidenzia?: boolean }) {
   return (
     <tr>
-      <td className="py-0.5 pl-3">{n}</td>
-      <td className="py-0.5 pr-3 text-right"
+      <td className="py-1 pl-3">{n}</td>
+      <td className="py-1 pr-3 text-right"
           style={evidenzia ? { color: 'var(--accento)', fontWeight: 600 } : undefined}>
         {v}
       </td>

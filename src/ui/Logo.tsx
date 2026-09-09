@@ -29,8 +29,15 @@ export function Logo({ compatto = false, onClick }: {
       type="button"
       onClick={onClick}
       title={`${NOME} — informazioni`}
-      className="font-semibold tracking-tight transition-opacity hover:opacity-80"
-      style={{ color: 'var(--accento)', fontSize: compatto ? '12px' : undefined }}
+      className="inline-flex items-center font-semibold tracking-tight transition-opacity
+                 hover:opacity-80"
+      style={{
+        color: 'var(--accento)',
+        fontSize: compatto ? 'var(--t-etichetta)' : 'var(--t-corpo)',
+        // anche una scritta cliccabile deve avere un bersaglio comodo
+        minHeight: compatto ? undefined : 'var(--h-controllo)',
+        paddingRight: 'var(--s1)',
+      }}
     >
       {NOME}
     </button>

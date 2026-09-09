@@ -55,7 +55,7 @@ export function ElencoVincoli() {
 
   return (
     <div className="mt-3 border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
-      <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider"
+      <div className="px-3 pb-1 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
            style={{ color: 'var(--testo-debole)' }}>
         Vincoli inseriti ({totale})
       </div>
@@ -168,14 +168,14 @@ function Gruppi({ id, gruppi }: { id: string; gruppi: ElementId[][] }) {
   };
 
   return (
-    <div className="mb-1 ml-2 rounded border px-2 py-1.5"
+    <div className="mb-1 ml-2 rounded-[var(--raggio-controllo)] border px-2 py-2"
          style={{ borderColor: 'var(--bordo)' }}>
-      <div className="pb-1 text-[9.5px]" style={{ color: 'var(--testo-debole)' }}>
+      <div className="pb-1 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
         aste saldate fra loro nello stesso gruppo · clic per spostarle
       </div>
       {gruppi.map((g, i) => (
         <div key={i} className="flex flex-wrap items-baseline gap-1 py-[2px]">
-          <span className="numerico w-14 shrink-0 text-[9.5px]"
+          <span className="numerico w-14 shrink-0 text-[length:var(--t-minuto)]"
                 style={{ color: 'var(--testo-debole)' }}>gruppo {i + 1}</span>
           {g.map((a) => (
             <button
@@ -183,7 +183,7 @@ function Gruppi({ id, gruppi }: { id: string; gruppi: ElementId[][] }) {
               type="button"
               onClick={() => sposta(a)}
               title="Spostala nel gruppo successivo"
-              className="numerico rounded border px-1.5 text-[10px]"
+              className="numerico rounded-[var(--raggio-controllo)] border px-2 text-[length:var(--t-minuto)]"
               style={{
                 borderColor: 'var(--bordo)',
                 background: 'var(--sfondo-elevato)',
@@ -193,7 +193,7 @@ function Gruppi({ id, gruppi }: { id: string; gruppi: ElementId[][] }) {
           ))}
         </div>
       ))}
-      <div className="pt-1 text-[9.5px]" style={{ color: 'var(--testo-debole)' }}>
+      <div className="pt-1 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
         {gruppi.length} {gruppi.length === 1 ? 'gruppo' : 'gruppi'} ·{' '}
         {2 * Math.max(0, gruppi.length - 1)} gradi di vincolo
       </div>
@@ -254,7 +254,7 @@ function Riga2({ nome, dove, angolo, gdv, scelto, onEntra, onEsci, onClic }: {
       onClick={onClic}
       onMouseEnter={onEntra}
       onMouseLeave={onEsci}
-      className="flex w-full items-baseline gap-2 py-[3px] text-left text-[10px]"
+      className="riga-elenco flex w-full items-baseline gap-2  text-left text-[length:var(--t-minuto)]"
       style={{ color: scelto ? 'var(--accento)' : 'var(--testo-attenuato)' }}
     >
       <span className="min-w-0 flex-1 truncate">{nome}</span>

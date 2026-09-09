@@ -23,7 +23,7 @@ export function Ispettore() {
     return (
       <Pannello titolo="Proprietà">
         <div className="py-2">
-          <p className="px-3 pb-2 text-[11px] leading-relaxed"
+          <p className="px-3 pb-2 text-[length:var(--t-minuto)] leading-relaxed"
              style={{ color: 'var(--testo-debole)' }}>
             Nessuna selezione. Disegna la struttura: materiale e sezione si
             assegnano in <b>Materiali</b>, e valgono per tutte le aste finché
@@ -63,7 +63,7 @@ export function Ispettore() {
                            onChange={() => { /* modifica da tastiera: usa G */ }}
                            disabilitato />
             </Riga>
-            <p className="px-3 text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+            <p className="px-3 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
               Per spostarlo con precisione: <b>G</b> <b>X</b> valore <b>Invio</b>.
             </p>
           </>
@@ -83,7 +83,7 @@ export function Ispettore() {
               valore={tutteUguali((a) => a.sezioneId as string)}
               specifica={asteSelezionate.some((a) => a.sezioneSpecifica)}
             />
-            <div className="px-3 pb-1 pt-0.5">
+            <div className="px-3 pb-1 pt-1">
               <Bottone
                 titolo="Porta alla modalità Materiali con queste aste già selezionate"
                 onClick={() => useStore.getState().impostaModalita('materiali')}
@@ -104,7 +104,7 @@ export function Ispettore() {
             </Riga>
 
             <Intestazione testo="Svincoli di estremità" />
-            <p className="px-3 pb-1 text-[10px] leading-relaxed"
+            <p className="px-3 pb-1 text-[length:var(--t-minuto)] leading-relaxed"
                style={{ color: 'var(--testo-debole)' }}>
               Spuntare significa <b>non trasmesso</b>. M svincolato = cerniera interna.
             </p>
@@ -131,7 +131,7 @@ export function Ispettore() {
 
 function Intestazione({ testo }: { testo: string }) {
   return (
-    <div className="mt-2 border-t px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider"
+    <div className="mt-2 border-t px-3 pb-1 pt-2 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
          style={{ borderColor: 'var(--bordo)', color: 'var(--testo-debole)' }}>
       {testo}
     </div>
@@ -147,7 +147,7 @@ function SvincoloRiga({ etichetta, valore, onChange }: {
     <Riga etichetta={etichetta}>
       <div className="flex gap-3">
         {(['N', 'T', 'M'] as const).map((k) => (
-          <label key={k} className="flex cursor-pointer items-center gap-1 text-[11px]">
+          <label key={k} className="flex cursor-pointer items-center gap-1 text-[length:var(--t-minuto)]">
             <input
               type="checkbox"
               checked={valore[k]}
@@ -180,7 +180,7 @@ function Azioni({ aste, nodi }: { aste: ElementId[]; nodi: NodeId[] }) {
     <div className="border-b px-3 py-2" style={{ borderColor: 'var(--bordo)' }}>
       {aste.length === 1 && (
         <div className="flex items-center gap-1">
-          <span className="text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+          <span className="text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
             dividi in
           </span>
           {[2, 3, 4].map((k) => (
@@ -195,7 +195,7 @@ function Azioni({ aste, nodi }: { aste: ElementId[]; nodi: NodeId[] }) {
         </div>
       )}
       {nodi.length === 1 && (
-        <div className="pt-1.5">
+        <div className="pt-2">
           <Bottone
             larghezzaPiena
             titolo="Toglie il nodo e ricongiunge le due aste, se non porta nulla"
@@ -230,12 +230,12 @@ function SolaLettura({ etichetta, valore, specifica }: {
   return (
     <Riga etichetta={etichetta}>
       <div className="flex items-center gap-2">
-        <span className="numerico truncate text-[11px]"
+        <span className="numerico truncate text-[length:var(--t-minuto)]"
               style={{ color: 'var(--testo-attenuato)' }}>
           {valore ?? '— valori diversi —'}
         </span>
         {specifica && (
-          <span className="shrink-0 rounded px-1 text-[9px]"
+          <span className="shrink-0 rounded-[var(--raggio-controllo)] px-1 text-[length:var(--t-minuto)]"
                 style={{ background: 'var(--accento-scuro)', color: '#fff' }}
                 title="Assegnazione specifica: non segue il predefinito del modello">
             specifica

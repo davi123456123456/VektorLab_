@@ -25,7 +25,7 @@ export function PannelloConteggio() {
     return (
       <div className="border-b px-3 py-2" style={{ borderColor: 'var(--bordo)' }}>
         <Titolo />
-        <p className="text-[10.5px]" style={{ color: 'var(--testo-debole)' }}>
+        <p className="text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
           {nAste === 0
             ? 'Disegna la prima asta e il conteggio comincia.'
             : 'Modello troppo grande per il conteggio continuo: usa la modalità Analisi.'}
@@ -40,7 +40,7 @@ export function PannelloConteggio() {
   return (
     <div className="border-b px-3 py-2" style={{ borderColor: 'var(--bordo)' }}>
       <Titolo />
-      <table className="numerico w-full text-[10px]">
+      <table className="numerico w-full text-[length:var(--t-minuto)]">
         <tbody>
           <Riga
             etichetta="corpi rigidi"
@@ -77,13 +77,13 @@ export function PannelloConteggio() {
         </tbody>
       </table>
 
-      <div className="pt-1 text-[11px] font-semibold uppercase tracking-wide"
+      <div className="pt-1 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wide"
            style={{ color: colore }}>
         {c.classificazione}
       </div>
 
       {c.anelliChiusi > 0 && (
-        <p className="pt-1 text-[10px] leading-relaxed" style={{ color: 'var(--momento)' }}>
+        <p className="pt-1 text-[length:var(--t-minuto)] leading-relaxed" style={{ color: 'var(--momento)' }}>
           {c.anelliChiusi === 1 ? 'Un anello chiuso' : `${c.anelliChiusi} anelli chiusi`}:
           {' '}altre {c.iperstaticitaInterna} iperstaticità <b>interne</b>, che questo
           bilancio non vede. Le sollecitazioni vanno calcolate col FEM.
@@ -95,7 +95,7 @@ export function PannelloConteggio() {
 
 function Titolo() {
   return (
-    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider"
+    <div className="mb-1 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
          style={{ color: 'var(--testo-debole)' }}>
       Conteggio
     </div>

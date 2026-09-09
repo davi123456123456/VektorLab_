@@ -66,7 +66,13 @@ export function PannelloRisultati() {
   const valoreSorgente = `${sorgente.tipo === 'caso' ? 'caso' : 'comb'}:${sorgente.id}`;
 
   return (
-    <Pannello titolo="Risultati">
+    <Pannello
+      titolo="Risultati"
+      azione={<Bottone minore onClick={() => void calcola()}
+                       titolo="Rifà l'analisi sul modello corrente">
+        {inCorso ? 'in corso…' : 'ricalcola'}
+      </Bottone>}
+    >
       <div className="space-y-1.5 py-2">
         <Riga etichetta="Sorgente">
           <Selettore
@@ -81,14 +87,23 @@ export function PannelloRisultati() {
           />
         </Riga>
 
-        <div className="px-3">
-          <Bottone larghezzaPiena attivo={!risultato} onClick={() => void calcola()}>
-            {inCorso ? 'calcolo in corso…' : risultato ? 'ricalcola' : 'calcola'}
-          </Bottone>
-        </div>
+        {/*
+          §4.1 — LA STESSA AZIONE NELLO STESSO POSTO.
+          Il ricalcolo sta nell'intestazione, come in Analisi. Qui il bottone
+          grande resta solo finché non c'è un risultato, perché allora è
+          l'azione principale del pannello e merita di essere vista; dopo
+          diventa un aggiornamento, e un aggiornamento sta in intestazione.
+        */}
+        {!risultato && (
+          <div className="px-3">
+            <Bottone larghezzaPiena attivo onClick={() => void calcola()}>
+              {inCorso ? 'calcolo in corso…' : 'calcola'}
+            </Bottone>
+          </div>
+        )}
 
         {errore && (
-          <div className="mx-3 rounded border px-2 py-1 text-[10px]"
+          <div className="mx-3 rounded-[var(--raggio-controllo)] border px-2 py-1 text-[length:var(--t-minuto)]"
                style={{ borderColor: 'var(--errore)', color: 'var(--errore)' }}>
             {errore}
           </div>
@@ -183,22 +198,22 @@ function Sintesi({ r }: { r: RisultatoAnalisi }) {
   }
 
   return (
-    <div className="mx-3 rounded border px-2 py-1.5"
+    <div className="mx-3 rounded-[var(--raggio-controllo)] border px-2 py-2"
          style={{ borderColor: 'var(--bordo)', background: 'var(--sfondo-elevato)' }}>
       {classe && (
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider"
+        <div className="mb-1 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
              style={{ color: classe.colore }}>{classe.testo}</div>
       )}
       <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
         {celle.map(([nome, valore, colore]) => (
           <div key={nome} className="flex items-baseline justify-between gap-2">
-            <span className="text-[10px]" style={{ color: 'var(--testo-debole)' }}>{nome}</span>
-            <span className="numerico text-[11px]"
+            <span className="text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>{nome}</span>
+            <span className="numerico text-[length:var(--t-minuto)]"
                   style={{ color: colore ?? 'var(--testo)' }}>{valore}</span>
           </div>
         ))}
       </div>
-      <p className="mt-1 text-[9.5px]" style={{ color: 'var(--testo-debole)' }}>
+      <p className="mt-1 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
         N&gt;0 trazione · T&gt;0 fa ruotare il concio in senso orario ·
         M&gt;0 tende le fibre inferiori
       </p>
@@ -248,7 +263,7 @@ function ControlliVista({ r }: { r: RisultatoAnalisi }) {
 
   return (
     <>
-      <Riga etichetta={`Scala diagrammi ×${scala.toFixed(2)}`}>
+      <Riga etichetta={`Scala ×${scala.toFixed(2)}`}>
         <input type="range" min={0.1} max={4} step={0.05} value={scala}
                onChange={(e) => impostaScala(Number.parseFloat(e.target.value))}
                className="w-full accent-[var(--accento)]" />
@@ -278,7 +293,7 @@ function ControlliVista({ r }: { r: RisultatoAnalisi }) {
       <Interruttore attivo={mostraTratteggiata} etichetta="tratteggiata di riferimento"
                     onChange={(v) => opzioni({ mostraTratteggiata: v })} />
       <InvertiTratteggiata />
-      <Riga etichetta="Cifre significative">
+      <Riga etichetta="Cifre">
         <Selettore
           valore={String(cifre)}
           opzioni={[3, 4, 5, 6].map((n) => ({ valore: String(n), etichetta: String(n) }))}
@@ -300,7 +315,7 @@ function TabellaReazioni({ r }: { r: RisultatoAnalisi }) {
   if (r.reazioni.length === 0) return null;
 
   return (
-    <table className="numerico w-full text-[10px]">
+    <table className="numerico w-full text-[length:var(--t-minuto)]">
       <thead>
         <tr style={{ color: 'var(--testo-debole)' }}>
           <th className="pl-3 pr-2 text-left font-normal">vincolo</th>
@@ -321,9 +336,9 @@ function TabellaReazioni({ r }: { r: RisultatoAnalisi }) {
             <tr key={x.nodoId as string} style={{ color: 'var(--testo-attenuato)' }}>
               <td className="pl-3 pr-2">{nodo?.vincolo?.tipo ?? '—'}</td>
               <td className="pr-2 truncate">{eti.nodo(x.nodoId)}</td>
-              <td className="py-0.5 pr-2 text-right">{sig(x.fx / 1e3, cifre)}</td>
-              <td className="py-0.5 pr-2 text-right">{sig(x.fy / 1e3, cifre)}</td>
-              <td className="py-0.5 pr-2 text-right">{sig(x.mz / 1e3, cifre)}</td>
+              <td className="py-1 pr-2 text-right">{sig(x.fx / 1e3, cifre)}</td>
+              <td className="py-1 pr-2 text-right">{sig(x.fy / 1e3, cifre)}</td>
+              <td className="py-1 pr-2 text-right">{sig(x.mz / 1e3, cifre)}</td>
               <td className="whitespace-nowrap pr-3 text-right">
                 {sig(modulo / 1e3, cifre)} ∠{angolo.toFixed(0)}
               </td>
@@ -352,10 +367,10 @@ function ValoriNotevoli({ r }: { r: RisultatoAnalisi }) {
     <div className="space-y-2">
       {aste.map((a) => (
         <div key={a.astaId as string}>
-          <div className="numerico px-3 text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+          <div className="numerico px-3 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
             {eti.asta(a.astaId)} · L = {sig(a.lunghezza, cifre)} m
           </div>
-          <table className="numerico w-full text-[10px]">
+          <table className="numerico w-full text-[length:var(--t-minuto)]">
             <thead>
               <tr style={{ color: 'var(--testo-debole)' }}>
                 <th className="pl-3 text-left font-normal">x m</th>
@@ -370,8 +385,8 @@ function ValoriNotevoli({ r }: { r: RisultatoAnalisi }) {
                 <tr key={i} style={{ color: 'var(--testo-attenuato)' }}>
                   <td className="pl-3">{sig(p.x, cifre)}</td>
                   <td>{p.tipo}</td>
-                  <td className="py-0.5 text-right">{sig(p.N / 1e3, cifre)}</td>
-                  <td className="py-0.5 text-right">{sig(p.T / 1e3, cifre)}</td>
+                  <td className="py-1 text-right">{sig(p.N / 1e3, cifre)}</td>
+                  <td className="py-1 text-right">{sig(p.T / 1e3, cifre)}</td>
                   <td className="pr-3 text-right">{sig(p.M / 1e3, cifre)}</td>
                 </tr>
               ))}
@@ -407,12 +422,12 @@ function Espressioni({ a, cifre }: { a: RisultatoAsta; cifre: number }) {
     <div className="px-3 pt-1">
       {tratti.map((t, i) => (
         <div key={i} className="pb-1">
-          <div className="numerico text-[9.5px]" style={{ color: 'var(--testo-debole)' }}>
+          <div className="numerico text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
             tratto {sig(t.da, cifre)} ≤ x ≤ {sig(t.a, cifre)} m
             {tratti.length > 1 && ` · x da ${sig(t.da, cifre)}`}
           </div>
           {([['N', 'kN'], ['T', 'kN'], ['M', 'kNm']] as const).map(([quale, unita]) => (
-            <div key={quale} className="numerico flex gap-2 text-[10px]">
+            <div key={quale} className="numerico flex gap-2 text-[length:var(--t-minuto)]">
               <span className="w-8 shrink-0" style={{ color: 'var(--testo-debole)' }}>
                 {quale}(x)
               </span>
@@ -464,7 +479,7 @@ function Diagnostica({ r }: { r: RisultatoAnalisi }) {
   return (
     <div className="px-3">
       {righe.map((x) => <RigaDiagnostica key={x.nome} {...x} />)}
-      <div className="numerico pt-1 text-[9.5px]" style={{ color: 'var(--testo-debole)' }}>
+      <div className="numerico pt-1 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
         {r.diagnostica.numeroDofLiberi} / {r.diagnostica.numeroDof} gdl liberi ·
         {' '}{sig(r.diagnostica.tempoMs, cifre)} ms
       </div>
@@ -481,13 +496,13 @@ function RigaDiagnostica({ nome, ok, dettaglio }: {
       <button
         type="button"
         onClick={() => setAperto((v) => !v)}
-        className="flex w-full items-baseline gap-2 py-[2px] text-left text-[10px]"
+        className="riga-elenco gap-2 text-[length:var(--t-minuto)]"
       >
         <span style={{ color: ok ? 'var(--ok)' : 'var(--errore)' }}>{ok ? '✓' : '✗'}</span>
         <span className="flex-1" style={{ color: 'var(--testo-attenuato)' }}>{nome}</span>
       </button>
       {aperto && (
-        <p className="numerico pb-1 pl-4 text-[9.5px]" style={{ color: 'var(--testo-debole)' }}>
+        <p className="numerico pb-1 pl-4 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
           {dettaglio}
         </p>
       )}
@@ -509,7 +524,7 @@ function InvertiTratteggiata() {
   const quante = selezione.aste.size;
   if (quante === 0) return null;
   return (
-    <div className="px-3 py-0.5">
+    <div className="px-3 py-1">
       <Bottone
         larghezzaPiena
         titolo="Sposta la tratteggiata dall'altro lato: T e M cambiano segno, N no"
@@ -531,11 +546,11 @@ function Blocco({ titolo, aperto: apertoIniziale = false, children }: {
       <button
         type="button"
         onClick={() => setAperto((v) => !v)}
-        className="flex w-full items-baseline justify-between px-3 py-1 text-left"
+        className="riga-elenco justify-between px-3"
       >
-        <span className="text-[10px] font-semibold uppercase tracking-wider"
+        <span className="text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
               style={{ color: 'var(--testo-debole)' }}>{titolo}</span>
-        <span className="numerico text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+        <span className="numerico text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
           {aperto ? '−' : '+'}
         </span>
       </button>

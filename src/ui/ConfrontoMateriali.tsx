@@ -158,15 +158,21 @@ export function ConfrontoMateriali() {
 
   return (
     <div>
-      <p className="px-3 pb-1 text-[9.5px] leading-relaxed"
-         style={{ color: 'var(--testo-debole)' }}>
-        Stessa geometria, stessi vincoli, stessi carichi, stesse sezioni: cambia
-        solo il materiale di tutte le aste, e l'analisi viene rifatta per
-        ciascuno. Modificando la struttura questi numeri cambiano.
+      {/*
+        §3.3 — il paragrafo è diventato una riga, e la spiegazione un
+        suggerimento: che l'analisi sia rifatta per ogni materiale serve
+        saperlo una volta, non ogni volta che si apre il pannello.
+      */}
+      <p
+        className="px-3 pb-1"
+        title="Stessa geometria, stessi vincoli, stessi carichi, stesse sezioni: cambia solo il materiale di tutte le aste, e l'analisi viene rifatta per ciascuno. Modificando la struttura questi numeri cambiano."
+        style={{ color: 'var(--testo-debole)', fontSize: 'var(--t-minuto)' }}
+      >
+        Analisi rifatta per ogni materiale, sulla struttura in esame.
       </p>
 
-      <div className="flex items-center gap-2 px-3 pb-1.5">
-        <span className="numerico text-[9.5px]" style={{ color: 'var(--testo-debole)' }}>
+      <div className="flex items-center gap-2 px-3 pb-2">
+        <span className="numerico text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
           {inCorso ? `${righe.length}/${MATERIALI.length}…` : `${righe.length} materiali`}
         </span>
         <Bottone onClick={() => { generazione.current++; setRighe([]); setInCorso(false); }}
@@ -184,7 +190,7 @@ export function ConfrontoMateriali() {
           leggibile che va cercato scorrendo vale più di una sigla sempre
           visibile e da interpretare.
         */}
-        <table className="numerico w-max min-w-full text-[10px]">
+        <table className="numerico w-max min-w-full text-[length:var(--t-minuto)]">
           <thead>
             <tr>
               {COLONNE.map(intestazione)}
@@ -212,7 +218,7 @@ export function ConfrontoMateriali() {
                     rende la tabella confrontabile a colpo d'occhio, ed è il
                     motivo per cui è una tabella e non un elenco di schede.
                   */}
-                  <td className="whitespace-nowrap py-0.5 px-2 pl-3"
+                  <td className="whitespace-nowrap py-1 px-2 pl-3"
                       style={{ color: assegnato ? 'var(--accento)' : 'var(--testo-attenuato)' }}>
                     {r.nome}
                   </td>
@@ -261,7 +267,7 @@ export function ConfrontoMateriali() {
       </div>
 
       {senzaResistenza.length > 0 && (
-        <p className="px-3 pt-1.5 text-[9.5px] leading-relaxed"
+        <p className="px-3 pt-2 text-[length:var(--t-minuto)] leading-relaxed"
            style={{ color: 'var(--errore)' }}>
           Senza tensione di snervamento, e quindi senza verifica:{' '}
           {senzaResistenza.map((r) => r.nome).join(', ')}. Il dato va inserito
@@ -269,13 +275,14 @@ export function ConfrontoMateriali() {
         </p>
       )}
 
-      <p className="px-3 pt-1.5 text-[9.5px] leading-relaxed"
-         style={{ color: 'var(--testo-debole)' }}>
-        La colonna Esito dice se il materiale verifica: «resist.» non passa la
-        verifica di resistenza, «instab.» sbanda a compressione. Uno che non
-        verifica può essere comunque il più leggero o il più economico, ed è il
-        motivo per cui le colonne stanno vicine. Riga evidenziata: il materiale
-        assegnato. La tabella scorre in orizzontale.
+      <p
+        className="px-3 pt-2"
+        title={'«resist.» non passa la verifica di resistenza, «instab.» sbanda a '
+          + 'compressione. Un materiale che non verifica può essere comunque il più '
+          + 'leggero o il più economico: è il motivo per cui le colonne stanno vicine.'}
+        style={{ color: 'var(--testo-debole)', fontSize: 'var(--t-minuto)' }}
+      >
+        Riga evidenziata: il materiale assegnato. La tabella scorre in orizzontale.
       </p>
     </div>
   );

@@ -80,8 +80,8 @@ export function BarraFogli() {
       <button
         type="button" onClick={() => nuovo()}
         title="Nuovo foglio (Ctrl+T)"
-        className="shrink-0 px-2 text-sm transition-colors hover:bg-[var(--sfondo-attivo)]"
-        style={{ color: 'var(--testo-debole)' }}
+        className="btn btn-minore shrink-0"
+        style={{ border: 0, background: 'transparent', color: 'var(--testo-debole)' }}
       >+</button>
 
       {menu && (
@@ -121,7 +121,7 @@ function MenuScheda({ x, y, voci, onChiudiMenu }: {
 
   return (
     <div
-      className="fixed z-50 min-w-[9rem] rounded border py-1 text-[11px] shadow-lg"
+      className="fixed z-50 min-w-[9rem] rounded-[var(--raggio-controllo)] border py-1 text-[length:var(--t-minuto)] shadow-lg"
       style={{
         left: x, top: y,
         background: 'var(--sfondo-pannello)',
@@ -164,7 +164,7 @@ function Scheda({
           if (e.key === 'Enter') onNome(e.currentTarget.value);
           else if (e.key === 'Escape') onAnnullaModifica();
         }}
-        className="w-28 shrink-0 rounded-t border-b-2 bg-transparent px-2 py-1 text-[11px]
+        className="w-28 shrink-0 rounded-t-[var(--raggio-pannello)] border-b-2 bg-transparent px-2 py-1 text-[length:var(--t-minuto)]
                    outline-none"
         style={{ borderColor: 'var(--accento)', color: 'var(--testo)' }}
       />
@@ -173,7 +173,7 @@ function Scheda({
 
   return (
     <div
-      className="group flex shrink-0 items-center gap-1 rounded-t border-b-2 px-2 py-1
+      className="group flex shrink-0 items-center gap-1 rounded-t-[var(--raggio-pannello)] border-b-2 px-2 py-1
                  transition-colors"
       style={{
         borderColor: attiva ? 'var(--accento)' : 'transparent',
@@ -189,19 +189,34 @@ function Scheda({
         onDoubleClick={onModifica}
         onContextMenu={(e) => { e.preventDefault(); onMenu(e.clientX, e.clientY); }}
         title={`${nome} — clic per rinominare (Ctrl+${indice})`}
-        className="max-w-[10rem] truncate text-[11px]"
-        style={{ color: attiva ? 'var(--testo)' : 'var(--testo-debole)' }}
+        className="max-w-[10rem] truncate"
+        style={{
+          color: attiva ? 'var(--testo)' : 'var(--testo-debole)',
+          // la scheda è il modo di passare da un modello all'altro: deve
+          // prendersi senza mirare
+          minHeight: 'var(--h-controllo-minore)',
+          fontSize: 'var(--t-etichetta)',
+          padding: '0 var(--s1)',
+        }}
       >{nome}</button>
       <button
         type="button" onClick={onDuplica} title="Duplica il foglio"
-        className="opacity-0 transition-opacity group-hover:opacity-100"
-        style={{ color: 'var(--testo-debole)', fontSize: '10px' }}
+        className="flex items-center justify-center opacity-0 transition-opacity
+                   group-hover:opacity-100"
+        style={{
+          color: 'var(--testo-debole)', fontSize: 'var(--t-etichetta)',
+          minWidth: 'var(--h-controllo-minore)', minHeight: 'var(--h-controllo-minore)',
+        }}
       >⧉</button>
       {chiudibile && (
         <button
           type="button" onClick={onChiudi} title="Chiudi il foglio (Ctrl+W)"
-          className="opacity-0 transition-opacity group-hover:opacity-100"
-          style={{ color: 'var(--testo-debole)', fontSize: '11px' }}
+          className="flex items-center justify-center opacity-0 transition-opacity
+                     group-hover:opacity-100"
+          style={{
+            color: 'var(--testo-debole)', fontSize: 'var(--t-corpo)',
+            minWidth: 'var(--h-controllo-minore)', minHeight: 'var(--h-controllo-minore)',
+          }}
         >×</button>
       )}
     </div>

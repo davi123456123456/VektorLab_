@@ -40,11 +40,11 @@ export function DisegnoConcio({ N, T, M, angolo }: {
     const stile = getComputedStyle(document.documentElement);
     const leggi = (v: string, riserva: string) =>
       stile.getPropertyValue(v).trim() || riserva;
-    const coloreN = leggi('--sforzo-normale', '#4a9eff');
-    const coloreT = leggi('--taglio', '#35c46a');
-    const coloreM = leggi('--momento', '#ff8a3d');
-    const coloreAsta = leggi('--asta', '#c8d0dc');
-    const debole = leggi('--testo-debole', '#6b7686');
+    const coloreN = leggi('--sforzo-normale', 'var(--accento)');
+    const coloreT = leggi('--taglio', 'var(--carico)');
+    const coloreM = leggi('--momento', 'var(--momento)');
+    const coloreAsta = leggi('--asta', 'var(--asta)');
+    const debole = leggi('--testo-debole', 'var(--testo-debole)');
 
     const cx = larghezza / 2, cy = altezza / 2;
     const w = 46, h = 30;
@@ -137,7 +137,7 @@ export function DisegnoConcio({ N, T, M, angolo }: {
   return (
     <div className="pt-1">
       <canvas ref={canvas} style={{ width: larghezza, height: altezza }} />
-      <p className="text-[10px] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
+      <p className="text-[length:var(--t-minuto)] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
         {Math.abs(M) < 1e-9
           ? 'Momento nullo: nessuna fibra tesa dalla flessione.'
           : M > 0

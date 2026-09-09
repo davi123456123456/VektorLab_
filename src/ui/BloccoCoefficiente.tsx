@@ -65,12 +65,12 @@ export function BloccoCoefficiente({ r }: { r: RisultatoAnalisi }) {
 
           <ol className="space-y-1.5 px-3 pb-2">
             {c.passi.map((p) => (
-              <li key={p.numero} className="text-[10px]">
+              <li key={p.numero} className="text-[length:var(--t-minuto)]">
                 <div className="flex gap-1.5">
                   <span className="numerico shrink-0"
                         style={{ color: 'var(--testo-debole)' }}>{p.numero}.</span>
                   <div className="min-w-0 flex-1">
-                    <div className="mb-0.5 font-semibold"
+                    <div className="mb-1 font-semibold"
                          style={{ color: 'var(--testo)' }}>{p.titolo}</div>
                     {p.righe.map((riga, i) => (
                       <div key={i} className="flex justify-between gap-2 leading-relaxed">
@@ -122,7 +122,7 @@ function Sezioni({ c, onSeleziona }: {
   const m = c.massimoMomento;
   const t = c.massimaTensione!;
   return (
-    <div className="space-y-1 px-3 pb-1 text-[10px]">
+    <div className="space-y-1 px-3 pb-1 text-[length:var(--t-minuto)]">
       {m && (
         <Candidata etichetta="massimo momento" s={m}
                    valore={`M = ${(m.M / 1e3).toFixed(2)} kNm`}
@@ -153,7 +153,7 @@ function Candidata({ etichetta, s, valore, onClick }: {
   const nome = etichette(useStore((x) => x.progetto)).asta;
   return (
     <button type="button" onClick={onClick}
-            className="flex w-full items-baseline justify-between gap-2 rounded px-1 py-0.5
+            className="riga-elenco flex w-full items-baseline justify-between gap-2 rounded-[var(--raggio-controllo)] px-1 py-1
                        text-left transition-colors hover:bg-[var(--sfondo-attivo)]">
       <span style={{ color: 'var(--testo-debole)' }}>
         {etichetta} — <span className="numerico">{nome(s.astaId as never)}{s.lato}</span>
@@ -169,9 +169,9 @@ function Esito({ c }: { c: EsitoCoefficiente }) {
   const ok = c.verificato;
   const colore = ok ? 'var(--ok)' : 'var(--errore)';
   return (
-    <div className="mx-3 mb-2 rounded border px-2 py-1.5" style={{ borderColor: colore }}>
+    <div className="mx-3 mb-2 rounded-[var(--raggio-controllo)] border px-2 py-2" style={{ borderColor: colore }}>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[10px] uppercase tracking-wider" style={{ color: colore }}>
+        <span className="text-[length:var(--t-minuto)] uppercase tracking-wider" style={{ color: colore }}>
           C.S.
         </span>
         <span className="numerico text-sm font-semibold" style={{ color: colore }}>
@@ -179,7 +179,7 @@ function Esito({ c }: { c: EsitoCoefficiente }) {
         </span>
       </div>
       {c.fibraGovernante && (
-        <p className="mt-0.5 text-[9.5px]" style={{ color: 'var(--testo-debole)' }}>
+        <p className="mt-1 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
           fibra {c.fibraGovernante}
           {c.compressa && ' · asta compressa: verificare anche la stabilità'}
         </p>
@@ -193,8 +193,8 @@ function Progetto({ c }: { c: EsitoCoefficiente }) {
   if (!c.suggerimenti) return null;
   const s = c.suggerimenti;
   return (
-    <div className="px-3 pb-2 text-[10px]" style={{ color: 'var(--testo-debole)' }}>
-      <div className="mb-0.5 font-semibold" style={{ color: 'var(--testo)' }}>
+    <div className="px-3 pb-2 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
+      <div className="mb-1 font-semibold" style={{ color: 'var(--testo)' }}>
         Per avere C.S. = 1
       </div>
       <div className="flex justify-between gap-2">
@@ -233,10 +233,10 @@ function ErroreDato({ codice, messaggio, aste, onSeleziona }: {
 }) {
   const vaiA = useStore((s) => s.impostaModalita);
   return (
-    <div className="mx-3 mb-2 rounded border px-2 py-1.5 text-[10px]"
+    <div className="mx-3 mb-2 rounded-[var(--raggio-controllo)] border px-2 py-2 text-[length:var(--t-minuto)]"
          style={{ borderColor: 'var(--errore)' }}>
       <div className="font-semibold" style={{ color: 'var(--errore)' }}>{messaggio}</div>
-      <p className="mt-0.5" style={{ color: 'var(--testo-debole)' }}>
+      <p className="mt-1" style={{ color: 'var(--testo-debole)' }}>
         {codice === 'SY_MANCANTE'
           ? 'Nessun valore inventato. Il resto dei risultati resta valido.'
           : 'Aste escluse dal calcolo delle tensioni.'}
@@ -248,7 +248,7 @@ function ErroreDato({ codice, messaggio, aste, onSeleziona }: {
           {aste.length === 1 ? `asta ${aste[0]}` : `${aste.length} aste: ${aste.join(', ')}`}
         </button>
       )}
-      <div className="mt-1.5">
+      <div className="mt-2">
         <Bottone larghezzaPiena onClick={() => vaiA('materiali')}>
           Vai a Materiali →
         </Bottone>

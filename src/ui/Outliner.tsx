@@ -17,14 +17,23 @@ export function Outliner() {
   const [apertoNodi, setApertoNodi] = useState(true);
   const [aperteAste, setAperteAste] = useState(true);
 
+  /*
+   * §1.3 — l'altezza delle righe viene dal token, non da una utility.
+   *
+   * Trentadue pixel: un elenco di venti nodi a quaranta sarebbe alto ottocento
+   * pixel e costringerebbe a scorrere una struttura piccola. Trentadue resta
+   * sopra la soglia di un dito e raddoppia il bersaglio rispetto ai ventitré
+   * che c'erano prima.
+   */
   const stileVoce = (attiva: boolean) => ({
     background: attiva ? 'var(--accento-scuro)' : 'transparent',
     color: attiva ? '#fff' : 'var(--testo-attenuato)',
+    minHeight: 'var(--h-controllo-minore)',
   });
 
   return (
     <Pannello titolo="Struttura">
-      <div className="py-1 text-[12px]">
+      <div className="py-1 text-[length:var(--t-etichetta)]">
         <Gruppo
           etichetta={`Nodi (${progetto.nodi.length})`}
           aperto={apertoNodi}
@@ -35,8 +44,8 @@ export function Outliner() {
             key={n.id}
             type="button"
             onClick={(e) => seleziona({ nodi: new Set([n.id]) }, e.shiftKey)}
-            className="numerico flex w-full items-center gap-2 whitespace-nowrap px-5 py-[3px]
-                       text-left text-[11px] hover:brightness-125"
+            className="numerico flex w-full items-center gap-2 whitespace-nowrap px-6
+                       text-left text-[length:var(--t-etichetta)] hover:brightness-125"
             style={stileVoce(selezione.nodi.has(n.id))}
           >
             <span className="w-16 shrink-0 truncate" title={String(n.id)}>
@@ -46,7 +55,7 @@ export function Outliner() {
               {n.x.toFixed(2)}, {n.y.toFixed(2)}
             </span>
             {n.vincolo && (
-              <span className="ml-auto shrink-0 text-[10px]" style={{ color: 'var(--vincolo)' }}>
+              <span className="ml-auto shrink-0 text-[length:var(--t-minuto)]" style={{ color: 'var(--vincolo)' }}>
                 {n.vincolo.tipo.slice(0, 4)}
               </span>
             )}
@@ -63,8 +72,8 @@ export function Outliner() {
             key={a.id}
             type="button"
             onClick={(e) => seleziona({ aste: new Set([a.id]) }, e.shiftKey)}
-            className="numerico flex w-full items-center gap-2 whitespace-nowrap px-5 py-[3px]
-                       text-left text-[11px] hover:brightness-125"
+            className="numerico flex w-full items-center gap-2 whitespace-nowrap px-6
+                       text-left text-[length:var(--t-etichetta)] hover:brightness-125"
             style={stileVoce(selezione.aste.has(a.id))}
           >
             <span className="w-8 shrink-0">{eti.asta(a.id)}</span>
@@ -73,14 +82,14 @@ export function Outliner() {
               {a.nodoIniziale} → {a.nodoFinale}
             </span>
             {(a.svincolo.iniziale.M || a.svincolo.finale.M) && (
-              <span className="shrink-0 text-[10px]" style={{ color: 'var(--accento)' }}
+              <span className="shrink-0 text-[length:var(--t-minuto)]" style={{ color: 'var(--accento)' }}
                     title="cerniera interna">⌾</span>
             )}
           </button>
         ))}
 
         {progetto.nodi.length === 0 && (
-          <p className="px-3 py-4 text-[11px] leading-relaxed"
+          <p className="px-3 py-4 text-[length:var(--t-minuto)] leading-relaxed"
              style={{ color: 'var(--testo-debole)' }}>
             Il modello è vuoto. Premi <b>L</b> per lo strumento asta e traccia la
             prima campata, oppure <b>N</b> per posare singoli nodi.
@@ -98,9 +107,9 @@ function Gruppo({ etichetta, aperto, onToggle }: {
     <button
       type="button"
       onClick={onToggle}
-      className="flex w-full items-center gap-1 px-2 py-1 text-left text-[11px] font-semibold
+      className="flex w-full items-center gap-1 px-2 text-left text-[length:var(--t-etichetta)] font-semibold
                  uppercase tracking-wide hover:brightness-125"
-      style={{ color: 'var(--testo-debole)' }}
+      style={{ color: 'var(--testo-debole)', minHeight: 'var(--h-controllo-minore)' }}
     >
       <span className="inline-block w-3">{aperto ? '▾' : '▸'}</span>
       {etichetta}

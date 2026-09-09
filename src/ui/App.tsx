@@ -159,7 +159,7 @@ function PannelloDiModalita() {
 function Esempi() {
   return (
     <div className="border-b p-2" style={{ borderColor: 'var(--bordo)' }}>
-      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider"
+      <div className="mb-2 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
            style={{ color: 'var(--testo-debole)' }}>Esempi</div>
       <div className="flex flex-wrap gap-1">
         {esempi.map((e) => (
@@ -261,11 +261,21 @@ function Laterale({ lato, stato, etichetta, children }: {
         onClick={stato.alterna}
         title={`${stato.aperto ? 'Nascondi' : 'Mostra'} ${etichetta}`
           + (sinistra ? ' (Ctrl+B)' : ' (Ctrl+I)')}
-        className="z-10 flex w-3.5 shrink-0 items-center justify-center border-r text-[10px]"
+        /*
+          §1.3 — LA MANIGLIA SI ALLARGA da 14 a 24 px.
+          Non a 40: è alta quanto la finestra, quindi verticalmente si prende
+          senza mirare, e quaranta pixel di larghezza per lato costerebbero
+          ottanta pixel di disegno su uno schermo da 1280. Ventiquattro è il
+          punto in cui diventa comoda senza togliere spazio al modello.
+        */
+        className="z-10 flex shrink-0 items-center justify-center border-r
+                   transition-colors hover:brightness-125"
         style={{
+          width: 24,
           borderColor: 'var(--bordo)',
           background: 'var(--sfondo-pannello)',
           color: 'var(--testo-debole)',
+          fontSize: 'var(--t-minuto)',
         }}
       >
         <span style={{

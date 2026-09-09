@@ -47,13 +47,13 @@ export function DettaglioFibre({ v, EI, EA, altezza, ySup, yInf }: {
     const st = getComputedStyle(document.documentElement);
     const col = (n: string, f: string) => st.getPropertyValue(n).trim() || f;
     const colori = {
-      sfondo: col('--sfondo', '#14171c'),
-      contorno: col('--asta', '#c8d0dc'),
-      trazione: col('--errore', '#ff5f56'),
-      compressione: col('--sforzo-normale', '#4a9eff'),
-      neutro: col('--testo-debole', '#6b7483'),
-      testo: col('--testo-attenuato', '#9aa3b2'),
-      debole: col('--bordo-chiaro', '#3d4552'),
+      sfondo: col('--sfondo', 'var(--sfondo)'),
+      contorno: col('--asta', 'var(--asta)'),
+      trazione: col('--errore', 'var(--vincolo)'),
+      compressione: col('--sforzo-normale', 'var(--accento)'),
+      neutro: col('--testo-debole', 'var(--testo-debole)'),
+      testo: col('--testo-attenuato', 'var(--testo-attenuato)'),
+      debole: col('--bordo-chiaro', 'var(--bordo-chiaro)'),
     };
 
     let vivo = true;
@@ -87,17 +87,17 @@ export function DettaglioFibre({ v, EI, EA, altezza, ySup, yInf }: {
         <Bottone attivo={riproduci} onClick={() => setRiproduci((r) => !r)}>
           {riproduci ? 'in movimento' : 'fermo'}
         </Bottone>
-        <span className="numerico text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+        <span className="numerico text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
           χ = M/EI = {curvatura.toExponential(2)} 1/m
         </span>
       </div>
-      <p className="px-1 pt-1.5 text-[10px] leading-relaxed"
+      <p className="px-1 pt-2 text-[length:var(--t-minuto)] leading-relaxed"
          style={{ color: 'var(--testo-debole)' }}>
         Sezioni <b>piane</b> (Bernoulli). Il momento tende le fibre{' '}
         <b>{latoTeso}</b>; la rotazione è molto ingrandita.
       </p>
       {v.sezione.N !== 0 && (
-        <p className="px-1 pt-1 text-[10px] leading-relaxed"
+        <p className="px-1 pt-1 text-[length:var(--t-minuto)] leading-relaxed"
            style={{ color: 'var(--testo-debole)' }}>
           N = {(v.sezione.N / 1e3).toFixed(1)} kN
           {v.sezione.N > 0 ? ' allunga' : ' accorcia'} tutte le fibre allo stesso

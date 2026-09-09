@@ -64,7 +64,7 @@ export function EditorSezione({ parametri, densita, onChange }: {
               onChange={(v) => { if (v) onChange(preset(v)); }}
             />
           </Riga>
-          <p className="px-3 text-[10px] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
+          <p className="px-3 text-[length:var(--t-minuto)] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
             Il preset compila i campi con le misure del profilo commerciale.
             Restano tutti modificabili.
           </p>
@@ -92,13 +92,13 @@ export function EditorSezione({ parametri, densita, onChange }: {
       ))}
 
       {descrizione.note && (
-        <p className="px-3 text-[10px] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
+        <p className="px-3 text-[length:var(--t-minuto)] leading-relaxed" style={{ color: 'var(--testo-debole)' }}>
           {descrizione.note}
         </p>
       )}
 
       {errore && (
-        <div className="mx-3 rounded border px-2 py-1 text-[10px]"
+        <div className="mx-3 rounded-[var(--raggio-controllo)] border px-2 py-1 text-[length:var(--t-minuto)]"
              style={{ borderColor: 'var(--errore)', color: 'var(--errore)' }}>
           {errore}
         </div>
@@ -109,7 +109,7 @@ export function EditorSezione({ parametri, densita, onChange }: {
           <div className="flex justify-center py-1">
             <AnteprimaSezione parametri={parametri} />
           </div>
-          <table className="numerico w-full text-[10px]">
+          <table className="numerico w-full text-[length:var(--t-minuto)]">
             <tbody style={{ color: 'var(--testo-attenuato)' }}>
               <Prop nome="A" valore={`${(proprieta.A * 1e4).toFixed(2)} cm²`} />
               <Prop nome="I_y" valore={`${(proprieta.I * 1e8).toFixed(0)} cm⁴`} />
@@ -131,7 +131,7 @@ export function EditorSezione({ parametri, densita, onChange }: {
               )}
             </tbody>
           </table>
-          <p className="px-3 pt-1 text-[10px]" style={{ color: 'var(--testo-debole)' }}>
+          <p className="px-3 pt-1 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
             Nome automatico: <b>{nomePredefinito(parametri)}</b>
           </p>
         </>
@@ -143,8 +143,8 @@ export function EditorSezione({ parametri, densita, onChange }: {
 function Prop({ nome, valore }: { nome: string; valore: string }) {
   return (
     <tr>
-      <td className="py-0.5 pl-3">{nome}</td>
-      <td className="py-0.5 pr-3 text-right">{valore}</td>
+      <td className="py-1 pl-3">{nome}</td>
+      <td className="py-1 pr-3 text-right">{valore}</td>
     </tr>
   );
 }
@@ -187,17 +187,17 @@ function AnteprimaSezione({ parametri }: { parametri: ParametriSezione }) {
     };
     percorso(esterno);
     if (interno.length) percorso(interno);
-    ctx.fillStyle = stile.getPropertyValue('--accento-scuro').trim() || '#2b6dbd';
+    ctx.fillStyle = stile.getPropertyValue('--accento-scuro').trim() || 'var(--accento-scuro)';
     ctx.globalAlpha = 0.45;
     ctx.fill('evenodd');
     ctx.globalAlpha = 1;
-    ctx.strokeStyle = stile.getPropertyValue('--accento').trim() || '#4a9eff';
+    ctx.strokeStyle = stile.getPropertyValue('--accento').trim() || 'var(--accento)';
     ctx.lineWidth = 1.3;
     percorso(esterno); ctx.stroke();
     if (interno.length) { percorso(interno); ctx.stroke(); }
 
     // asse baricentrico: su T e L non sta a metà altezza, e si vede
-    ctx.strokeStyle = stile.getPropertyValue('--testo-debole').trim() || '#6b7483';
+    ctx.strokeStyle = stile.getPropertyValue('--testo-debole').trim() || 'var(--testo-debole)';
     ctx.setLineDash([4, 3]);
     ctx.lineWidth = 1;
     ctx.beginPath();
