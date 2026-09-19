@@ -217,6 +217,16 @@ export function PannelloSezioni() {
           {verifiche && <RisultatoVerifiche v={verifiche} sezioni={sezioni} />}
         </Blocco>
 
+        {/*
+          Le due tabelle stanno INSIEME perché rispondono alla stessa domanda —
+          «quale materiale scelgo?» — da due lati: le proprietà dicono che cosa
+          il materiale è, il confronto che cosa fa su QUESTA struttura. Erano
+          in due punti lontani del pannello, e il confronto fra le due
+          costringeva a scorrere avanti e indietro.
+        */}
+        <Blocco titolo="Proprietà dei materiali">
+          <TabellaMateriali />
+        </Blocco>
         <Blocco titolo="Confronto fra materiali">
           <ConfrontoMateriali />
         </Blocco>
@@ -720,14 +730,16 @@ function MaterialeDelModello() {
       </div>
 
       {/*
-        §2 — LA TABELLA DELLE PROPRIETÀ, ripristinata.
-        Al posto delle quattro righe del solo materiale scelto: tutti i
-        materiali, con le barre che permettono il confronto senza leggere i
-        numeri, le grandezze scelte dall'utente e il materiale assegnato in
-        evidenza.
+        Le proprietà del materiale SCELTO, in quattro righe: è quello che serve
+        guardando questo blocco. Il confronto fra tutti i materiali sta nel suo
+        blocco, più in basso, ed è una domanda diversa.
       */}
-      <div style={{ paddingTop: 'var(--s2)' }}>
-        <TabellaMateriali />
+      <div className="numerico grid grid-cols-2 gap-x-3 px-3 pt-2"
+           style={{ color: 'var(--testo-debole)', fontSize: 'var(--t-minuto)' }}>
+        <span>E</span><span>{(materiale.E / 1e9).toFixed(0)} GPa</span>
+        <span>ν</span><span>{materiale.nu.toFixed(2)}</span>
+        <span>ρ</span><span>{materiale.rho.toFixed(0)} kg/m³</span>
+        <span>α</span><span>{(materiale.alpha * 1e6).toFixed(1)}·10⁻⁶ 1/°C</span>
       </div>
     </Blocco>
   );

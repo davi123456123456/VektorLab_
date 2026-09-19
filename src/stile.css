@@ -70,13 +70,24 @@
   --raggio-pannello: 10px;
 
   /*
-    ALTEZZA DEI CONTROLLI. 40 px è il bersaglio minimo comodo da colpire, ed è
-    la misura che il §1 chiede per la barra e per i bottoni dentro i pannelli.
-    I controlli minori — le crocette, i «+» — scendono a 32, che resta sopra la
-    soglia di un dito su schermo touch.
+    ALTEZZA DEI CONTROLLI — tre misure, e ognuna ha un motivo.
+
+    · `--h-controllo` (34) è il bottone d'azione dentro i pannelli: comodo da
+      colpire senza rubare spazio alle liste che lo circondano.
+    · `--h-barra` (30) è la barra superiore, che deve stare su UNA riga fino a
+      1280 px: è il vincolo che ne fissa l'altezza, non il gusto.
+    · `--h-controllo-minore` (26) è per i controlli fitti — le crocette, i
+      preset d'angolo — dove ce ne stanno venti in fila e la dimensione di un
+      bottone d'azione li renderebbe un muro.
+
+    Su schermo touch salgono tutte: vedi il blocco `(pointer: coarse)` in fondo.
   */
-  --h-controllo: 40px;
-  --h-controllo-minore: 32px;
+  /* la maniglia che apre e chiude un pannello: col dito serve più larga */
+  --larghezza-maniglia: 24px;
+
+  --h-controllo: 34px;
+  --h-barra: 30px;
+  --h-controllo-minore: 26px;
 
   /*
     TIPOGRAFIA: quattro dimensioni, non una in più.
@@ -90,10 +101,10 @@
     bottoni chiesta dal §1 — e sedici il titolo. Quattro dimensioni, non una in
     più.
   */
-  --t-titolo: 16px;
-  --t-corpo: 14px;
-  --t-etichetta: 13px;
-  --t-minuto: 12px;
+  --t-titolo: 15px;
+  --t-corpo: 13px;
+  --t-etichetta: 12px;
+  --t-minuto: 11px;
 
   /* una sola transizione per tutta l'applicazione */
   --transizione: 150ms ease;
@@ -168,6 +179,30 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 .btn-piena { width: 100%; }
 
 /*
+  LA BARRA SUPERIORE.
+
+  I suoi controlli sono più bassi di quelli dei pannelli, e non è una svista:
+  la barra deve stare su UNA RIGA anche a 1280 px, e con quindici comandi in
+  fila ogni pixel di altezza è un pixel di larghezza che non c'è. Il bersaglio
+  resta comodo perché la barra è larga e i bottoni sono affiancati.
+*/
+/*
+  Sotto i 1400 px il nome del modello sparisce dalla barra: è già scritto sulla
+  scheda del foglio, a due centimetri di distanza, e sono i cento pixel che
+  fanno stare la barra su una riga a 1280.
+*/
+@media (max-width: 1400px) {
+  .barra-alta .solo-largo { display: none; }
+}
+
+.barra-alta .btn {
+  min-height: var(--h-barra);
+  min-width: var(--h-barra);
+  padding: 0 var(--s2);
+  font-size: var(--t-etichetta);
+}
+
+/*
   GRUPPO DI BOTTONI: quelli attaccati fra loro — le modalità, gli strumenti.
   Il bordo è del gruppo, i bottoni dentro sono separati da un filetto: così
   restano una scelta sola invece di sembrare sette azioni indipendenti.
@@ -236,6 +271,47 @@ input[type='range'] {
   cursor: pointer;
 }
 
+/*
+  BARRA DELLE AZIONI SULLA SELEZIONE.
+
+  Galleggia in basso al centro sopra il disegno. Sta lì e non in un pannello
+  perché segue l'attenzione: chi ha appena toccato un'asta guarda l'asta, non
+  il bordo dello schermo.
+*/
+.barra-selezione {
+  position: absolute;
+  left: 50%;
+  bottom: var(--s3);
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  max-width: calc(100% - var(--s6));
+  padding: var(--s1) var(--s2);
+  border: 1px solid var(--bordo-chiaro);
+  border-radius: var(--raggio-pannello);
+  background: var(--sfondo-pannello);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 45%);
+}
+.barra-selezione-cosa {
+  padding: 0 var(--s1);
+  color: var(--testo-attenuato);
+  font-size: var(--t-minuto);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.barra-selezione-elimina {
+  border-color: var(--errore);
+  color: var(--errore);
+}
+.barra-selezione-elimina:hover:not(:disabled) {
+  background: var(--errore);
+  border-color: var(--errore);
+  color: #fff;
+}
+
 /* una riga di controlli: la spaziatura fra bottoni adiacenti è 8 px (§1.3) */
 .riga-controlli {
   display: flex;
@@ -272,4 +348,134 @@ canvas { display: block; touch-action: none; }
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/*
+  ═══════════ SCHERMI A DITO ═══════════
+
+  Non «schermi piccoli»: schermi con un PUNTATORE GROSSO. Un tablet da tredici
+  pollici ha le dita, un portatile da tredici ha il trackpad, e la larghezza
+  non distingue i due casi. Qui si alzano i bersagli; la larghezza governa
+  invece che cosa sta in schermo, ed è un'altra regola più sotto.
+*/
+@media (pointer: coarse) {
+  :root {
+    --h-controllo: 44px;
+    --h-barra: 44px;
+    --h-controllo-minore: 36px;
+    --larghezza-maniglia: 32px;
+  }
+  /* le tendine di sistema su telefono sono già grandi: non vanno gonfiate */
+  .tendina { min-height: 44px; font-size: var(--t-corpo); }
+}
+
+/*
+  ═══════════ SCHERMO STRETTO ═══════════
+
+  Sotto i 900 px i pannelli laterali non ci stanno accanto al disegno. La
+  barra passa alle sole icone — i nomi delle modalità occupano da soli più
+  della larghezza di un telefono — e le etichette restano nei suggerimenti e
+  per i lettori di schermo.
+*/
+@media (max-width: 900px) {
+  .barra-alta { position: relative; padding: var(--s1); gap: var(--s1); flex-wrap: nowrap; }
+  /* le icone si stringono: l'altezza fa il bersaglio, la larghezza no */
+  .barra-alta .btn-gruppo .btn { min-width: 38px; padding: 0; }
+  .barra-alta .solo-largo,
+  .barra-alta .nome-modalita { display: none; }
+  .barra-alta .btn { padding: 0 var(--s1); min-width: var(--h-barra); }
+  /* su schermo stretto il tasto di scorciatoia non serve: non c'è tastiera */
+  .barra-alta .tasto-scorciatoia { display: none; }
+}
+
+/* il complemento di `.nome-modalita`: si vede solo dove il nome sparisce */
+.solo-stretto { display: none; }
+.solo-stretto-blocco { display: none !important; }
+
+@media (max-width: 900px) {
+  .barra-alta .solo-stretto { display: inline; font-size: 16px; line-height: 1; }
+  .solo-stretto-blocco { display: inline-flex !important; }
+
+  /*
+    Le modalità sono la navigazione e restano: se non ci stanno, SCORRONO in
+    orizzontale. Meglio un gruppo che scorre di sette icone accatastate su tre
+    righe, che spingono il disegno fuori dallo schermo.
+  */
+  .barra-alta .btn-gruppo {
+    overflow-x: auto;
+    scrollbar-width: none;
+    max-width: 100%;
+  }
+  .barra-alta .btn-gruppo::-webkit-scrollbar { display: none; }
+
+  /* gli agganci escono dal flusso e compaiono solo col menu aperto */
+  .barra-alta .opzioni-barra {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: var(--s1);
+    z-index: 40;
+    flex-wrap: wrap;
+    max-width: calc(100vw - var(--s4));
+    padding: var(--s2);
+    border: 1px solid var(--bordo-chiaro);
+    border-radius: var(--raggio-pannello);
+    background: var(--sfondo-pannello);
+    box-shadow: 0 6px 20px rgb(0 0 0 / 50%);
+  }
+  .barra-alta .opzioni-barra.aperto { display: flex; }
+  /* nel menu i nomi tornano per esteso: lì lo spazio c'è */
+  .barra-alta .opzioni-barra .nome-modalita { display: inline; }
+  .barra-alta .opzioni-barra .solo-stretto { display: none; }
+}
+
+/*
+  ═══════════ TELEFONO IN VERTICALE ═══════════
+
+  Sotto i 720 px il disegno prende TUTTA la larghezza e i pannelli gli passano
+  sopra quando servono. Affiancati lasciavano al modello una striscia di
+  centocinquanta pixel: si vedeva la griglia e nient'altro.
+*/
+@media (max-width: 720px) {
+  .pannello-laterale {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    width: 100% !important;
+    border: 0;
+  }
+  /* chiuso, sparisce del tutto: a zero pixel di larghezza restava un velo */
+  .pannello-laterale:not(.aperto) { display: none; }
+  .pannello-laterale > div { width: 100% !important; }
+  /* la maniglia di ridimensionamento non ha senso a tutta larghezza */
+  .pannello-laterale [title^='Trascina per cambiare'] { display: none; }
+
+  /*
+    La barra di stato porta cinque voci: coordinate, passo della griglia,
+    suggerimento sul gesto, conteggio della selezione e cronologia. Su 390 px
+    si accavallano e diventano illeggibili tutte. Restano le coordinate e il
+    passo — gli unici due numeri che servono mentre si disegna — e il resto
+    torna appena c'è spazio.
+  */
+  .barra-stato .solo-largo { display: none !important; }
+  .barra-stato { gap: var(--s2); }
+}
+
+/*
+  ═══════════ TELEFONO: LE MODALITÀ HANNO LA LORO RIGA ═══════════
+
+  Sette modalità, tre strumenti, il menu e il marchio non stanno in 390 px.
+  Lasciarle scorrere significa nascondere quattro modalità su sette dietro un
+  gesto che nessuno indovina, e la navigazione non si nasconde. Due righe
+  costano cinquanta pixel su ottocento, ed è il prezzo giusto.
+*/
+@media (max-width: 720px) {
+  .barra-alta { flex-wrap: wrap; }
+  .barra-alta .gruppo-modalita {
+    order: 10;
+    flex-basis: 100%;
+    justify-content: space-between;
+    overflow-x: visible;
+  }
+  .barra-alta .gruppo-modalita .btn { flex: 1 1 0; min-width: 0; }
 }

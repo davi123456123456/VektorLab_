@@ -231,9 +231,16 @@ function Laterale({ lato, stato, etichetta, children }: {
 
   return (
     <>
+      {/*
+        SU TELEFONO il pannello NON sta accanto al disegno: ci si sovrappone.
+        Affiancato, su 390 px di larghezza lasciava al modello una striscia di
+        centocinquanta pixel — si vedeva la griglia e nient'altro. La classe
+        `pannello-laterale` è ciò che la regola di larghezza in `stile.css`
+        cerca per farlo diventare una sovrapposizione a tutta larghezza.
+      */}
       <aside
-        className={`relative flex shrink-0 flex-col overflow-hidden
-                    ${sinistra ? 'border-r' : 'border-l'}`}
+        className={`pannello-laterale relative flex shrink-0 flex-col overflow-hidden
+                    ${sinistra ? 'border-r' : 'border-l'}${stato.aperto ? ' aperto' : ''}`}
         style={{
           width: stato.aperto ? stato.larghezza : 0,
           borderColor: 'var(--bordo)',
@@ -271,7 +278,7 @@ function Laterale({ lato, stato, etichetta, children }: {
         className="z-10 flex shrink-0 items-center justify-center border-r
                    transition-colors hover:brightness-125"
         style={{
-          width: 24,
+          width: 'var(--larghezza-maniglia)',
           borderColor: 'var(--bordo)',
           background: 'var(--sfondo-pannello)',
           color: 'var(--testo-debole)',

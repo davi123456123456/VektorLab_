@@ -59,7 +59,7 @@ function Cosa() {
       testo = '';
   }
   return (
-    <span className="max-w-[52ch] truncate" style={{ color: 'var(--testo-debole)' }}
+    <span className="solo-largo max-w-[52ch] truncate" style={{ color: 'var(--testo-debole)' }}
           title={testo}>
       {testo}
     </span>
@@ -114,7 +114,7 @@ export function BarraStato() {
   const snap = useStore((s) => s.ultimoSnap);
 
   return (
-    <div className="flex h-7 shrink-0 items-center gap-4 border-t px-3 text-[length:var(--t-minuto)]"
+    <div className="barra-stato flex h-7 shrink-0 items-center gap-4 border-t px-3 text-[length:var(--t-minuto)]"
          style={{ borderColor: 'var(--bordo)', background: 'var(--sfondo-pannello)' }}>
       <span className="numerico" style={{ color: 'var(--testo-attenuato)' }}>
         {coordinate} m
@@ -124,7 +124,7 @@ export function BarraStato() {
         <div className="h-2 border-l border-r"
              style={{ width: `${Math.min(120, scala.pixel)}px`,
                       borderColor: 'var(--testo-debole)' }} />
-        <span className="numerico" style={{ color: 'var(--testo-debole)' }}>
+        <span className="solo-largo numerico" style={{ color: 'var(--testo-debole)' }}>
           {scala.etichetta}
         </span>
       </div>
@@ -150,7 +150,7 @@ export function BarraStato() {
 
       <Cosa />
 
-      <span className="ml-auto" style={{ color: 'var(--testo-debole)' }}>
+      <span className="solo-largo ml-auto" style={{ color: 'var(--testo-debole)' }}>
         selezione: {contaSelezione(selezione)}
       </span>
       <span className="numerico" style={{ color: 'var(--testo-debole)' }}

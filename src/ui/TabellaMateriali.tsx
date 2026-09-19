@@ -330,17 +330,25 @@ function Tabella({ materiali, colonne, estremi, assegnato }: {
       <thead>
         <tr>
           <th className="pl-3 text-left font-normal"
-              style={{ color: 'var(--testo-debole)' }}>materiale</th>
+              style={{
+                color: 'var(--testo-debole)',
+                paddingBottom: 'var(--s1)',
+                borderBottom: '1px solid var(--bordo)',
+              }}>materiale</th>
           {colonne.map((g) => (
             <th
               key={g.id}
               title={`${g.nome}${g.unita ? ` — ${g.unita}` : ''}`}
-              className="pr-2 text-right font-normal"
-              style={{ color: g.colore({ accento: 'var(--accento)' }) }}
+              className="text-right font-normal"
+              style={{
+                color: g.colore({ accento: 'var(--accento)' }),
+                padding: '0 var(--s1) var(--s1)',
+                borderBottom: '1px solid var(--bordo)',
+              }}
             >
               {g.sigla}
               {g.unita && (
-                <span className="block" style={{ color: 'var(--testo-debole)', opacity: 0.8 }}>
+                <span className="block" style={{ color: 'var(--testo-debole)', opacity: 0.75 }}>
                   {g.unita}
                 </span>
               )}
@@ -386,46 +394,64 @@ function Tabella({ materiali, colonne, estremi, assegnato }: {
 }
 
 /**
- * Una cella: il numero, e sotto la barra.
+ * Una cella: il numero, con la barra DIETRO.
  *
- * La barra è alta due pixel e sta SOTTO il valore, non dietro: dietro
- * renderebbe il numero meno leggibile proprio nelle righe che contano di più,
- * quelle con la barra piena.
+ * La barra era un trattino sotto il valore, e due elementi separati per dire
+ * una cosa sola leggono come un numero con una riga storta appiccicata. Dietro
+ * — una banda tenue che cresce da destra come il riempimento di un serbatoio —
+ * il numero e la sua misura sono la stessa cosa, e la colonna si scorre
+ * riconoscendo il profilo senza leggere le cifre.
+ *
+ * La banda è al 22 % di opacità: si vede, e non mangia il contrasto del numero
+ * che ci sta sopra.
  */
 function Cella({ g, m, estremi }: {
   g: Grandezza; m: Materiale; estremi?: { min: number; max: number };
 }) {
   const v = g.valore(m);
-  const colore = g.colore({ accento: 'var(--accento)' });
 
   if (v === null) {
     return (
-      <td className="pr-2 text-right" style={{ color: 'var(--testo-debole)' }}>—</td>
+      <td
+        className="text-right"
+        style={{
+          color: 'var(--testo-debole)',
+          padding: '0 var(--s1)',
+          height: 'var(--h-controllo-minore)',
+        }}
+      >
+        —
+      </td>
     );
   }
 
   /*
-   * NORMALIZZAZIONE. Dal minimo al massimo dell'insieme mostrato, non da zero:
+   * NORMALIZZAZIONE dal minimo al massimo dell'insieme mostrato, non da zero:
    * partendo da zero le densità dei metalli — tutte fra 2700 e 7850 — darebbero
-   * barre quasi identiche, e la barra non direbbe niente. Il minimo conserva
-   * comunque un filo di barra, o sembrerebbe un dato mancante.
+   * bande quasi identiche, e la banda non direbbe niente. Il minimo conserva
+   * un'unghia di banda, o sembrerebbe un dato mancante.
    */
   const frazione = estremi && estremi.max > estremi.min
-    ? 0.08 + 0.92 * ((v - estremi.min) / (estremi.max - estremi.min))
+    ? 0.06 + 0.94 * ((v - estremi.min) / (estremi.max - estremi.min))
     : 1;
 
   return (
-    <td className="pr-2 align-middle">
-      <div className="text-right" style={{ color: 'var(--testo)' }}>{g.scrivi(v)}</div>
-      <div style={{ height: 2, background: 'var(--bordo)', borderRadius: 1 }}>
-        <div style={{
+    <td
+      className="relative text-right"
+      style={{ padding: '0 var(--s1)', height: 'var(--h-controllo-minore)' }}
+    >
+      <span
+        aria-hidden
+        style={{
+          position: 'absolute',
+          right: 0, top: 3, bottom: 3,
           width: `${Math.round(frazione * 100)}%`,
-          height: '100%',
-          background: colore,
-          borderRadius: 1,
-          marginLeft: 'auto',
-        }} />
-      </div>
+          background: g.colore({ accento: 'var(--accento)' }),
+          opacity: 0.22,
+          borderRadius: 2,
+        }}
+      />
+      <span style={{ position: 'relative', color: 'var(--testo)' }}>{g.scrivi(v)}</span>
     </td>
   );
 }

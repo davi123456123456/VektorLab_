@@ -4,10 +4,36 @@
  * toccare, non che cosa si vede.
  */
 
+import { useState } from 'react';
 import { MODALITA, useStore, type Modalita, type Strumento } from '../state/store.js';
 import { useFogli } from '../state/fogli.js';
 import { Bottone } from './Pannelli.js';
 import { Logo } from './Logo.js';
+
+/**
+ * L'ICONA DI OGNI MODALITÀ, per lo schermo stretto.
+ *
+ * Su un telefono i sette nomi delle modalità occupano da soli più della
+ * larghezza dello schermo. Sono disegni di una riga — il glifo che un
+ * ingegnere riconosce senza leggere: il triangolo del vincolo, la freccia del
+ * carico, la curva del diagramma — e il nome resta nel suggerimento e per chi
+ * usa un lettore di schermo.
+ */
+const ICONA_MODALITA: Record<string, string> = {
+  modellazione: '╱',
+  vincoli: '△',
+  carichi: '↓',
+  materiali: '▤',
+  analisi: '⚙',
+  reazioni: '↥',
+  risultati: '∿',
+};
+
+const ICONA_STRUMENTO: Record<string, string> = {
+  seleziona: '⬉',
+  nodo: '•',
+  asta: '╱',
+};
 
 const STRUMENTI: { id: Strumento; nome: string; tasto: string; suggerimento: string }[] = [
   { id: 'seleziona', nome: 'Seleziona', tasto: 'Q', suggerimento: 'click, Shift+click, riquadro, Alt+click per la catena' },
@@ -19,6 +45,15 @@ export function BarraModalita({ onAiuto, onLogo }: {
   onAiuto: () => void;
   onLogo: () => void;
 }) {
+  /*
+   * SU SCHERMO STRETTO gli agganci stanno dietro un «⋯».
+   *
+   * Diciannove comandi a quarantaquattro pixel su un telefono da 390 sono
+   * cinque righe di barra, cioè un quarto dello schermo speso prima di vedere
+   * la struttura. Le modalità e gli strumenti restano — sono la navigazione —
+   * e le opzioni di aggancio, che si toccano di rado, entrano in un menu.
+   */
+  const [menuAperto, setMenuAperto] = useState(false);
   const modalita = useStore((s) => s.modalita);
   const impostaModalita = useStore((s) => s.impostaModalita);
   const strumento = useStore((s) => s.strumento);
@@ -30,13 +65,13 @@ export function BarraModalita({ onAiuto, onLogo }: {
   const alternaAnimazioni = useStore((s) => s.alternaAnimazioni);
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center border-b"
+    <div className="barra-alta flex shrink-0 flex-wrap items-center border-b"
          style={{
            borderColor: 'var(--bordo)', background: 'var(--sfondo-pannello)',
-           gap: 'var(--s2)', padding: 'var(--s2) var(--s3)',
+           gap: 'var(--s1)', padding: 'var(--s1) var(--s2)',
          }}>
       <Logo onClick={onLogo} />
-      <span className="max-w-[24ch] truncate"
+      <span className="solo-largo max-w-[24ch] truncate"
             style={{
               color: 'var(--testo-attenuato)', fontSize: 'var(--t-etichetta)',
               marginRight: 'var(--s1)',
@@ -51,7 +86,7 @@ export function BarraModalita({ onAiuto, onLogo }: {
                onClick={() => useFogli.getState().nuovo()}>+</Bottone>
 
       {/* le modalità sono UNA scelta: stanno in un gruppo, non in sette bottoni */}
-      <div className="btn-gruppo" role="group" aria-label="Modalità">
+      <div className="btn-gruppo gruppo-modalita" role="group" aria-label="Modalità">
         {MODALITA.map((m) => (
           <button
             key={m.id}
@@ -59,9 +94,11 @@ export function BarraModalita({ onAiuto, onLogo }: {
             onClick={() => impostaModalita(m.id as Modalita)}
             title={`${m.nome} (${m.tasto})`}
             aria-pressed={modalita === m.id}
+            aria-label={m.nome}
             className={`btn${modalita === m.id ? ' attivo' : ''}`}
           >
-            {m.nome}
+            <span className="nome-modalita">{m.nome}</span>
+            <span aria-hidden className="solo-stretto">{ICONA_MODALITA[m.id]}</span>
           </button>
         ))}
       </div>
@@ -74,14 +111,29 @@ export function BarraModalita({ onAiuto, onLogo }: {
             onClick={() => impostaStrumento(s.id)}
             title={s.suggerimento}
             aria-pressed={strumento === s.id}
+            aria-label={s.nome}
             className={`btn${strumento === s.id ? ' attivo' : ''}`}
           >
-            {s.nome} <span className="opacity-50">{s.tasto}</span>
+            <span className="nome-modalita">{s.nome}</span>
+            <span aria-hidden className="solo-stretto">{ICONA_STRUMENTO[s.id]}</span>
+            <span className="tasto-scorciatoia opacity-50">{s.tasto}</span>
           </button>
         ))}
       </div>
 
-      <div className="riga-controlli" style={{ marginLeft: 'auto' }}>
+      <button
+        type="button"
+        className="btn solo-stretto-blocco"
+        aria-expanded={menuAperto}
+        aria-label="Altre opzioni"
+        onClick={() => setMenuAperto((v) => !v)}
+        style={{ marginLeft: 'auto' }}
+      >⋯</button>
+
+      <div
+        className={`riga-controlli opzioni-barra${menuAperto ? ' aperto' : ''}`}
+        style={{ marginLeft: 'auto' }}
+      >
         {/*
           La parola «AGGANCIO» è sparita: il gruppo la dichiara già a chi usa
           un lettore di schermo, e a chi guarda la dicevano i nomi dentro —
@@ -105,9 +157,13 @@ export function BarraModalita({ onAiuto, onLogo }: {
               onClick={() => impostaSnap({ [chiave]: !snap[chiave] })}
               title="Ctrl tenuto premuto inverte temporaneamente l'aggancio"
               aria-pressed={snap[chiave]}
+              aria-label={`aggancio ${etichetta}`}
               className={`btn${snap[chiave] ? ' attivo' : ''}`}
             >
-              {etichetta}
+              <span className="nome-modalita">{etichetta}</span>
+              <span aria-hidden className="solo-stretto">
+                {etichetta.slice(0, 1).toUpperCase()}
+              </span>
             </button>
           ))}
         </div>

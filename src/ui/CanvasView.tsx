@@ -25,6 +25,7 @@ import {
   applicaVincolo, concludiTrascinamentoSuAsta, confermaOperazione, posaSuAsta,
 } from '../state/azioni.js';
 import { nomeVincolo } from '../render/simboli.js';
+import { BarraSelezione } from './BarraSelezione.js';
 import { etichette } from '../state/etichette.js';
 import { leggiPuntatore, scriviPuntatore } from '../state/puntatore.js';
 import { DURATE, registro } from '../anim/registro.js';
@@ -823,6 +824,11 @@ export function CanvasView() {
 
   return (
     <div ref={contenitore} className="relative h-full w-full overflow-hidden">
+      {/*
+        Senza tastiera non c'era modo di eliminare né di deselezionare: la
+        barra è l'unica via su un telefono, e una comodità col mouse.
+      */}
+      <BarraSelezione />
       <canvas
         ref={canvas}
         className="h-full w-full"

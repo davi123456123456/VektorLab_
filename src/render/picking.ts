@@ -9,12 +9,18 @@
 
 import type { ElementId, NodeId, Progetto } from '../core/model/types.js';
 import { type Camera, type Punto, mondoASchermo, schermoAMondo } from './camera.js';
+import { tolleranza } from './tocco.js';
 
 export type Bersaglio =
   | { tipo: 'nodo'; id: NodeId }
   | { tipo: 'asta'; id: ElementId }
   | null;
 
+/*
+ * Tolleranze pensate per il MOUSE. Con un dito vengono moltiplicate — vedi
+ * `tolleranza()` — perché dieci pixel sono la metà del raggio di un
+ * polpastrello, e senza l'adattamento su un telefono non si seleziona niente.
+ */
 const TOLL_NODO = 10;
 const TOLL_ASTA = 7;
 
@@ -26,7 +32,7 @@ export function colpisci(
   for (const n of progetto.nodi) {
     const s = mondoASchermo(camera, { x: n.x, y: n.y });
     const d = Math.hypot(s.x - puntatore.x, s.y - puntatore.y);
-    if (d <= TOLL_NODO && (!migliorNodo || d < migliorNodo.d)) {
+    if (d <= tolleranza(TOLL_NODO) && (!migliorNodo || d < migliorNodo.d)) {
       migliorNodo = { id: n.id, d };
     }
   }
@@ -41,7 +47,7 @@ export function colpisci(
     const p1 = mondoASchermo(camera, { x: ni.x, y: ni.y });
     const p2 = mondoASchermo(camera, { x: nj.x, y: nj.y });
     const d = distanzaPuntoSegmento(puntatore, p1, p2);
-    if (d <= TOLL_ASTA && (!migliorAsta || d < migliorAsta.d)) {
+    if (d <= tolleranza(TOLL_ASTA) && (!migliorAsta || d < migliorAsta.d)) {
       migliorAsta = { id: a.id, d };
     }
   }
@@ -152,7 +158,7 @@ export function distanzaPuntoSegmento(p: Punto, a: Punto, b: Punto): number {
  * linea, e chi ci clicca sopra intende prendere quello, non l'asta sotto.
  */
 export function colpisciSuAsta(
-  p: Progetto, camera: Camera, punto: Punto, raggio = 12,
+  p: Progetto, camera: Camera, punto: Punto, raggio = tolleranza(12),
 ): { id: string; tipo: 'vincolo' | 'sconnessione'; astaId: ElementId } | null {
   const nodi = new Map(p.nodi.map((n) => [n.id, n]));
   const aste = new Map(p.aste.map((a) => [a.id, a]));

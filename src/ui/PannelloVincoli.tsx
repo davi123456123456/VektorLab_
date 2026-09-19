@@ -290,9 +290,15 @@ function Orientamento() {
           <Ghiera gradi={o.gradi} onChange={daGradi} />
         </div>
       </Riga>
+      {/*
+        I PRESET D'ANGOLO restano piccoli. Sono ventiquattro in fila: alla
+        taglia di un bottone d'azione riempirebbero mezzo pannello, e sono una
+        scorciatoia — chi vuole un angolo qualunque usa il campo o la ghiera
+        qui sopra.
+      */}
       <div className="flex flex-wrap gap-1 px-3 pt-1">
         {PRESET_ANGOLI.map((a) => (
-          <Bottone key={a} attivo={o.gradi === a} onClick={() => daGradi(a)}>
+          <Bottone key={a} minore attivo={o.gradi === a} onClick={() => daGradi(a)}>
             {a}°
           </Bottone>
         ))}

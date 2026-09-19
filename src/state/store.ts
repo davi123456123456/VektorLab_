@@ -759,6 +759,16 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
     },
 
     apriPannelloDestro() {
+      /*
+       * SU SCHERMO STRETTO non si apre da sé.
+       *
+       * Cambiare modalità apriva il pannello, e su un telefono il pannello
+       * copre tutto: si toccava «Vincoli» e la struttura spariva dietro la
+       * tavolozza, compresa la barra delle azioni sulla selezione. Su schermo
+       * largo il pannello sta accanto al disegno e aprirlo è un servizio; su
+       * uno stretto è un sipario, e lo si tira solo su richiesta.
+       */
+      if (schermoStretto()) return;
       if (get().pannelloDestro.aperto) return;
       const p = { ...get().pannelloDestro, aperto: true };
       set({ pannelloDestro: p });
@@ -1187,7 +1197,21 @@ const CHIAVE_PANNELLO = 'vektorlab.proprieta';
  */
 let ultimoPannello = { aperto: true, larghezza: 288 };
 
+/** Lo schermo è stretto abbastanza che un pannello coprirebbe il disegno? */
+function schermoStretto(): boolean {
+  return typeof window !== 'undefined' && window.innerWidth <= 720;
+}
+
 function pannelloDestroIniziale(): { aperto: boolean; larghezza: number } {
+  /*
+   * SU SCHERMO STRETTO il pannello parte CHIUSO.
+   *
+   * Sotto i 720 px il pannello non sta accanto al disegno: ci passa sopra a
+   * tutta larghezza. Aprirlo all'avvio significa presentare l'applicazione
+   * con il modello nascosto dietro una tavolozza, e chi la apre per la prima
+   * volta su un telefono non trova nemmeno la struttura.
+   */
+  if (schermoStretto()) return { ...ultimoPannello, aperto: false };
   return { ...ultimoPannello };
 }
 

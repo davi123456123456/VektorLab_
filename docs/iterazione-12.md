@@ -264,3 +264,116 @@ programma.» Ciò che lo rende vero non è una scelta estetica ma una struttura:
 quattro dimensioni di carattere, due raggi, una scala di spaziature, zero
 colori scritti a mano, e un solo `.btn`. Un bottone aggiunto domani eredita
 tutto senza che nessuno debba ricordarsene.
+
+---
+
+## Ritocchi dopo la prova sul campo
+
+### Misure riviste
+
+I 40 px dell'iterazione erano troppi. Ridotti, e con una misura DIVERSA per la
+barra, perché il suo vincolo è diverso da quello dei pannelli:
+
+| | iterazione 12 | ora |
+|---|---|---|
+| bottoni dei pannelli | 40 px | **34 px** |
+| barra superiore | 40 px | **30 px** |
+| controlli fitti (preset d'angolo) | 32 px | **26 px** |
+| corpo del testo | 14 px | **13 px** |
+
+I preset d'angolo tornano alla taglia di prima: sono ventiquattro in fila, e
+alla taglia di un bottone d'azione riempivano mezzo pannello.
+
+**La barra sta su una riga fino a 1280 px** — era il punto aperto dell'ultima
+iterazione. Ci arriva così: controlli a 30 px, comandi raccolti in tre gruppi,
+e il nome del modello che sparisce sotto i 1400 px perché è già scritto sulla
+scheda del foglio a due centimetri di distanza.
+
+### Tabella dei materiali
+
+Spostata: non più in cima al pannello ma **accanto al confronto**, perché le
+due tabelle rispondono alla stessa domanda da due lati. Nel blocco «Materiale
+del modello» tornano le quattro righe del solo materiale scelto.
+
+Stile rifatto: la barra non è più un trattino SOTTO il numero ma il FONDO della
+cella, una banda che cresce da destra. Due elementi separati per dire una cosa
+sola leggevano come un numero con una riga storta appiccicata.
+
+---
+
+## Basi per il telefono
+
+L'applicazione su un telefono era inutilizzabile. Non per un dettaglio: per
+quattro cose insieme.
+
+### 1. Non si poteva selezionare niente
+
+Le tolleranze di selezione — dieci pixel su un nodo, sette su un'asta — sono
+scritte per un mouse. Un polpastrello copre una quarantina di pixel: si toccava
+l'asta e non succedeva niente.
+
+Ora `render/tocco.ts` risponde a una domanda sola — «il puntatore è grosso?» —
+interrogando `(pointer: coarse)`, e le tolleranze si moltiplicano per 2,4. Non
+si guarda la LARGHEZZA della finestra: un tablet largo ha le dita, un portatile
+stretto ha il trackpad.
+
+### 2. Non si poteva cancellare niente
+
+Su un computer si seleziona e si preme Canc. Su un telefono non c'è Canc, e non
+c'era nessun'altra via: si poteva disegnare ma non correggere.
+
+La **barra delle azioni sulla selezione** galleggia sopra il disegno quando c'è
+qualcosa di selezionato, dice CHE COSA è selezionato — «asta a1», non «1
+elemento» — e offre duplica, deseleziona, elimina. Con un nodo vincolato offre
+anche **togli vincolo**, che toglie il vincolo lasciando il nodo: prima
+l'unica alternativa era cancellare il nodo, e con lui le aste che ci arrivano.
+
+Serve anche col mouse: chi non conosce la scorciatoia trova un bottone.
+
+### 3. La barra non era dimensionata
+
+| | prima | ora |
+|---|---|---|
+| altezza su iPhone 13 | 203 px (5 righe) | **105 px** (2 righe) |
+| modalità raggiungibili | 3 su 7 | **7 su 7** |
+| bersaglio minimo | variabile | **44 px** |
+
+I nomi diventano icone sotto i 900 px — sette nomi di modalità non stanno in
+390 px — e il nome resta nel suggerimento e per i lettori di schermo. Le
+opzioni di aggancio, che si toccano di rado, entrano in un menu «⋯». Le
+modalità hanno una riga loro: lasciarle scorrere avrebbe nascosto quattro
+voci su sette dietro un gesto che nessuno indovina, e la navigazione non si
+nasconde.
+
+### 4. I pannelli coprivano il disegno
+
+Sotto i 720 px il pannello non sta accanto al disegno: ci passa sopra, a tutta
+larghezza, e **parte chiuso**. Affiancato lasciava al modello una striscia di
+centocinquanta pixel — si vedeva la griglia e nient'altro. E cambiare modalità
+non lo apre più da sé: su schermo largo aprirlo è un servizio, su uno stretto
+è un sipario.
+
+### Verificato guidando il telefono
+
+Con un iPhone 13 emulato, a tocchi veri: disegnata un'asta, selezionata,
+eliminata; posato un vincolo su un nodo, selezionato il nodo, tolto il vincolo
+lasciando il nodo. Canvas 326 px di 390, barra 105 px, nessun errore di
+console.
+
+### Quello che resta da fare
+
+Queste sono basi, non una versione telefono finita. Restano: il pizzico per
+zoomare, i pannelli come fogli che salgono dal basso invece che a tutto
+schermo, e le tendine di sistema che su telefono aprono la rotella nativa e
+andrebbero riviste una per una.
+
+---
+
+## Verifica finale dei ritocchi
+
+```
+npm run baseline:check   LINEA DI BASE INTATTA — 18 modelli, differenza nulla
+npm test                 989 test verdi su 67 file
+tsc -b                   pulito
+git diff core/           vuoto
+```
