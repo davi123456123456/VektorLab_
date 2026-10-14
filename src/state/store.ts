@@ -42,7 +42,7 @@ import type { Componente } from '../render/diagrammi.js';
 import { verificaIntegrita, type Anomalia } from '../core/model/integrita.js';
 import type { ModoTaglio } from '../core/checks/coefficiente.js';
 import {
-  type Camera, cameraIniziale, inquadra, trasla, zoomVersoPuntatore, type Punto,
+  type Camera, applicaPizzico, cameraIniziale, inquadra, trasla, zoomVersoPuntatore, type Punto,
 } from '../render/camera.js';
 import { SNAP_PREDEFINITO, type OpzioniSnap, type RisultatoSnap } from '../render/snap.js';
 import type { Comando } from './commands.js';
@@ -360,6 +360,8 @@ export interface Stato {
   ridimensiona: (larghezza: number, altezza: number) => void;
   panning: (dx: number, dy: number) => void;
   zoomPuntatore: (p: Punto, fattore: number) => void;
+  /** Due dita: da (a0, b0) ad (a1, b1), in pixel dello schermo. */
+  pizzico: (a0: Punto, b0: Punto, a1: Punto, b1: Punto) => void;
   /**
    * §8 — pannello di destra, per foglio.
    *
@@ -709,6 +711,7 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
     },
     panning: (dx, dy) => set((s) => ({ camera: trasla(s.camera, dx, dy) })),
     zoomPuntatore: (p, f) => set((s) => ({ camera: zoomVersoPuntatore(s.camera, p, f) })),
+    pizzico: (a0, b0, a1, b1) => set((s) => ({ camera: applicaPizzico(s.camera, a0, b0, a1, b1) })),
 
     /**
      * §2 — inquadratura animata.

@@ -55,6 +55,28 @@ export function trasla(c: Camera, dxPixel: number, dyPixel: number): Camera {
   return { ...c, cx: c.cx - dxPixel / c.zoom, cy: c.cy + dyPixel / c.zoom };
 }
 
+/**
+ * NAVIGAZIONE A DUE DITA: dalla posizione di prima delle dita (a0, b0) a
+ * quella di adesso (a1, b1).
+ *
+ * Il punto medio fra le dita sposta la vista, il rapporto fra le distanze la
+ * ingrandisce attorno al nuovo punto medio. Spostare PRIMA e ingrandire DOPO,
+ * attorno al punto di arrivo, è ciò che tiene il disegno incollato ai
+ * polpastrelli: il punto del mondo che stava fra le dita ci resta.
+ *
+ * Due dita quasi sovrapposte non definiscono uno zoom — il rapporto
+ * esploderebbe — e lì si sposta soltanto.
+ */
+export function applicaPizzico(c: Camera, a0: Punto, b0: Punto, a1: Punto, b1: Punto): Camera {
+  const centro0 = { x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2 };
+  const centro1 = { x: (a1.x + b1.x) / 2, y: (a1.y + b1.y) / 2 };
+  const d0 = distanza(a0, b0);
+  const d1 = distanza(a1, b1);
+  const fattore = d0 > 8 && d1 > 8 ? d1 / d0 : 1;
+  const spostata = trasla(c, centro1.x - centro0.x, centro1.y - centro0.y);
+  return zoomVersoPuntatore(spostata, centro1, fattore);
+}
+
 /** Inquadra un rettangolo del mondo con un margine relativo. */
 export function inquadra(
   c: Camera,

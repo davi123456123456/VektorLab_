@@ -13,7 +13,7 @@
 
 import { useEffect, useRef } from 'react';
 import { disegnaScena, type StatoDisegno } from '../render/scene.js';
-import { mondoASchermo, schermoAMondo, type Punto } from '../render/camera.js';
+import { distanza, mondoASchermo, schermoAMondo, type Punto } from '../render/camera.js';
 import { calcolaSnap } from '../render/snap.js';
 import {
   ascissaSuAsta, catenaCollineare, colpisci, colpisciSuAsta, dentroRiquadro,
@@ -39,6 +39,13 @@ import {
   normalizzaAngolo, PASSO_SNAP_ANGOLO,
 } from '../core/model/orientamento.js';
 
+/**
+ * Quanto aspetta un dito prima di agire, nel caso ne arrivi un secondo.
+ * Le due dita di un gesto toccano a qualche centesimo di secondo l'una
+ * dall'altra; un decimo le copre, e su un tocco singolo non si percepisce.
+ */
+const ATTESA_SECONDO_DITO = 100;
+
 export function CanvasView() {
   const contenitore = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -48,6 +55,17 @@ export function CanvasView() {
   const trascinaSuAsta = useRef<{ id: string; astaId: ElementId } | null>(null);
   /** timer della pressione prolungata che avvia la rotazione di un vincolo */
   const attesaRotazione = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // due dita: le dita a contatto, il primo tocco in attesa del secondo, e se
+  // è in corso una navigazione (dal secondo dito finché non si alzano tutte)
+  const dita = useRef(new Map<number, Punto>());
+  const inAttesa = useRef<{
+    giu: React.PointerEvent; timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+  const pizzicando = useRef(false);
+  // un tocco in attesa non deve scattare su un foglio che non c'è più
+  useEffect(() => () => {
+    if (inAttesa.current) clearTimeout(inAttesa.current.timer);
+  }, []);
 
   // ── ridimensionamento ────────────────────────────────────────────────
   useEffect(() => {
@@ -385,7 +403,9 @@ export function CanvasView() {
   }
 
   function onPointerDown(e: React.PointerEvent): void {
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    // un tocco confermato al rilascio (vedi «due dita») ha il dito già
+    // alzato, e catturare un puntatore che non c'è più è un errore
+    try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch { /* già rilasciato */ }
     const p = posizioneLocale(e);
     scriviPuntatore(p);
     premuto.current = { tasto: e.button, da: p, trascinato: false };
@@ -742,6 +762,103 @@ export function CanvasView() {
     aggiornaSnap(p);
   }
 
+  // ── due dita ─────────────────────────────────────────────────────────
+  /*
+   * NAVIGAZIONE A DUE DITA, in ogni modalità e con ogni strumento: trascinare
+   * sposta la vista, allargare e stringere la ingrandisce.
+   *
+   * La difficoltà è che due dita non arrivano mai insieme. Il primo tocco
+   * arriva qualche centesimo di secondo prima del secondo, e fino a qui
+   * agiva subito: con lo strumento Nodo ogni tentativo di spostare la vista
+   * posava un nodo. Per questo un dito, e SOLO un dito — il mouse resta
+   * immediato — aspetta `ATTESA_SECONDO_DITO` prima di agire. Se in quel
+   * tempo arriva il secondo, il primo tocco non è mai esistito; se il dito
+   * si alza o si sposta prima, il tocco parte subito e nessuno se ne accorge.
+   *
+   * Alzato un dito, quello che resta giù non conta più finché non si alza
+   * anche lui: chi finisce un ingrandimento non vuole che il dito rimasto
+   * disegni qualcosa.
+   */
+  function giu(e: React.PointerEvent): void {
+    if (e.pointerType !== 'touch') { onPointerDown(e); return; }
+    dita.current.set(e.pointerId, posizioneLocale(e));
+    if (pizzicando.current) return;
+    if (dita.current.size >= 2) { avviaPizzico(); return; }
+    inAttesa.current = { giu: e, timer: setTimeout(confermaTocco, ATTESA_SECONDO_DITO) };
+  }
+
+  function muovi(e: React.PointerEvent): void {
+    if (e.pointerType !== 'touch') { onPointerMove(e); return; }
+    if (!dita.current.has(e.pointerId)) return;
+    const p = posizioneLocale(e);
+    if (pizzicando.current) {
+      const [ia, ib] = [...dita.current.keys()];
+      const a0 = dita.current.get(ia)!;
+      const b0 = ib !== undefined ? dita.current.get(ib)! : null;
+      dita.current.set(e.pointerId, p);
+      if (b0) {
+        useStore.getState().pizzico(
+          a0, b0, dita.current.get(ia)!, dita.current.get(ib)!);
+      }
+      return;
+    }
+    dita.current.set(e.pointerId, p);
+    if (inAttesa.current) {
+      // un dito non sta mai fermo del tutto: sotto qualche pixel si aspetta
+      if (distanza(posizioneLocale(inAttesa.current.giu), p) < 6) return;
+      confermaTocco();
+    }
+    onPointerMove(e);
+  }
+
+  function su(e: React.PointerEvent): void {
+    if (e.pointerType !== 'touch') { onPointerUp(e); return; }
+    dita.current.delete(e.pointerId);
+    if (pizzicando.current) {
+      if (dita.current.size === 0) pizzicando.current = false;
+      return;
+    }
+    if (inAttesa.current) confermaTocco();
+    onPointerUp(e);
+  }
+
+  function toccoInterrotto(e: React.PointerEvent): void {
+    if (e.pointerType !== 'touch') return;
+    dita.current.delete(e.pointerId);
+    scartaAttesa();
+    if (dita.current.size === 0) pizzicando.current = false;
+  }
+
+  /** Il primo dito ha aspettato abbastanza: il suo tocco è un tocco. */
+  function confermaTocco(): void {
+    const attesa = inAttesa.current;
+    if (!attesa) return;
+    scartaAttesa();
+    onPointerDown(attesa.giu);
+  }
+
+  function scartaAttesa(): void {
+    if (inAttesa.current) clearTimeout(inAttesa.current.timer);
+    inAttesa.current = null;
+  }
+
+  function avviaPizzico(): void {
+    pizzicando.current = true;
+    if (inAttesa.current) { scartaAttesa(); return; }
+    // Il primo dito aveva già cominciato qualcosa — il secondo è arrivato in
+    // ritardo. Quello che era in corso si lascia cadere; ciò che era già
+    // fatto, come un nodo posato, resta e si toglie con annulla.
+    const st = useStore.getState();
+    annullaAttesaRotazione();
+    premuto.current = null;
+    if (st.rotazioneVincolo) st.concludiRotazioneVincolo(false);
+    if (trascinaSuAsta.current) {
+      trascinaSuAsta.current = null;
+      st.impostaAnteprimaSuAsta(null);
+    }
+    if (st.operazione.tipo === 'riquadro') st.impostaOperazione({ tipo: 'nessuna' });
+  }
+
   // ── disegno delle aste ───────────────────────────────────────────────
   function gestisciDisegnoAsta(p: Punto): void {
     const st = useStore.getState();
@@ -833,9 +950,10 @@ export function CanvasView() {
         ref={canvas}
         className="h-full w-full"
         style={{ cursor: 'crosshair' }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
+        onPointerDown={giu}
+        onPointerMove={muovi}
+        onPointerUp={su}
+        onPointerCancel={toccoInterrotto}
         onWheel={onWheel}
         onDoubleClick={onDoubleClick}
         onContextMenu={(e) => e.preventDefault()}
