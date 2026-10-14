@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { MODALITA, useStore, type Modalita, type Strumento } from '../state/store.js';
 import { useFogli } from '../state/fogli.js';
 import { Bottone } from './Pannelli.js';
+import { FileProgetto } from './FileProgetto.js';
 import { Logo } from './Logo.js';
 import { Icona } from './icone.js';
 import { usaTelefono } from './usaTelefono.js';
@@ -129,6 +130,7 @@ function BarraComputer({ onAiuto, onLogo }: {
       */}
       <Bottone minore titolo="Nuovo foglio di lavoro (Ctrl+T)"
                onClick={() => useFogli.getState().nuovo()}>+</Bottone>
+      <FileProgetto />
 
       {/* le modalità sono UNA scelta: stanno in un gruppo, non in sette bottoni */}
       <div className="btn-gruppo gruppo-modalita" role="group" aria-label="Modalità">
