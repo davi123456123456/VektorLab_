@@ -27,7 +27,9 @@ import {
 import { nomeVincolo } from '../render/simboli.js';
 import { BarraSelezione } from './BarraSelezione.js';
 import { etichette } from '../state/etichette.js';
-import { leggiPuntatore, scriviPuntatore } from '../state/puntatore.js';
+import {
+  leggiPuntatore, puntatorePresente, scriviPuntatore, segnaPuntatorePresente,
+} from '../state/puntatore.js';
 import { DURATE, registro } from '../anim/registro.js';
 import { MOLLE } from '../anim/molla.js';
 import { mescolaRisultati } from '../anim/interpolazione.js';
@@ -123,8 +125,10 @@ export function CanvasView() {
     const a = calcolaAnteprima(st.operazione, mondo);
     if (a) anteprimaNodi = a.posizioni;
 
+    // col dito alzato non c'è un punto da seguire: niente elastico né aggancio
+    const presente = puntatorePresente();
     let anteprimaAsta: { da: Punto; a: Punto } | null = null;
-    if (st.operazione.tipo === 'disegnaAsta' && st.operazione.daPunto) {
+    if (presente && st.operazione.tipo === 'disegnaAsta' && st.operazione.daPunto) {
       const p = st.ultimoSnap?.punto ?? mondo;
       anteprimaAsta = { da: st.operazione.daPunto, a: p };
     }
@@ -151,7 +155,7 @@ export function CanvasView() {
       selezioneAste: st.selezione.aste,
       evidenziato: st.evidenziato,
       asteEvidenziate: st.asteEvidenziate,
-      snap: st.modalita === 'modellazione' ? st.ultimoSnap : null,
+      snap: st.modalita === 'modellazione' && presente ? st.ultimoSnap : null,
       anteprimaAsta,
       riquadro,
       anteprimaNodi,
@@ -457,6 +461,9 @@ export function CanvasView() {
     }
 
     if (st.strumento === 'asta' || st.operazione.tipo === 'disegnaAsta') {
+      // a dito il punto si posa al RILASCIO (vedi `onPointerUp`): appoggiato
+      // il dito si striscia, si guarda dove aggancia, e si stacca lì
+      if (e.pointerType === 'touch') return;
       gestisciDisegnoAsta(p);
       return;
     }
@@ -574,6 +581,22 @@ export function CanvasView() {
       const sel = dentroRiquadro(st.progetto, st.camera, st.operazione.da, st.operazione.a);
       st.seleziona({ nodi: new Set(sel.nodi), aste: new Set(sel.aste) }, e.shiftKey);
       st.impostaOperazione({ tipo: 'nessuna' });
+      return;
+    }
+
+    /*
+     * L'ASTA A DITO SI CONFERMA STACCANDO.
+     *
+     * Col mouse il punto si posa alla pressione, perché il cursore si vede
+     * prima di premere. Il dito invece copre proprio il punto che vuole
+     * toccare: lo si appoggia, si striscia guardando l'aggancio e l'asta
+     * elastica, e il punto vale dove il dito si stacca — anche dopo uno
+     * strisciamento lungo, che col mouse sarebbe un trascinamento.
+     */
+    if (e.pointerType === 'touch' && info && info.tasto === 0
+        && st.modalita === 'modellazione'
+        && (st.strumento === 'asta' || st.operazione.tipo === 'disegnaAsta')) {
+      gestisciDisegnoAsta(p);
       return;
     }
 
@@ -780,7 +803,7 @@ export function CanvasView() {
    * disegni qualcosa.
    */
   function giu(e: React.PointerEvent): void {
-    if (e.pointerType !== 'touch') { onPointerDown(e); return; }
+    if (e.pointerType !== 'touch') { segnaPuntatorePresente(true); onPointerDown(e); return; }
     dita.current.set(e.pointerId, posizioneLocale(e));
     if (pizzicando.current) return;
     if (dita.current.size >= 2) { avviaPizzico(); return; }
@@ -788,7 +811,7 @@ export function CanvasView() {
   }
 
   function muovi(e: React.PointerEvent): void {
-    if (e.pointerType !== 'touch') { onPointerMove(e); return; }
+    if (e.pointerType !== 'touch') { segnaPuntatorePresente(true); onPointerMove(e); return; }
     if (!dita.current.has(e.pointerId)) return;
     const p = posizioneLocale(e);
     if (pizzicando.current) {
@@ -820,6 +843,7 @@ export function CanvasView() {
     }
     if (inAttesa.current) confermaTocco();
     onPointerUp(e);
+    ditoAlzato();
   }
 
   function toccoInterrotto(e: React.PointerEvent): void {
@@ -827,6 +851,17 @@ export function CanvasView() {
     dita.current.delete(e.pointerId);
     scartaAttesa();
     if (dita.current.size === 0) pizzicando.current = false;
+    ditoAlzato();
+  }
+
+  /*
+   * Col dito alzato non c'è più un punto indicato: né l'elastico né
+   * l'aggancio hanno qualcosa da seguire. L'ultimo aggancio si cancella
+   * anche dallo store, o la barra di stato continuerebbe a descriverlo.
+   */
+  function ditoAlzato(): void {
+    segnaPuntatorePresente(false);
+    useStore.getState().impostaUltimoSnap(null);
   }
 
   /** Il primo dito ha aspettato abbastanza: il suo tocco è un tocco. */
@@ -834,6 +869,7 @@ export function CanvasView() {
     const attesa = inAttesa.current;
     if (!attesa) return;
     scartaAttesa();
+    segnaPuntatorePresente(true);
     onPointerDown(attesa.giu);
   }
 
@@ -844,6 +880,7 @@ export function CanvasView() {
 
   function avviaPizzico(): void {
     pizzicando.current = true;
+    ditoAlzato();
     if (inAttesa.current) { scartaAttesa(); return; }
     // Il primo dito aveva già cominciato qualcosa — il secondo è arrivato in
     // ritardo. Quello che era in corso si lascia cadere; ciò che era già

@@ -228,6 +228,48 @@ export function trasformaNodi(
 }
 
 /**
+ * Lunghezza e inclinazione di un'asta, in metri e in gradi dall'asse x in
+ * senso antiorario — la stessa coppia che l'anteprima scrive mentre si
+ * disegna.
+ */
+export function geometriaAsta(
+  p: Progetto, astaId: ElementId,
+): { lunghezza: number; gradi: number } | null {
+  const a = p.aste.find((x) => x.id === astaId);
+  const i = a && p.nodi.find((n) => n.id === a.nodoIniziale);
+  const j = a && p.nodi.find((n) => n.id === a.nodoFinale);
+  if (!i || !j) return null;
+  const dx = j.x - i.x;
+  const dy = j.y - i.y;
+  return { lunghezza: Math.hypot(dx, dy), gradi: (Math.atan2(dy, dx) * 180) / Math.PI };
+}
+
+/**
+ * Scrive lunghezza e inclinazione di un'asta. Il nodo INIZIALE resta fermo e
+ * si sposta il FINALE, con le altre aste che vi arrivano: è come trascinarlo
+ * fino al punto giusto, ma con il numero invece che con il dito.
+ *
+ * Una lunghezza nulla, negativa o non numerica non descrive un'asta: niente
+ * comando, invece di un nodo sovrapposto all'altro.
+ */
+export function impostaGeometriaAsta(
+  p: Progetto, astaId: ElementId, lunghezza: number, gradi: number,
+): Comando | null {
+  if (!Number.isFinite(lunghezza) || !Number.isFinite(gradi) || lunghezza <= 0) return null;
+  const a = p.aste.find((x) => x.id === astaId);
+  const i = a && p.nodi.find((n) => n.id === a.nodoIniziale);
+  const j = a && p.nodi.find((n) => n.id === a.nodoFinale);
+  if (!a || !i || !j) return null;
+  const rad = (gradi * Math.PI) / 180;
+  const nuova = new Map([[j.id, {
+    x: i.x + lunghezza * Math.cos(rad),
+    y: i.y + lunghezza * Math.sin(rad),
+  }]]);
+  const vecchia = new Map([[j.id, { x: j.x as number, y: j.y as number }]]);
+  return trasformaNodi([j.id], nuova, 'lunghezza e inclinazione', vecchia);
+}
+
+/**
  * Eliminazione. Le aste che perdono un nodo vengono eliminate anche se non
  * erano selezionate — un'asta senza estremità non è un oggetto valido — e i
  * carichi che vi si riferiscono con esse. Tutto viene conservato per l'undo.
