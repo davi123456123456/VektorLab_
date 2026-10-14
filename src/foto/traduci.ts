@@ -161,7 +161,7 @@ export function traduci(g: Grafo): { progetto: Progetto; avvisi: Avviso[] } {
 }
 
 /** Assi globali quando la direzione è orizzontale o verticale, angolo assoluto altrimenti. */
-function direzioneDistribuito(direzione: number, intensita: number): {
+export function direzioneDistribuito(direzione: number, intensita: number): {
   modo: 'globaleX' | 'globaleY' | 'angolo'; alpha?: number; q: number;
 } {
   const gradi = Math.round(direzione / GRADI);
