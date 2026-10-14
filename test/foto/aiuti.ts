@@ -20,7 +20,8 @@ import type {
 
 const GRADI = Math.PI / 180;
 /** raggio del pallino e spessore della linea, in unità di L */
-const R = 0.06;
+export const RAGGIO = 0.06;
+const R = RAGGIO;
 const SPESSORE = 0.03;
 
 const puntamento = (gradi: number): Punto =>
