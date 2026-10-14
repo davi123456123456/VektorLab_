@@ -76,6 +76,61 @@ describe('confronto fra il modello letto e quello atteso', () => {
     expect(confronta(trave({ versoInvertito: true }), trave()).correzioni).toBe(1);
   });
 
+  it('cerniera parziale che svincola l\'asta sbagliata: una correzione', () => {
+    const telaio = (svincolata: 'colonna' | 'diagonale'): Progetto => {
+      const p = progetto('b');
+      const a = p.nodo(0, 0);
+      const b = p.nodo(0, 1);
+      const c = p.nodo(0, 2);
+      const g = p.nodo(2, 0);
+      const ab = p.asta(a, b, MAT, SEZ);
+      const bc = p.asta(b, c, MAT, SEZ);
+      const bg = p.asta(b, g, MAT, SEZ);
+      p.vincolo(a, 'cerniera');
+      p.vincolo(g, 'carrello');
+      p.sconnessioneNodale(b, 'cerniera', {
+        astaMaster: ab, asteSvincolate: [svincolata === 'colonna' ? bc : bg],
+      });
+      return p.costruisci();
+    };
+    expect(confronta(telaio('colonna'), telaio('diagonale')).correzioni).toBe(1);
+  });
+
+  it('colonna che tocca la trave senza esserle collegata non è un incrocio a T', () => {
+    const collegata = progetto('T');
+    const a = collegata.nodo(0, 1);
+    const t = collegata.nodo(1, 1);
+    const b = collegata.nodo(2, 1);
+    const piede = collegata.nodo(1, 0);
+    collegata.asta(a, t, MAT, SEZ);
+    collegata.asta(t, b, MAT, SEZ);
+    collegata.asta(piede, t, MAT, SEZ);
+    const staccata = progetto('staccata');
+    const a2 = staccata.nodo(0, 1);
+    const b2 = staccata.nodo(2, 1);
+    const t2 = staccata.nodo(1, 1);
+    const piede2 = staccata.nodo(1, 0);
+    staccata.asta(a2, b2, MAT, SEZ);
+    staccata.asta(piede2, t2, MAT, SEZ);
+    expect(confronta(staccata.costruisci(), collegata.costruisci()).correzioni).toBeGreaterThan(0);
+  });
+
+  it('distribuiti su aste orientate testa a testa sono lo stesso carico', () => {
+    const versi = (testaATesta: boolean): Progetto => {
+      const p = progetto('v');
+      const a = p.nodo(0, 0);
+      const b = p.nodo(1, 0);
+      const c = p.nodo(2, 0);
+      const ab = testaATesta ? p.asta(b, a, MAT, SEZ) : p.asta(a, b, MAT, SEZ);
+      const bc = p.asta(b, c, MAT, SEZ);
+      p.vincolo(a, 'incastro');
+      p.distribuito(ab, -1000);
+      p.distribuito(bc, -1000);
+      return p.costruisci();
+    };
+    expect(confronta(versi(true), versi(false)).correzioni).toBe(0);
+  });
+
   it('cerniera interna in più: una correzione', () => {
     const c = confronta(trave({ cernieraInterna: true }), trave());
     expect(c.correzioni).toBe(1);

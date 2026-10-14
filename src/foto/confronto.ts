@@ -35,7 +35,8 @@ interface FormaNormale {
   nodi: P[];
   pezzi: [P, P][];
   vincoli: { p: P; tipo: string; angolo: number }[];
-  sconnessioni: { p: P; tipo: string; gruppi: number }[];
+  /** `gruppi`: firma della partizione, le direzioni delle aste di ogni gruppo */
+  sconnessioni: { p: P; tipo: string; gruppi: string }[];
   carichi: Descrittore[];
 }
 
@@ -81,22 +82,18 @@ function formaNormale(p: Progetto): FormaNormale {
     return Math.atan2(j.y - i.y, j.x - i.x);
   };
 
-  // ── geometria: ogni asta spezzata in tutti i punti che le cadono dentro ──
-  const punti: P[] = [...pos.values()];
-  for (const v of p.vincoliSuAsta ?? []) punti.push(lungo(v.astaId as string, v.s));
-  for (const s of p.sconnessioni ?? []) punti.push(lungo(s.astaId as string, s.s));
+  // ── geometria: ogni asta spezzata nei SUOI punti (vincoli e sconnessioni
+  // su asta). Un nodo d'altri che le cade sopra non la tocca: in VektorLab
+  // due aste sono collegate solo se condividono il nodo ──
   const pezzi: [P, P][] = [];
   for (const x of p.aste) {
     const i = pos.get(x.nodoIniziale as string)!;
     const j = pos.get(x.nodoFinale as string)!;
-    const l2 = (j.x - i.x) ** 2 + (j.y - i.y) ** 2;
-    const tagli = punti
-      .map((q) => ({ q, t: ((q.x - i.x) * (j.x - i.x) + (q.y - i.y) * (j.y - i.y)) / l2 }))
-      .filter(({ q, t }) => t > EPS && t < 1 - EPS
-        && Math.abs((q.x - i.x) * (j.y - i.y) - (q.y - i.y) * (j.x - i.x)) / Math.sqrt(l2) < EPS)
-      .sort((u, v) => u.t - v.t)
-      .map(({ q }) => q);
-    const seq = [i, ...tagli, j];
+    const ascisse = [
+      ...(p.vincoliSuAsta ?? []).filter((v) => v.astaId === x.id).map((v) => v.s),
+      ...(p.sconnessioni ?? []).filter((v) => v.astaId === x.id).map((v) => v.s),
+    ].filter((t) => t > EPS && t < 1 - EPS).sort((a, b) => a - b);
+    const seq = [i, ...ascisse.map((t) => lungo(x.id as string, t)), j];
     for (let k = 1; k < seq.length; k++) pezzi.push([seq[k - 1], seq[k]]);
   }
 
@@ -112,17 +109,34 @@ function formaNormale(p: Progetto): FormaNormale {
   const sconnessioni: FormaNormale['sconnessioni'] = [];
   const convergenti = (nodo: string): ElementId[] =>
     p.aste.filter((x) => x.nodoIniziale === nodo || x.nodoFinale === nodo).map((x) => x.id);
+  /** direzione con cui l'asta lascia il nodo, in gradi interi */
+  const uscita = (astaId: string, nodo: string): number => {
+    const x = asta.get(astaId)!;
+    const da = pos.get(nodo)!;
+    const verso = pos.get((x.nodoIniziale === nodo ? x.nodoFinale : x.nodoIniziale) as string)!;
+    return Math.round(normAngolo(Math.atan2(verso.y - da.y, verso.x - da.x)) * 180 / Math.PI) % 360;
+  };
+  /** firma di una partizione: per gruppo le direzioni ordinate, gruppi ordinati */
+  const firma = (gruppi: number[][]): string =>
+    gruppi.map((g) => [...g].sort((a, b) => a - b).join(',')).sort().join(' | ');
   const conVincoloInterno = new Set<string>();
   for (const v of p.vincoliInterni) {
-    conVincoloInterno.add(v.nodoId as string);
+    const nodo = v.nodoId as string;
+    conVincoloInterno.add(nodo);
     if (v.tipo === 'biella') continue;
-    const gruppi = gruppiSconnessione(v, convergenti(v.nodoId as string));
+    const gruppi = gruppiSconnessione(v, convergenti(nodo));
     if (gruppi.length >= 2) {
-      sconnessioni.push({ p: pos.get(v.nodoId as string)!, tipo: v.tipo, gruppi: gruppi.length });
+      sconnessioni.push({
+        p: pos.get(nodo)!, tipo: v.tipo,
+        gruppi: firma(gruppi.map((g) => g.map((a) => uscita(a as string, nodo)))),
+      });
     }
   }
   for (const s of p.sconnessioni ?? []) {
-    sconnessioni.push({ p: lungo(s.astaId as string, s.s), tipo: s.tipo, gruppi: 2 });
+    const t = Math.round(normAngolo(angoloAsta(s.astaId as string)) * 180 / Math.PI) % 360;
+    sconnessioni.push({
+      p: lungo(s.astaId as string, s.s), tipo: s.tipo, gruppi: firma([[t], [(t + 180) % 360]]),
+    });
   }
   for (const n of p.nodi) {
     if (conVincoloInterno.has(n.id as string)) continue;
@@ -133,8 +147,10 @@ function formaNormale(p: Progetto): FormaNormale {
     if (liberate.length === 0 || ast.length < 2) continue;
     const r = rilascio(liberate[0]);
     const tipo = r.M ? 'cerniera' : r.T ? 'bipendolo' : 'pattino';
-    const gruppi = liberate.length + (ast.length > liberate.length ? 1 : 0);
-    if (gruppi >= 2) sconnessioni.push({ p: pos.get(n.id as string)!, tipo, gruppi });
+    const saldate = ast.filter((x) => !liberate.includes(x));
+    const gruppi = [...liberate.map((x) => [x]), ...(saldate.length > 0 ? [saldate] : [])]
+      .map((g) => g.map((x) => uscita(x.id as string, n.id as string)));
+    if (gruppi.length >= 2) sconnessioni.push({ p: pos.get(n.id as string)!, tipo, gruppi: firma(gruppi) });
   }
 
   // ── carichi, in assi globali ──
@@ -168,11 +184,14 @@ function formaNormale(p: Progetto): FormaNormale {
                 : (c.direzione.alpha as number | undefined) ?? 0;
         // il verso sta nel segno: si porta nell'angolo e l'intensità resta positiva
         const segno = Math.sign((c.q1 as number) || (c.q2 as number)) || 1;
+        // estremi in ordine canonico: il verso di percorrenza dell'asta non conta
+        const inizio = lungo(c.astaId as string, c.sIniziale);
+        const [da, a] = ordinati(inizio, lungo(c.astaId as string, c.sFinale));
+        const [q1, q2] = da === inizio ? [c.q1, c.q2] : [c.q2, c.q1];
         carichi.push({
-          tipo: 'distribuito',
-          da: lungo(c.astaId as string, c.sIniziale), a: lungo(c.astaId as string, c.sFinale),
+          tipo: 'distribuito', da, a,
           angolo: normAngolo(base + (segno < 0 ? Math.PI : 0)),
-          q1: Math.abs(c.q1 as number), q2: Math.abs(c.q2 as number),
+          q1: Math.abs(q1 as number), q2: Math.abs(q2 as number),
         });
         break;
       }
@@ -338,6 +357,11 @@ function uguale(u: P, v: P): boolean {
 
 function altro([a, b]: [P, P], q: P): P {
   return uguale(a, q) ? b : a;
+}
+
+/** I due estremi ordinati per x e poi per y. */
+function ordinati(u: P, v: P): [P, P] {
+  return u.x < v.x - EPS || (Math.abs(u.x - v.x) <= EPS && u.y < v.y) ? [u, v] : [v, u];
 }
 
 function normAngolo(a: number): number {
