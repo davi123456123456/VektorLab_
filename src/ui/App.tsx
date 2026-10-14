@@ -80,6 +80,15 @@ export function App() {
     if (modalita !== 'modellazione') destra.apri();
   }, [modalita, destra]);
 
+  // Sul telefono il cassetto non si apre da sé (lo store lo rifiuta su
+  // schermo stretto), ma una volta sì: la PRIMA volta che si lascia Disegna,
+  // perché chi non l'ha mai visto non sa che esiste. Poi lo si tira a mano.
+  useEffect(() => {
+    if (!telefono || modalita === 'modellazione' || cassettoGiaMostrato()) return;
+    segnaCassettoMostrato();
+    if (!destra.aperto) destra.alterna();
+  }, [modalita, telefono, destra]);
+
   // §4.4 — salvataggio automatico dei fogli. Non a ogni battuta: mezzo secondo
   // dopo l'ultima modifica, così scrivere una geometria non serializza il
   // modello venti volte. Il salvataggio protegge da una ricarica accidentale,
@@ -186,6 +195,17 @@ function PannelloDiModalita() {
     case 'materiali': return <PannelloSezioni />;
     default: return <Ispettore />;
   }
+}
+
+const CHIAVE_CASSETTO = 'vektorlab.cassettoMostrato';
+
+// localStorage può lanciare in navigazione privata: allora il cassetto si
+// mostra a ogni avvio, che è il male minore
+function cassettoGiaMostrato(): boolean {
+  try { return window.localStorage.getItem(CHIAVE_CASSETTO) === '1'; } catch { return false; }
+}
+function segnaCassettoMostrato(): void {
+  try { window.localStorage.setItem(CHIAVE_CASSETTO, '1'); } catch { /* pazienza */ }
 }
 
 function Esempi() {

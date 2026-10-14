@@ -639,18 +639,25 @@ canvas { display: block; touch-action: none; }
   bottom: 0;
   z-index: 21;
   display: flex;
-  width: 22px;
+  width: 28px;
   align-items: center;
   justify-content: flex-end;
-  padding-right: 3px;
   touch-action: none;
   cursor: pointer;
 }
+/* la linguetta: un bottone attaccato al bordo, con la freccia che dice «tira» */
 .cassetto-linguetta {
-  width: 5px;
-  height: 56px;
-  border-radius: 3px;
-  background: var(--bordo-chiaro);
+  display: flex;
+  width: 26px;
+  height: 76px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--bordo-chiaro);
+  border-right: 0;
+  border-radius: var(--raggio-pannello) 0 0 var(--raggio-pannello);
+  background: var(--sfondo-pannello);
+  color: var(--testo-attenuato);
+  box-shadow: -4px 0 12px rgb(0 0 0 / 35%);
 }
 
 /*

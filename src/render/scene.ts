@@ -50,6 +50,11 @@ export interface StatoDisegno {
   snap: RisultatoSnap | null;
   /** anteprima dell'asta in tracciamento */
   anteprimaAsta: { da: Punto; a: Punto } | null;
+  /**
+   * Sul telefono le misure del disegno vanno lontano dal punto toccato: lì
+   * sopra c'è il dito, e una quota che il dito copre non si legge.
+   */
+  etichetteLontane?: boolean;
   /** riquadro di selezione, in coordinate schermo */
   riquadro: { da: Punto; a: Punto } | null;
   /** anteprima della trasformazione in corso: nuove posizioni dei nodi */
@@ -901,10 +906,13 @@ function disegnaAnteprimaAsta(ctx: CanvasRenderingContext2D, s: StatoDisegno, t:
   const L = Math.hypot(a.x - da.x, a.y - da.y);
   const ang = (Math.atan2(a.y - da.y, a.x - da.x) * 180) / Math.PI;
   if (L > 1e-9) {
-    etichetta(
-      ctx, `${L.toFixed(3)} m   ${ang.toFixed(1)}°`,
-      (p1.x + p2.x) / 2, (p1.y + p2.y) / 2 - 14, t.accento, t.sfondo,
-    );
+    const testo = `${L.toFixed(3)} m   ${ang.toFixed(1)}°`;
+    if (s.etichetteLontane) {
+      // sopra il dito, e sopra anche l'etichetta dell'aggancio
+      etichettaSopra(ctx, testo, p2, DISTANZA_QUOTA, s.camera.larghezza, t.accento, t.sfondo);
+    } else {
+      etichetta(ctx, testo, (p1.x + p2.x) / 2, (p1.y + p2.y) / 2 - 14, t.accento, t.sfondo);
+    }
   }
   ctx.restore();
 }
@@ -957,8 +965,41 @@ function disegnaSnap(ctx: CanvasRenderingContext2D, s: StatoDisegno, t: Tema): v
   }
   ctx.stroke();
 
-  etichetta(ctx, snap.etichetta, p.x + 12, p.y + 16, t.snap, t.sfondo);
+  if (s.etichetteLontane) {
+    etichettaSopra(ctx, snap.etichetta, p, DISTANZA_AGGANCIO, s.camera.larghezza, t.snap, t.sfondo);
+  } else {
+    etichetta(ctx, snap.etichetta, p.x + 12, p.y + 16, t.snap, t.sfondo);
+  }
   ctx.restore();
+}
+
+/*
+ * ETICHETTE SOPRA IL DITO, sul telefono.
+ *
+ * Col mouse la quota sta accanto al cursore, che è una freccia sottile. Un
+ * polpastrello è largo un centimetro e copre tutto ciò che gli sta intorno,
+ * soprattutto sotto — la mano arriva dal basso. Le due righe vanno quindi
+ * SOPRA il punto toccato, centrate, una sopra l'altra, abbastanza in alto da
+ * uscire dall'ombra del dito; in un corpo più grande, perché si leggono a
+ * distanza di braccio.
+ */
+const DISTANZA_AGGANCIO = 64;
+const DISTANZA_QUOTA = 92;
+const CORPO_TELEFONO = 13;
+
+function etichettaSopra(
+  ctx: CanvasRenderingContext2D, testo: string, p: Punto, distanza: number,
+  larghezzaVista: number, colore: string, sfondo: string,
+): void {
+  ctx.save();
+  ctx.font = `${CORPO_TELEFONO}px ui-monospace, SF Mono, Menlo, monospace`;
+  const w = ctx.measureText(testo).width;
+  ctx.restore();
+  // centrata sul dito, ma dentro lo schermo: vicino al bordo scivola di lato
+  const x = Math.max(6, Math.min(larghezzaVista - w - 6, p.x - w / 2));
+  // vicino al bordo alto passa SOTTO il dito, che è meglio che fuori vista
+  const y = p.y - distanza > 14 ? p.y - distanza : p.y + distanza;
+  etichetta(ctx, testo, x, y, colore, sfondo, CORPO_TELEFONO);
 }
 
 function disegnaRiquadro(ctx: CanvasRenderingContext2D, s: StatoDisegno, t: Tema): void {
@@ -977,16 +1018,17 @@ function disegnaRiquadro(ctx: CanvasRenderingContext2D, s: StatoDisegno, t: Tema
 
 function etichetta(
   ctx: CanvasRenderingContext2D, testo: string,
-  x: number, y: number, colore: string, sfondo: string,
+  x: number, y: number, colore: string, sfondo: string, corpo = 11,
 ): void {
   ctx.save();
-  ctx.font = '11px ui-monospace, SF Mono, Menlo, monospace';
+  ctx.font = `${corpo}px ui-monospace, SF Mono, Menlo, monospace`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   const w = ctx.measureText(testo).width;
+  const h = corpo + 5;
   ctx.fillStyle = sfondo;
   ctx.globalAlpha = 0.85;
-  ctx.fillRect(x - 3, y - 8, w + 6, 16);
+  ctx.fillRect(x - 3, y - h / 2, w + 6, h);
   ctx.globalAlpha = 1;
   ctx.fillStyle = colore;
   ctx.fillText(testo, x, y);

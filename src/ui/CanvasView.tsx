@@ -26,6 +26,7 @@ import {
 } from '../state/azioni.js';
 import { nomeVincolo } from '../render/simboli.js';
 import { BarraSelezione } from './BarraSelezione.js';
+import { usaTelefono } from './usaTelefono.js';
 import { etichette } from '../state/etichette.js';
 import {
   leggiPuntatore, puntatorePresente, scriviPuntatore, segnaPuntatorePresente,
@@ -64,6 +65,10 @@ export function CanvasView() {
     giu: React.PointerEvent; timer: ReturnType<typeof setTimeout>;
   } | null>(null);
   const pizzicando = useRef(false);
+  // letto dal ciclo di disegno, che non passa da React: serve un ref
+  const telefono = usaTelefono();
+  const telefonoRef = useRef(telefono);
+  telefonoRef.current = telefono;
   // un tocco in attesa non deve scattare su un foglio che non c'è più
   useEffect(() => () => {
     if (inAttesa.current) clearTimeout(inAttesa.current.timer);
@@ -157,6 +162,7 @@ export function CanvasView() {
       asteEvidenziate: st.asteEvidenziate,
       snap: st.modalita === 'modellazione' && presente ? st.ultimoSnap : null,
       anteprimaAsta,
+      etichetteLontane: telefonoRef.current,
       riquadro,
       anteprimaNodi,
       mostraNumeri: st.camera.zoom > 25 && st.modalita === 'modellazione',

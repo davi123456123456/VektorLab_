@@ -4,8 +4,9 @@
  * Si apre scorrendo dal bordo destro verso sinistra — o toccando la linguetta
  * sul bordo — e si chiude scorrendolo verso destra o toccando il disegno che
  * resta scoperto a sinistra. Mentre il dito si muove il pannello lo segue,
- * e al rilascio decide: aperto se è stato tirato per almeno un terzo, o
- * lanciato con un colpo deciso.
+ * e al rilascio decide: basta un colpo breve. Chiedere di trascinarlo per un
+ * terzo della sua larghezza rendeva la chiusura faticosa, e un gesto che si
+ * sbaglia una volta su tre non lo si usa più.
  *
  * Prima era un foglio a tutto schermo che copriva anche la maniglia con cui
  * lo si era aperto: una volta dentro, non c'era modo di uscirne.
@@ -16,6 +17,7 @@
  */
 
 import { useRef, useState, type ReactNode } from 'react';
+import { Icona } from './icone.js';
 
 interface Gesto {
   x0: number;
@@ -27,6 +29,11 @@ interface Gesto {
 }
 
 const limita = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+
+/** Quanto deve correre il dito, in pixel, perché il cassetto scatti. */
+const CORSA_MINIMA = 36;
+/** …oppure quanto veloce, in pixel al millisecondo: un colpetto deciso basta. */
+const VELOCITA_MINIMA = 0.2;
 
 export function CassettoTelefono({ aperto, apri, chiudi, children }: {
   aperto: boolean;
@@ -79,13 +86,12 @@ export function CassettoTelefono({ aperto, apri, chiudi, children }: {
     if (!g || !g.deciso) return;
     const dx = e.clientX - g.x0;
     const velocita = dx / Math.max(1, e.timeStamp - g.t0);   // px/ms
-    const soglia = larghezza() / 3;
     if (g.da === 'bordo') {
       // un tocco sulla linguetta apre come un trascinamento
-      if (!g.trascinato || -dx > soglia || velocita < -0.4) apri();
+      if (!g.trascinato || -dx > CORSA_MINIMA || velocita < -VELOCITA_MINIMA) apri();
     } else {
       appenaTrascinato.current = g.trascinato;
-      if (dx > soglia || velocita > 0.4) chiudi();
+      if (dx > CORSA_MINIMA || velocita > VELOCITA_MINIMA) chiudi();
     }
   };
 
@@ -128,7 +134,12 @@ export function CassettoTelefono({ aperto, apri, chiudi, children }: {
         aria-label="Apri il pannello delle proprietà"
         aria-hidden={aperto}
       >
-        <span className="cassetto-linguetta" />
+        {/*
+          La linguetta è un bottone che si vede, con la freccia: che dal bordo
+          si possa tirare fuori un pannello non lo indovina nessuno, mentre
+          un bottone si tocca.
+        */}
+        <span className="cassetto-linguetta"><Icona nome="apriPannello" dimensione={18} /></span>
       </div>
 
       <aside
