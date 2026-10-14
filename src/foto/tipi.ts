@@ -87,7 +87,7 @@ export type CodiceAvviso =
   | 'nessunaAsta' | 'simboloIsolato' | 'cernieraAmbigua'
   | 'partizioneNonRappresentabile' | 'versoIncerto' | 'coefficienteNonLetto'
   | 'caricoNonAgganciato' | 'quotaNonLetta' | 'quoteIncoerenti' | 'nessunaQuota'
-  | 'integrita';
+  | 'integrita' | 'primitiveScartate' | 'nessunVincolo' | 'erroreLettura';
 
 /** Ciò che lo studente deve controllare: il motore non tira a indovinare in silenzio. */
 export interface Avviso { codice: CodiceAvviso; messaggio: string; punti?: string[] }

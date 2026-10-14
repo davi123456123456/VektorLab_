@@ -84,16 +84,24 @@ export function misura(g: Grafo, tol: Tolleranze): void {
     if (q.direzione === 'y') return Math.abs(pxRig[rig[ib]] - pxRig[rig[ia]]);
     return distanza(pxDi(q.da), pxDi(q.a));
   };
+  // una quota i cui capi cadono nella stessa colonna (o riga) non misura
+  // niente: in una foto storta capita a una quota corta. Si scarta
+  for (const q of g.quote.filter((x) => lunghezzaPx(x) < tol.tau)) {
+    g.avvisi.push({ codice: 'quotaNonLetta', messaggio: `Quota ${formatta(q.valore)} di lunghezza nulla: scartata.` });
+  }
+  g.quote = g.quote.filter((x) => lunghezzaPx(x) >= tol.tau);
   let scala: number;
   if (g.quote.length > 0) {
     scala = mediana(g.quote.map((q) => lunghezzaPx(q) / q.valore));
   } else {
-    scala = medianaInferiore(campate(g)) || 1;
+    scala = medianaInferiore(campate(g));
     g.avvisi.push({
       codice: 'nessunaQuota',
       messaggio: 'Nessuna quota letta: la campata tipica vale L, le altre in proporzione.',
     });
   }
+
+  if (!Number.isFinite(scala) || scala <= 0) scala = 1;
 
   const equazioni: Equazione[] = [];
   const esentiX = new Set<number>();

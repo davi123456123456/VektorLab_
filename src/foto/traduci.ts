@@ -31,6 +31,9 @@ export function traduci(g: Grafo): { progetto: Progetto; avvisi: Avviso[] } {
     return { progetto: migra(b.costruisci()), avvisi };
   }
 
+  if (g.vincoli.length === 0) {
+    avvisi.push({ codice: 'nessunVincolo', messaggio: 'Non ho letto nessun vincolo: aggiungili a mano.' });
+  }
   const pos = (id: string): Punto => {
     const q = g.punti.find((x) => x.id === id)!;
     return q.pos ?? q.px;

@@ -100,7 +100,9 @@ export function leggiCarichi(g: Grafo, p: Primitive, tol: Tolleranze): void {
 
   // ── momenti ──
   for (const m of p.momenti) {
-    let punto = puntoVicino(g, m.centro, 2 * m.raggio);
+    // il raggio dell'arco è una scelta di disegno, non una distanza dal nodo:
+    // un momento a metà campata non deve finire sull'appoggio vicino
+    let punto = puntoVicino(g, m.centro, Math.max(tol.tau, 0.5 * m.raggio));
     if (!punto) {
       if (g.tratti.length === 0) {
         g.avvisi.push({ codice: 'caricoNonAgganciato', messaggio: 'Momento lontano da ogni asta.' });
