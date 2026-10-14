@@ -289,6 +289,11 @@ function riproietta(g: Grafo): void {
     const dX = B.pos!.x - A.pos!.x;
     const dY = B.pos!.y - A.pos!.y;
     if (Math.abs(dX) < 1e-9 || Math.abs(dY) < 1e-9) continue;
+    // se l'arrotondamento l'ha già messo sulla retta, quella posizione è
+    // esatta; ricavarla dai pixel porterebbe l'errore di qualche decimo di
+    // pixel dei nodi vicini ai simboli
+    const fuori = Math.abs((q.pos!.x - A.pos!.x) * dY - (q.pos!.y - A.pos!.y) * dX) / Math.hypot(dX, dY);
+    if (fuori < 1e-9) continue;
     const { t } = proiezione(q.px, A.px, B.px);
     q.pos = { x: A.pos!.x + t * dX, y: A.pos!.y + t * dY };
   }

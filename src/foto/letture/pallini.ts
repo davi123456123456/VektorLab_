@@ -87,10 +87,26 @@ export function leggiPallini(p: Primitive, tol: Tolleranze): LetturaPallino[] {
     });
 
     const prosegue = passanti.filter((x) => interno(p, x, tol));
-    const raggiunte = terminano.filter((e) => !oltreLaTrave(p, e, prosegue, c));
-    const sfiorano = passanti.length - prosegue.length;
+    const sfiorano = passanti.filter((x) => !interno(p, x, tol));
+    // una linea spezzata proprio nel punto di contatto (la rete la spezza
+    // dove arriva un'altra asta) sono due estremi allineati e opposti: per il
+    // pallino è un'asta sola che prosegue
+    const accoppiati = new Set<number>();
+    const continuano = prosegue.map((x) => ({ segmento: x.segmento }));
+    let coppie = 0;
+    for (let i = 0; i < sfiorano.length; i++) {
+      for (let j = i + 1; j < sfiorano.length; j++) {
+        if (accoppiati.has(i) || accoppiati.has(j)) continue;
+        if (!opposti(p, sfiorano[i], sfiorano[j])) continue;
+        accoppiati.add(i);
+        accoppiati.add(j);
+        coppie++;
+        continuano.push({ segmento: sfiorano[i].segmento }, { segmento: sfiorano[j].segmento });
+      }
+    }
+    const raggiunte = terminano.filter((e) => !oltreLaTrave(p, e, continuano, c));
     return {
-      indice, esito: esito(raggiunte.length, prosegue.length, sfiorano),
+      indice, esito: esito(raggiunte.length, prosegue.length + coppie, sfiorano.length - accoppiati.size),
       terminano: raggiunte, passanti, corpo: corpoSotto(p, indice, tol),
     };
   });
@@ -101,6 +117,19 @@ function esito(k: number, h: number, e: number): EsitoPallino {
   if (k + e === 0) return 'isolato';
   if (k + e === 1) return 'estremo';
   return k >= 2 ? 'cerniera' : 'appoggiato';
+}
+
+/** Due segmenti che sfiorano il pallino col proprio estremo e ripartono in versi opposti. */
+function opposti(
+  p: Primitive, u: { segmento: number; t: number }, v: { segmento: number; t: number },
+): boolean {
+  const verso = (x: { segmento: number; t: number }): number => {
+    const s = p.aste[x.segmento];
+    const [da, a] = x.t < 0.5 ? [s.a, s.b] : [s.b, s.a];
+    return Math.atan2(a.y - da.y, a.x - da.x);
+  };
+  const d = Math.abs(verso(u) - verso(v)) % (2 * Math.PI);
+  return Math.abs(d - Math.PI) < (10 * Math.PI) / 180;
 }
 
 /** Il contatto cade dentro l'asta, non su un suo estremo: l'asta prosegue. */

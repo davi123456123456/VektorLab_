@@ -37,11 +37,23 @@ interface Rappresentato {
 }
 
 export function leggiCarichi(g: Grafo, p: Primitive, tol: Tolleranze): void {
+  // ogni freccia ha uno o più agganci possibili: più d'uno quando cade su un
+  // nodo condiviso da più aste. Lì decide il contesto: va sull'asta dove
+  // stanno le frecce concordi che non hanno dubbi
+  const candidati = p.frecce.map((f) => aggancia(g, f, tol));
   const agganci: Aggancio[] = [];
-  p.frecce.forEach((f, i) => {
-    const a = aggancia(g, f, tol);
-    if (a) agganci.push({ ...a, freccia: i });
-    else g.avvisi.push({ codice: 'caricoNonAgganciato', messaggio: 'Freccia che non tocca nessuna asta.' });
+  candidati.forEach((cand, i) => {
+    if (cand.length === 0) {
+      g.avvisi.push({ codice: 'caricoNonAgganciato', messaggio: 'Freccia che non tocca nessuna asta.' });
+      return;
+    }
+    const sicure = candidati
+      .map((c, j) => ({ c, j }))
+      .filter(({ c, j }) => j !== i && c.length === 1
+        && differenzaAngoli(c[0].direzione, cand[0].direzione) <= 15 * GRADI);
+    const voti = cand.map((x) => sicure.filter(({ c }) => stessaRetta(c[0].retta, x.retta, tol.tau)).length);
+    const scelto = cand[voti.indexOf(Math.max(...voti))];
+    agganci.push({ ...scelto, freccia: i });
   });
 
   const gruppi = raggruppa(agganci, tol.tau);
@@ -126,12 +138,17 @@ export function leggiCarichi(g: Grafo, p: Primitive, tol: Tolleranze): void {
 
 // ──────────────────────────── aggancio delle frecce ────────────────────────────
 
+/**
+ * Agganci possibili di una freccia, il migliore per primo: tutti quelli che
+ * distano dal migliore meno di un pixel (la freccia sul nodo comune a più aste).
+ */
 function aggancia(
   g: Grafo, f: Primitive['frecce'][number], tol: Tolleranze,
-): Omit<Aggancio, 'freccia'> | null {
+): Omit<Aggancio, 'freccia'>[] {
   const d = { x: Math.cos(f.direzione), y: Math.sin(f.direzione) };
   const coda = { x: f.punta.x - f.lunghezza * d.x, y: f.punta.y - f.lunghezza * d.y };
   let migliore: { px: Punto; tr: string; dist: number } | null = null;
+  const tutti: { px: Punto; tr: string; dist: number }[] = [];
 
   // punta o coda posata su un'asta. A parità di distanza — la freccia che
   // cade sullo spigolo di un telaio — vince l'asta trasversale: un'asta
@@ -143,10 +160,12 @@ function aggancia(
     for (const q of [f.punta, coda]) {
       const dist = distanzaSegmento(q, a, b);
       const punteggio = dist + (parallela ? tol.tau : 0);
-      if (dist < 1.5 * tol.tau && (!migliore || punteggio < migliore.dist)) {
+      if (dist < 1.5 * tol.tau) {
         const pr = proiezione(q, a, b);
         const t = Math.min(1, Math.max(0, pr.t));
-        migliore = { px: { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) }, tr: tr.id, dist: punteggio };
+        const voce = { px: { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) }, tr: tr.id, dist: punteggio };
+        tutti.push(voce);
+        if (!migliore || punteggio < migliore.dist) migliore = voce;
       }
     }
   }
@@ -163,12 +182,17 @@ function aggancia(
       }
     }
   }
-  if (!migliore) return null;
-  const tr = g.tratti.find((x) => x.id === migliore!.tr)!;
-  return {
-    px: migliore.px, direzione: f.direzione,
-    retta: { o: pxDi(g, tr.i), angolo: angoloDi(pxDi(g, tr.i), pxDi(g, tr.j)) },
-  };
+  if (!migliore) return [];
+  const soglia = migliore.dist + 1;
+  const scelti = [migliore, ...tutti.filter((x) => x !== migliore && x.dist <= soglia)]
+    .filter((x, i, v) => v.findIndex((y) => y.tr === x.tr) === i);
+  return scelti.map((x) => {
+    const tr = g.tratti.find((t) => t.id === x.tr)!;
+    return {
+      px: x.px, direzione: f.direzione,
+      retta: { o: pxDi(g, tr.i), angolo: angoloDi(pxDi(g, tr.i), pxDi(g, tr.j)) },
+    };
+  });
 }
 
 /**

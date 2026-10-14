@@ -57,6 +57,12 @@ describe('carichi distribuiti', () => {
     expect(distribuiti(g)).toHaveLength(1);
   });
 
+  it('la prima freccia su un nodo condiviso va con le sue vicine (zigzag dell\'es. 23)', () => {
+    const g = letto(disegno().asta(1, 3, 0, 2).asta(0, 2, 1, 1).distribuito(0, 2, 1, 1, -90));
+    expect(g.carichi).toHaveLength(1);
+    expect(distribuiti(g)).toHaveLength(1);
+  });
+
   it('una freccia contraria isolata dentro un distribuito si scarta con un avviso', () => {
     const g = letto(trave().distribuito(0, 0, 2, 0, -90).freccia(1.1, 0, 90));
     expect(g.carichi).toHaveLength(1);

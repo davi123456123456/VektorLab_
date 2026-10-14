@@ -82,3 +82,31 @@ def test_ci_sono_carichi_e_sconnessioni():
     assert any(c.tipo == "bipendolo" for s in tutti for c in s.sconnessioni)
     assert any(v.asta is not None for s in tutti for v in s.vincoli)
     assert {c.tipo for s in tutti for c in s.carichi} == {"distribuito", "forza", "momento"}
+
+
+def _punto(s, c):
+    if c.nodo is not None:
+        return s.nodi[c.nodo]
+    (x0, y0), (x1, y1) = s.nodi[s.aste[c.asta][0]], s.nodi[s.aste[c.asta][1]]
+    return (x0 + c.s * (x1 - x0), y0 + c.s * (y1 - y0))
+
+
+def test_forze_mai_sopra_un_distribuito_ne_lungo_l_asta():
+    for f in FAMIGLIE:
+        for s in schemi(f, 150):
+            distribuiti = [c for c in s.carichi if c.tipo == "distribuito"]
+            for c in s.carichi:
+                if c.tipo != "forza":
+                    continue
+                px, py = _punto(s, c)
+                for q in distribuiti:
+                    (x0, y0), (x1, y1) = s.nodi[s.aste[q.asta][0]], s.nodi[s.aste[q.asta][1]]
+                    l2 = (x1 - x0) ** 2 + (y1 - y0) ** 2
+                    t = ((px - x0) * (x1 - x0) + (py - y0) * (y1 - y0)) / l2
+                    sulla_retta = abs((px - x0) * (y1 - y0) - (py - y0) * (x1 - x0)) < 1e-9
+                    assert not (sulla_retta and q.s1 - 1e-9 <= t <= q.s2 + 1e-9), (f, s.a_json())
+                if c.asta is not None:
+                    (x0, y0), (x1, y1) = s.nodi[s.aste[c.asta][0]], s.nodi[s.aste[c.asta][1]]
+                    d = math.radians(c.direzione)
+                    croce = math.cos(d) * (y1 - y0) - math.sin(d) * (x1 - x0)
+                    assert abs(croce) > 1e-6, (f, s.a_json())

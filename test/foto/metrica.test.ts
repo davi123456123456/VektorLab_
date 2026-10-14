@@ -126,6 +126,14 @@ describe('senza quote, e casi difficili', () => {
     expect(m.y - a.y).toBeCloseTo(t * (b.y - a.y), 9);
   });
 
+  it('un carico a metà di un\'asta inclinata con una cerniera in cima resta esattamente a metà', () => {
+    const g = misurato(disegno().asta(0, 0, 1, 1).cerniera(1, 1).freccia(0.5, 0.5, -90)
+      .quota(1, 0, -0.5, 1, -0.5).quota(1, 1.5, 0, 1.5, 1));
+    const medio = g.punti.find((p) => p.pos!.x > 0.1 && p.pos!.x < 0.9)!;
+    expect(medio.pos!.x).toBeCloseTo(0.5, 9);
+    expect(medio.pos!.y).toBeCloseTo(0.5, 9);
+  });
+
   it('una quota che non tocca nessun punto si scarta con un avviso', () => {
     const g = misurato(disegno().asta(0, 0, 1, 0).quota(1, 5, -0.5, 6, -0.5));
     expect(codici(g)).toContain('quotaNonLetta');

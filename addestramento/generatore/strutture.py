@@ -18,6 +18,7 @@ Nodi su griglia L/2, y verso l'alto, angoli in gradi.
 
 from __future__ import annotations
 
+import math
 from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -335,15 +336,25 @@ def _carichi(rng, c: _Costruttore) -> None:
             s1, s2 = 0.0, 1.0
             if _sulla_griglia(((x0 + x1) / 2, (y0 + y1) / 2)) and rng.random() < 0.3:
                 s1, s2 = scegli(rng, ((0.0, 0.5), (0.5, 1.0)))
-            c.carichi.append(Carico(tipo="distribuito", coefficiente=coeff, direzione=float(direzione),
-                                    asta=k, s1=s1, s2=s2))
+            q = Carico(tipo="distribuito", coefficiente=coeff, direzione=float(direzione), asta=k, s1=s1, s2=s2)
+            if any(x.tipo == "forza" and _sotto(c, _punto(c, x), q) for x in c.carichi):
+                continue
+            c.carichi.append(q)
             continue
         posto = _posto_puntuale(rng, c)
         if posto is None:
             continue
         if tipo == "forza":
-            direzione = float(scegli(rng, (-90, -90, 0, 180, 90, -45, -135)))
-            c.carichi.append(Carico(tipo="forza", coefficiente=coeff, direzione=direzione, **posto))
+            # una forza non si disegna sopra un distribuito, né lungo l'asta che
+            # la porta: sul foglio sarebbe una freccia che non si distingue
+            prova = Carico(tipo="forza", coefficiente=coeff, **posto)
+            if any(x.tipo == "distribuito" and _sotto(c, _punto(c, prova), x) for x in c.carichi):
+                continue
+            for _ in range(6):
+                prova.direzione = float(scegli(rng, (-90, -90, 0, 180, 90, -45, -135)))
+                if _disegnabile(c, prova):
+                    c.carichi.append(prova)
+                    break
         else:
             c.carichi.append(Carico(tipo="momento", coefficiente=coeff, verso=int(scegli(rng, (1, -1))), **posto))
 
@@ -359,6 +370,45 @@ def _posto_puntuale(rng, c: _Costruttore) -> Optional[dict]:
     if not _sulla_griglia(((x0 + x1) / 2, (y0 + y1) / 2)):
         return None
     return {"asta": k, "s": 0.5}
+
+
+def _punto(c: _Costruttore, x: Carico) -> Tuple[float, float]:
+    if x.nodo is not None:
+        return c.nodi[x.nodo]
+    (x0, y0), (x1, y1) = c.nodi[c.aste[x.asta][0]], c.nodi[c.aste[x.asta][1]]
+    return (x0 + x.s * (x1 - x0), y0 + x.s * (y1 - y0))
+
+
+def _sotto(c: _Costruttore, p: Tuple[float, float], q: Carico) -> bool:
+    """Il punto cade sulla retta dell'asta caricata, dentro il tratto del distribuito o a un suo capo."""
+    (x0, y0), (x1, y1) = c.nodi[c.aste[q.asta][0]], c.nodi[c.aste[q.asta][1]]
+    l2 = (x1 - x0) ** 2 + (y1 - y0) ** 2
+    t = ((p[0] - x0) * (x1 - x0) + (p[1] - y0) * (y1 - y0)) / l2
+    retta = abs((p[0] - x0) * (y1 - y0) - (p[1] - y0) * (x1 - x0)) < EPS
+    return retta and q.s1 - EPS <= t <= q.s2 + EPS
+
+
+def _disegnabile(c: _Costruttore, f: Carico) -> bool:
+    """La freccia ha almeno un lato libero da aste e dal corpo del vincolo."""
+    d = (math.cos(math.radians(f.direzione)), math.sin(math.radians(f.direzione)))
+    p = _punto(c, f)
+    if f.asta is not None:
+        (x0, y0), (x1, y1) = c.nodi[c.aste[f.asta][0]], c.nodi[c.aste[f.asta][1]]
+        l = math.hypot(x1 - x0, y1 - y0)
+        return abs(d[0] * (y1 - y0) - d[1] * (x1 - x0)) / l > math.sin(math.radians(30))
+    uscite = []
+    for i, j in c.aste:
+        if f.nodo in (i, j):
+            q = c.nodi[j if i == f.nodo else i]
+            l = math.hypot(q[0] - p[0], q[1] - p[1])
+            uscite.append(((q[0] - p[0]) / l, (q[1] - p[1]) / l))
+    for v in c.vincoli:
+        if v.nodo == f.nodo:
+            # il corpo del vincolo sta dalla parte opposta al puntamento
+            a = math.radians(v.angolo)
+            uscite.append((math.sin(a), -math.cos(a)))
+    libero = lambda v: all(v[0] * u[0] + v[1] * u[1] < math.cos(math.radians(30)) for u in uscite)  # noqa: E731
+    return libero(d) or libero((-d[0], -d[1]))
 
 
 # ═══════════════════════════════ AIUTI ═══════════════════════════════

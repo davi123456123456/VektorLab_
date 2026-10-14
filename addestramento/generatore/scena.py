@@ -264,7 +264,12 @@ def _carichi(schema: Schema, sc: Scena, rng, lungo, nodi_px) -> None:
             P = posizione(c)
             d = _dir_px(c.direzione)
             lung = 0.5 * s
-            if rng.random() < 0.7:
+            # la freccia sta dalla parte libera: non lungo un'asta, non dentro
+            # il simbolo del vincolo; a parità, entra nel punto con la punta
+            occupate = _occupate(schema, sc, c, P, nodi_px)
+            libero = lambda v: all(v[0] * u[0] + v[1] * u[1] < math.cos(math.radians(30)) for u in occupate)  # noqa: E731
+            punte = libero((-d[0], -d[1])) and (rng.random() < 0.7 or not libero(d))
+            if punte:
                 coda, punta = _add(P, d, -lung), P
                 lontano = coda
             else:
@@ -282,6 +287,23 @@ def _carichi(schema: Schema, sc: Scena, rng, lungo, nodi_px) -> None:
                                primitiva={"genere": "momento", "centro": _pt(P), "raggio": raggio, "verso": verso}))
             vuoto = math.radians(inizio - 45)
             scritta(_add(P, (math.cos(vuoto), math.sin(vuoto)), 1.5 * raggio), "M", c.coefficiente)
+
+
+def _occupate(schema: Schema, sc: Scena, c, P: Punto, nodi_px) -> List[Punto]:
+    """Direzioni già occupate attorno al punto di una forza: aste e corpo del vincolo."""
+    uscite: List[Punto] = []
+    if c.nodo is not None:
+        for i, j in schema.aste:
+            if c.nodo in (i, j):
+                uscite.append(_unit(_sub(nodi_px[j if i == c.nodo else i], P)))
+        for v in schema.vincoli:
+            if v.nodo == c.nodo:
+                u = _puntamento_px(-math.radians(v.angolo))
+                uscite.append((-u[0], -u[1]))
+    else:
+        a, b = nodi_px[schema.aste[c.asta][0]], nodi_px[schema.aste[c.asta][1]]
+        uscite += [_unit(_sub(a, P)), _unit(_sub(b, P))]
+    return uscite
 
 
 def _punti_notevoli(schema: Schema) -> List[Tuple[float, float]]:

@@ -81,6 +81,14 @@ describe('il pallino: divide la linea o ci si appoggia?', () => {
     expect(leggi(p)[0].esito).toBe('cerniera');
   });
 
+  it('trave in due segmenti che si toccano nel nodo, colonna incernierata accanto: accanto', () => {
+    // es. 08 in B: la rete spezza la trave proprio dove arriva la colonna
+    const [l] = leggi(disegno().asta(0, 0, 1, 0).asta(1, 0, 2, 0).asta(1, 2, 1, RAGGIO)
+      .cerniera(1, RAGGIO).primitive());
+    expect(l.esito).toBe('accanto');
+    expect(l.terminano).toEqual([{ segmento: 2, estremo: 'b' }]);
+  });
+
   it('pallino lontano da tutte le aste: isolato', () => {
     const [l] = leggi(disegno().asta(0, 0, 1, 0).cerniera(3, 3).primitive());
     expect(l.esito).toBe('isolato');

@@ -120,3 +120,26 @@ def test_coordinate_finite_e_dentro(stile):
             assert 0 <= q["x"] <= sc.larghezza and 0 <= q["y"] <= sc.altezza
         x0, y0, x1, y1 = sc.riquadro
         assert 0 <= x0 < x1 <= sc.larghezza and 0 <= y0 < y1 <= sc.altezza
+
+
+def test_la_freccia_di_una_forza_non_si_sovrappone_alle_aste():
+    from generatore.strutture import genera_schema
+    for seme in range(300):
+        schema = genera_schema(np.random.default_rng(seme))
+        sc = scena(schema, seme=seme)
+        frecce = [e for e in sc.elementi if e.forma == "freccia"]
+        for c in schema.carichi:
+            if c.tipo != "forza" or c.nodo is None:
+                continue
+            P = sc.px(*schema.nodi[c.nodo])
+            mie = [e for e in frecce if any(math.hypot(q[0] - P[0], q[1] - P[1]) < 1e-6 for q in e.punti)]
+            assert mie, seme
+            altro = [q for q in mie[0].punti if math.hypot(q[0] - P[0], q[1] - P[1]) > 1e-6][0]
+            occupa = math.atan2(altro[1] - P[1], altro[0] - P[0])
+            for i, j in schema.aste:
+                if c.nodo not in (i, j):
+                    continue
+                Q = sc.px(*schema.nodi[j if i == c.nodo else i])
+                asta = math.atan2(Q[1] - P[1], Q[0] - P[0])
+                diff = abs((occupa - asta + math.pi) % (2 * math.pi) - math.pi)
+                assert diff > math.radians(30), (seme, schema.a_json())

@@ -1,0 +1,49 @@
+"""
+Riga di comando del generatore.
+
+    python -m generatore --n 50 --seme 1 --uscita esiti/prova [--solo-etichette] [--rumore 3]
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+from .campione import genera
+
+
+def _arrotonda(x):
+    if isinstance(x, float):
+        return round(x, 4)
+    if isinstance(x, dict):
+        return {k: _arrotonda(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [_arrotonda(v) for v in x]
+    return x
+
+
+def serializza(c: dict) -> str:
+    """JSON compatto: le primitive in pixel si arrotondano, lo schema MAI (è il riferimento esatto)."""
+    uscita = dict(c)
+    uscita["primitive"] = _arrotonda(c["primitive"])
+    return json.dumps(uscita, separators=(",", ":"), ensure_ascii=False)
+
+
+def main() -> None:
+    a = argparse.ArgumentParser(prog="generatore")
+    a.add_argument("--n", type=int, default=10)
+    a.add_argument("--seme", type=int, default=1)
+    a.add_argument("--uscita", type=Path, default=Path("esiti/prova"))
+    a.add_argument("--solo-etichette", action="store_true")
+    a.add_argument("--rumore", type=float, default=0.0)
+    a.add_argument("--galleria", action="store_true")
+    arg = a.parse_args()
+    arg.uscita.mkdir(parents=True, exist_ok=True)
+    for seme in range(arg.seme, arg.seme + arg.n):
+        c = genera(seme, solo_etichette=arg.solo_etichette, rumore=arg.rumore)
+        (arg.uscita / f"{seme:05d}.json").write_text(serializza(c) + "\n", encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()
