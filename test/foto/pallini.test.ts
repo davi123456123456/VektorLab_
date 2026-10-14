@@ -58,6 +58,21 @@ describe('il pallino: divide la linea o ci si appoggia?', () => {
     expect(l.corpo).toBe(0);
   });
 
+  it('spigolo appoggiato sul pallino (es. 8 in E): appoggiato, non cerniera', () => {
+    // la colonna scende verso il centro del pallino, il traverso lo sfiora col suo estremo
+    const [l] = leggi(disegno().asta(0, 0, 1, 0).asta(1, 0, 1, 1)
+      .appoggio('triangolo', 1, 0, 0).primitive());
+    expect(l.esito).toBe('appoggiato');
+  });
+
+  it('asta che arriva sulla trave proprio sopra il pallino: incrocio, non cerniera', () => {
+    // la trave sta fra l'asta e il pallino: l'asta non lo raggiunge
+    const [l] = leggi(disegno().asta(0, 0, 2, 0).asta(1, 1, 1, 0)
+      .appoggio('triangolo', 1, 0, 0).primitive());
+    expect(l.esito).toBe('appoggiato');
+    expect(l.terminano).toEqual([]);
+  });
+
   it('pallino lontano da tutte le aste: isolato', () => {
     const [l] = leggi(disegno().asta(0, 0, 1, 0).cerniera(3, 3).primitive());
     expect(l.esito).toBe('isolato');

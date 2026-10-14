@@ -11,17 +11,27 @@
  * pallino (triangolo, rulli…) si aggancia qui e viene interpretato dopo, in
  * `grafo.ts`, insieme all'esito.
  *
- *   k = aste che finiscono, h = aste che passano
- *   k ≥ 2, h = 0  'cerniera'    la linea si divide: cerniera interna
- *   k ≥ 1, h ≥ 1  'accanto'     un'asta prosegue, le altre vi sono incernierate
- *   k = 0, h ≥ 1  'appoggiato'  asta continua, il pallino è del vincolo sotto
- *   k = 1, h = 0  'estremo'     fine di un'asta sola
- *   altrimenti    'isolato'
+ *   k = aste che finiscono puntando al centro
+ *   h = aste che passano e PROSEGUONO oltre il contatto
+ *   e = aste che lo sfiorano col proprio estremo (uno spigolo posato sopra)
+ *
+ *   h ≥ 1, k ≥ 1        'accanto'     un'asta prosegue, le altre vi sono incernierate
+ *   h ≥ 1, k = 0        'appoggiato'  asta continua, il pallino è del vincolo sotto
+ *   h = 0, k + e = 1    'estremo'     fine di un'asta sola
+ *   h = 0, k ≥ 2        'cerniera'    la linea si divide: cerniera interna
+ *   h = 0, k ≤ 1, e ≥ 1 'appoggiato'  spigolo posato sul pallino: rigido o
+ *                                     imperniato? È ambiguo, e `grafo.ts` lo
+ *                                     segnala invece di scegliere in silenzio
+ *   niente              'isolato'
+ *
+ * Un'asta che punta al centro ma ha fra sé e il pallino un'asta che prosegue
+ * (l'asta a T che arriva sulla trave proprio sopra l'appoggio) non lo
+ * raggiunge: non conta fra quelle che finiscono, e l'incrocio lo fa il grafo.
  */
 
 import { distanza, proiezione } from '../geometria.js';
 import type { Tolleranze } from '../parametri.js';
-import type { Primitive } from '../tipi.js';
+import type { Primitive, Punto } from '../tipi.js';
 
 export type EsitoPallino = 'cerniera' | 'accanto' | 'appoggiato' | 'estremo' | 'isolato';
 
@@ -64,17 +74,45 @@ export function leggiPallini(p: Primitive, tol: Tolleranze): LetturaPallino[] {
       }
     });
 
-    return { indice, esito: esito(terminano.length, passanti.length), terminano, passanti,
-             corpo: corpoSotto(p, indice, tol) };
+    const prosegue = passanti.filter((x) => interno(p, x, tol));
+    const raggiunte = terminano.filter((e) => !oltreLaTrave(p, e, prosegue, c));
+    const sfiorano = passanti.length - prosegue.length;
+    return {
+      indice, esito: esito(raggiunte.length, prosegue.length, sfiorano),
+      terminano: raggiunte, passanti, corpo: corpoSotto(p, indice, tol),
+    };
   });
 }
 
-function esito(k: number, h: number): EsitoPallino {
-  if (k >= 2 && h === 0) return 'cerniera';
-  if (k >= 1 && h >= 1) return 'accanto';
-  if (k === 0 && h >= 1) return 'appoggiato';
-  if (k === 1 && h === 0) return 'estremo';
-  return 'isolato';
+function esito(k: number, h: number, e: number): EsitoPallino {
+  if (h >= 1) return k >= 1 ? 'accanto' : 'appoggiato';
+  if (k + e === 0) return 'isolato';
+  if (k + e === 1) return 'estremo';
+  return k >= 2 ? 'cerniera' : 'appoggiato';
+}
+
+/** Il contatto cade dentro l'asta, non su un suo estremo: l'asta prosegue. */
+function interno(p: Primitive, x: { segmento: number; t: number }, tol: Tolleranze): boolean {
+  const s = p.aste[x.segmento];
+  const margine = tol.tau / Math.max(distanza(s.a, s.b), 1e-9);
+  return x.t > margine && x.t < 1 - margine;
+}
+
+/**
+ * Vero se il corpo dell'asta che "finisce" sta dall'altra parte di un'asta
+ * che prosegue rispetto al pallino: allora arriva sulla trave, non sul pallino.
+ */
+function oltreLaTrave(
+  p: Primitive, e: EstremoRef, prosegue: readonly { segmento: number }[], c: Punto,
+): boolean {
+  const s = p.aste[e.segmento];
+  const lontano = e.estremo === 'a' ? s.b : s.a;
+  return prosegue.some(({ segmento }) => {
+    const t = p.aste[segmento];
+    const lato = (q: Punto): number =>
+      (t.b.x - t.a.x) * (q.y - t.a.y) - (t.b.y - t.a.y) * (q.x - t.a.x);
+    return lato(lontano) * lato(c) < 0;
+  });
 }
 
 /**
