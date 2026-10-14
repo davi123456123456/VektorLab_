@@ -13,8 +13,4 @@
   <text x="240" y="200" fill="#4a9eff"
         font-family="ui-sans-serif, system-ui, sans-serif" font-size="76"
         font-weight="600">VektorLab</text>
-  <text x="240" y="252" fill="#9aa3b2"
-        font-family="ui-sans-serif, system-ui, sans-serif" font-size="30">
-    Analisi strutturale 2D — telai piani
-  </text>
 </svg>
