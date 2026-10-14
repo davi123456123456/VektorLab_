@@ -9,3 +9,6 @@ tsconfig.tsbuildinfo
 screenshots/
 # uscita di `npm run pdf-check`: si rigenera, non si versiona
 pdf-prova/
+
+# foto vere degli esercizi e loro soluzioni: diritti d autore, restano in locale
+dati-foto/

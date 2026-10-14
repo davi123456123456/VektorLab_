@@ -15,7 +15,8 @@
     "baseline:write": "tsx strumenti/baseline.ts --scrivi",
     "baseline:check": "tsx strumenti/baseline.ts",
     "pdf-check": "tsx strumenti/pdfCheck.ts",
-    "screenshots": "tsx strumenti/screenshots.ts"
+    "screenshots": "tsx strumenti/screenshots.ts",
+    "foto:attesi": "tsx strumenti/foto/scriviAttesi.ts"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
