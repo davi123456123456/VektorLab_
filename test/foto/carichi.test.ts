@@ -50,6 +50,13 @@ describe('carichi distribuiti', () => {
     expect(comuni).toHaveLength(1);
   });
 
+  it('la freccia sullo spigolo va sull\'asta trasversale, non sulla colonna parallela', () => {
+    const g = letto(disegno().asta(0, 0, 0, 1).asta(0, 1, 2, 1).asta(2, 1, 2, 0)
+      .distribuito(0, 1, 2, 1, -90));
+    expect(g.carichi).toHaveLength(1);
+    expect(distribuiti(g)).toHaveLength(1);
+  });
+
   it('una freccia contraria isolata dentro un distribuito si scarta con un avviso', () => {
     const g = letto(trave().distribuito(0, 0, 2, 0, -90).freccia(1.1, 0, 90));
     expect(g.carichi).toHaveLength(1);

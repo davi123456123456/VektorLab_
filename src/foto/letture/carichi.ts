@@ -131,16 +131,20 @@ function aggancia(
   const coda = { x: f.punta.x - f.lunghezza * d.x, y: f.punta.y - f.lunghezza * d.y };
   let migliore: { px: Punto; tr: string; dist: number } | null = null;
 
-  // punta o coda posata su un'asta
+  // punta o coda posata su un'asta. A parità di distanza — la freccia che
+  // cade sullo spigolo di un telaio — vince l'asta trasversale: un'asta
+  // parallela alla freccia sarebbe caricata di punta, e non è quasi mai così.
   for (const tr of g.tratti) {
     const a = pxDi(g, tr.i);
     const b = pxDi(g, tr.j);
+    const parallela = differenzaAngoli(2 * angoloDi(a, b), 2 * f.direzione) / 2 < 20 * GRADI;
     for (const q of [f.punta, coda]) {
       const dist = distanzaSegmento(q, a, b);
-      if (dist < 1.5 * tol.tau && (!migliore || dist < migliore.dist)) {
+      const punteggio = dist + (parallela ? tol.tau : 0);
+      if (dist < 1.5 * tol.tau && (!migliore || punteggio < migliore.dist)) {
         const pr = proiezione(q, a, b);
         const t = Math.min(1, Math.max(0, pr.t));
-        migliore = { px: { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) }, tr: tr.id, dist };
+        migliore = { px: { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) }, tr: tr.id, dist: punteggio };
       }
     }
   }
