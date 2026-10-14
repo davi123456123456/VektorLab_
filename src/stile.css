@@ -458,24 +458,116 @@ canvas { display: block; touch-action: none; }
     torna appena c'è spazio.
   */
   .barra-stato .solo-largo { display: none !important; }
-  .barra-stato { gap: var(--s2); }
+  /*
+    Su una riga sola, sempre: andando a capo le coordinate si spezzavano in
+    due e finivano sotto la cronologia. Quello che non ci sta — di solito il
+    messaggio, che è l'ultimo — si accorcia coi puntini.
+  */
+  .barra-stato { gap: var(--s2); white-space: nowrap; overflow: hidden; }
 }
 
 /*
-  ═══════════ TELEFONO: LE MODALITÀ HANNO LA LORO RIGA ═══════════
+  ═══════════ TELEFONO: LA BARRA IN ALTO ═══════════
 
-  Sette modalità, tre strumenti, il menu e il marchio non stanno in 390 px.
-  Lasciarle scorrere significa nascondere quattro modalità su sette dietro un
-  gesto che nessuno indovina, e la navigazione non si nasconde. Due righe
-  costano cinquanta pixel su ottocento, ed è il prezzo giusto.
+  Una riga sola: le sette modalità e la fotocamera. Ogni tasto porta l'icona
+  e sotto il nome corto — un'icona da sola si impara, con il nome si capisce
+  al primo sguardo. I tasti si dividono la larghezza in parti uguali, e a
+  375 px restano quarantaquattro pixel ciascuno: il minimo per un dito.
 */
+.barra-telefono {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--s1);
+  padding: var(--s1);
+  padding-top: max(var(--s1), env(safe-area-inset-top));
+  border-bottom: 1px solid var(--bordo);
+  background: var(--sfondo-pannello);
+}
+.barra-telefono-modalita {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 2px;
+}
+.tasto-telefono {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 48px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: var(--raggio-pannello);
+  color: var(--testo-attenuato);
+  transition: background var(--transizione), color var(--transizione);
+  -webkit-tap-highlight-color: transparent;
+}
+.tasto-telefono:active { background: var(--sfondo-elevato); }
+.tasto-telefono[aria-pressed='true'] {
+  background: var(--accento-scuro);
+  color: #fff;
+}
+.tasto-telefono-nome {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+}
+/* la fotocamera è un'azione, non una modalità: sta a parte, dietro un filetto */
+.tasto-foto {
+  flex: 0 0 40px;
+  border-left: 1px solid var(--bordo);
+  border-radius: 0;
+  color: var(--testo);
+}
+
+/*
+  ═══════════ TELEFONO: GLI STRUMENTI ═══════════
+
+  In colonna in basso a sinistra, sopra il disegno. La barra delle azioni
+  sulla selezione, che sta in basso al centro, quando c'è la colonna si
+  sposta alla sua destra: sovrapposte, il dito prenderebbe l'una per l'altra.
+*/
+.strumenti-telefono {
+  position: absolute;
+  left: var(--s2);
+  bottom: var(--s3);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+.tasto-strumento {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--bordo-chiaro);
+  border-radius: var(--raggio-pannello);
+  background: var(--sfondo-pannello);
+  color: var(--testo);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 40%);
+  -webkit-tap-highlight-color: transparent;
+}
+.tasto-strumento:active { background: var(--sfondo-elevato); }
+.tasto-strumento[aria-pressed='true'] {
+  border-color: var(--accento);
+  background: var(--accento-scuro);
+  color: #fff;
+}
+
 @media (max-width: 720px) {
-  .barra-alta { flex-wrap: wrap; }
-  .barra-alta .gruppo-modalita {
-    order: 10;
-    flex-basis: 100%;
-    justify-content: space-between;
-    overflow-x: visible;
+  .con-strumenti .barra-selezione {
+    left: calc(44px + var(--s2) * 2);
+    right: var(--s2);
+    transform: none;
+    max-width: none;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
-  .barra-alta .gruppo-modalita .btn { flex: 1 1 0; min-width: 0; }
 }

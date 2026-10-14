@@ -9,39 +9,84 @@ import { MODALITA, useStore, type Modalita, type Strumento } from '../state/stor
 import { useFogli } from '../state/fogli.js';
 import { Bottone } from './Pannelli.js';
 import { Logo } from './Logo.js';
+import { Icona } from './icone.js';
+import { usaTelefono } from './usaTelefono.js';
 
 /**
- * L'ICONA DI OGNI MODALITÀ, per lo schermo stretto.
+ * IL NOME CORTO DI OGNI MODALITÀ, per il telefono.
  *
- * Su un telefono i sette nomi delle modalità occupano da soli più della
- * larghezza dello schermo. Sono disegni di una riga — il glifo che un
- * ingegnere riconosce senza leggere: il triangolo del vincolo, la freccia del
- * carico, la curva del diagramma — e il nome resta nel suggerimento e per chi
- * usa un lettore di schermo.
+ * Sotto l'icona c'è posto per una parola di otto o nove lettere: «Modellazione»
+ * non ci sta, «Disegna» sì e dice la stessa cosa. «Sezioni» invece di
+ * «Materiali» perché è quello che il pannello fa scegliere per primo.
  */
-const ICONA_MODALITA: Record<string, string> = {
-  modellazione: '╱',
-  vincoli: '△',
-  carichi: '↓',
-  materiali: '▤',
-  analisi: '⚙',
-  reazioni: '↥',
-  risultati: '∿',
+const NOME_BREVE: Record<Modalita, string> = {
+  modellazione: 'Disegna',
+  vincoli: 'Vincoli',
+  carichi: 'Carichi',
+  materiali: 'Sezioni',
+  analisi: 'Analisi',
+  reazioni: 'Reazioni',
+  risultati: 'Risultati',
 };
 
-const ICONA_STRUMENTO: Record<string, string> = {
-  seleziona: '⬉',
-  nodo: '•',
-  asta: '╱',
-};
-
-const STRUMENTI: { id: Strumento; nome: string; tasto: string; suggerimento: string }[] = [
+export const STRUMENTI: { id: Strumento; nome: string; tasto: string; suggerimento: string }[] = [
   { id: 'seleziona', nome: 'Seleziona', tasto: 'Q', suggerimento: 'click, Shift+click, riquadro, Alt+click per la catena' },
   { id: 'nodo', nome: 'Nodo', tasto: 'N', suggerimento: 'click per posare un nodo' },
   { id: 'asta', nome: 'Asta', tasto: 'L', suggerimento: 'click iniziale e finale; prosegue a catena, Esc per terminare' },
 ];
 
-export function BarraModalita({ onAiuto, onLogo }: {
+export function BarraModalita({ onAiuto, onLogo, onFoto }: {
+  onAiuto: () => void;
+  onLogo: () => void;
+  onFoto: () => void;
+}) {
+  return usaTelefono()
+    ? <BarraTelefono onFoto={onFoto} />
+    : <BarraComputer onAiuto={onAiuto} onLogo={onLogo} />;
+}
+
+/**
+ * LA BARRA DEL TELEFONO: una riga sola, le sette modalità e la fotocamera.
+ *
+ * Mancano di proposito gli strumenti — stanno in basso a sinistra, sotto il
+ * pollice — e gli agganci, le animazioni, le scorciatoie: a dito non servono,
+ * e ognuno costava una riga di schermo. Gli agganci restano attivi con le
+ * impostazioni che hanno.
+ */
+function BarraTelefono({ onFoto }: { onFoto: () => void }) {
+  const modalita = useStore((s) => s.modalita);
+  const impostaModalita = useStore((s) => s.impostaModalita);
+  return (
+    <div className="barra-telefono">
+      <div className="barra-telefono-modalita" role="group" aria-label="Modalità">
+        {MODALITA.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => impostaModalita(m.id as Modalita)}
+            aria-pressed={modalita === m.id}
+            aria-label={m.nome}
+            className="tasto-telefono"
+          >
+            <Icona nome={m.id} />
+            <span className="tasto-telefono-nome">{NOME_BREVE[m.id]}</span>
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={onFoto}
+        aria-label="Struttura da foto"
+        title="Struttura da foto"
+        className="tasto-telefono tasto-foto"
+      >
+        <Icona nome="fotocamera" dimensione={22} />
+      </button>
+    </div>
+  );
+}
+
+function BarraComputer({ onAiuto, onLogo }: {
   onAiuto: () => void;
   onLogo: () => void;
 }) {
@@ -98,7 +143,7 @@ export function BarraModalita({ onAiuto, onLogo }: {
             className={`btn${modalita === m.id ? ' attivo' : ''}`}
           >
             <span className="nome-modalita">{m.nome}</span>
-            <span aria-hidden className="solo-stretto">{ICONA_MODALITA[m.id]}</span>
+            <span aria-hidden className="solo-stretto"><Icona nome={m.id} dimensione={18} /></span>
           </button>
         ))}
       </div>
@@ -115,7 +160,7 @@ export function BarraModalita({ onAiuto, onLogo }: {
             className={`btn${strumento === s.id ? ' attivo' : ''}`}
           >
             <span className="nome-modalita">{s.nome}</span>
-            <span aria-hidden className="solo-stretto">{ICONA_STRUMENTO[s.id]}</span>
+            <span aria-hidden className="solo-stretto"><Icona nome={s.id} dimensione={18} /></span>
             <span className="tasto-scorciatoia opacity-50">{s.tasto}</span>
           </button>
         ))}

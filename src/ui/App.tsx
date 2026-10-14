@@ -30,6 +30,8 @@ import { usaPannelloLaterale, type PannelloLaterale } from './usaPannelloLateral
 import { BarraFogli } from './BarraFogli.js';
 import { AvvisoIntegrita } from './AvvisoIntegrita.js';
 import { useFogli } from '../state/fogli.js';
+import { usaTelefono } from './usaTelefono.js';
+import { StrumentiTelefono } from './StrumentiTelefono.js';
 
 export function App() {
   const [aiuto, setAiuto] = useState(false);
@@ -46,6 +48,7 @@ export function App() {
   const generazione = useFogli((s) => s.generazione);
   const messaggia = useStore((s) => s.messaggia);
   const messaggio = useStore((s) => s.messaggio);
+  const telefono = usaTelefono();
 
   useScorciatoie({
     alternaAiuto: useCallback(() => setAiuto((v) => !v), []),
@@ -98,7 +101,10 @@ export function App() {
   return (
     <div className="flex h-full flex-col" style={{ background: 'var(--sfondo)' }}>
       <BarraModalita onAiuto={() => setAiuto((v) => !v)}
-                     onLogo={() => setInformazioni(true)} />
+                     onLogo={() => setInformazioni(true)}
+                     // il riconoscimento da foto non c'è ancora: il tasto
+                     // esiste già perché è qui che verrà collegato
+                     onFoto={() => messaggia('Struttura da foto: in arrivo')} />
       <BarraFogli />
 
       {/*
@@ -109,15 +115,25 @@ export function App() {
         deve conservare niente dello stato effimero del precedente.
       */}
       <div key={generazione} className="relative flex min-h-0 flex-1">
-        <Laterale lato="sinistra" stato={sinistra} etichetta="struttura">
-          <Esempi />
-          <AvvisoIntegrita />
-          <PannelloConteggio />
-          <div className="min-h-0 flex-1"><Outliner /></div>
-        </Laterale>
+        {/*
+          Sul telefono il pannello di sinistra non c'è proprio: sovrapposto a
+          tutto schermo copriva il disegno per mostrare un elenco che a dito
+          non si usa. Le proprietà, a destra, restano: portano i tipi di
+          vincolo e di carico, senza i quali non si potrebbe posare niente.
+        */}
+        {!telefono && (
+          <Laterale lato="sinistra" stato={sinistra} etichetta="struttura">
+            <Esempi />
+            <AvvisoIntegrita />
+            <PannelloConteggio />
+            <div className="min-h-0 flex-1"><Outliner /></div>
+          </Laterale>
+        )}
 
-        <main className="relative min-w-0 flex-1">
+        <main className={`relative min-w-0 flex-1${
+          telefono && modalita === 'modellazione' ? ' con-strumenti' : ''}`}>
           <CanvasView />
+          {telefono && modalita === 'modellazione' && <StrumentiTelefono />}
         </main>
 
         <Laterale lato="destra" stato={destra} etichetta="proprietà">
