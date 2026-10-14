@@ -2,8 +2,8 @@
  * LE ICONE DELL'INTERFACCIA.
  *
  * Disegni a tratto da Tabler Icons (licenza MIT, tabler.io/icons), copiati qui
- * come percorsi SVG invece di aggiungere una dipendenza: sono undici, e un
- * pacchetto da cinquemila icone per usarne undici non vale il peso.
+ * come percorsi SVG invece di aggiungere una dipendenza: sono una quindicina,
+ * e un pacchetto da cinquemila icone per usarne quindici non vale il peso.
  *
  * Sono SVG e non caratteri Unicode perché i caratteri li disegna il font del
  * sistema: su iPhone `⚙` e `↥` diventavano emoji colorate, ognuna di una
@@ -37,6 +37,11 @@ const TRATTI = {
     'M18 6m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0',
     'M7.5 16.5l9 -9',
   ],
+
+  // la cronologia e la fine della catena
+  annulla: ['M9 14l-4 -4l4 -4', 'M5 10h11a4 4 0 1 1 0 8h-1'],
+  ripeti: ['M15 14l4 -4l-4 -4', 'M19 10h-11a4 4 0 1 0 0 8h1'],
+  termina: ['M5 12l5 5l10 -10'],
 
   fotocamera: [
     'M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2',

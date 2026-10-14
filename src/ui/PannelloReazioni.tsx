@@ -13,6 +13,7 @@ import { Bottone, Interruttore, Pannello } from './Pannelli.js';
 import type { ComponenteReazione } from '../core/statica/reazioni.js';
 import type { Tronco } from '../core/statica/elementino.js';
 import { DisegnoConcio } from './DisegnoConcio.js';
+import { SoloComputer } from './SoloComputer.js';
 
 const NOME_COMPONENTE: Record<ComponenteReazione['componente'], string> = {
   x: 'orizzontale',
@@ -70,20 +71,25 @@ export function PannelloReazioni() {
   return (
     <Pannello titolo="Reazioni vincolari">
       <div className="pb-3">
-        <Classificazione />
+        {/* sul telefono le reazioni sono l'elenco: nome, tipo, valore */}
+        <SoloComputer><Classificazione /></SoloComputer>
 
         {labile ? <NienteNumeri /> : (
           <>
-            <Interruttore attivo={mostraValori} onChange={alternaValori}
-                          etichetta="valori accanto alle frecce" />
+            <SoloComputer>
+              <Interruttore attivo={mostraValori} onChange={alternaValori}
+                            etichetta="valori accanto alle frecce" />
+            </SoloComputer>
             <Tabella componenti={statico.componentiEsterne} />
-            {e.sconnessioni.length > 0 && <Sconnessioni />}
-            {troncoScelto && <CorpoLibero />}
-            {!troncoScelto && !sconnessioneEsplosa && <Istruzioni />}
+            <SoloComputer>
+              {e.sconnessioni.length > 0 && <Sconnessioni />}
+              {troncoScelto && <CorpoLibero />}
+              {!troncoScelto && !sconnessioneEsplosa && <Istruzioni />}
+            </SoloComputer>
           </>
         )}
 
-        <Autoverifiche />
+        <SoloComputer><Autoverifiche /></SoloComputer>
       </div>
     </Pannello>
   );
@@ -216,10 +222,12 @@ function Tabella({ componenti }: { componenti: ComponenteReazione[] }) {
               style={{ color: 'var(--testo-debole)' }}>
           Reazioni ({righe.length})
         </span>
-        <div className="flex gap-1">
-          <Bottone onClick={copia} titolo="Copia negli appunti, separata da tabulazioni">copia</Bottone>
-          <Bottone onClick={esporta} titolo="Scarica un file CSV">csv</Bottone>
-        </div>
+        <SoloComputer>
+          <div className="flex gap-1">
+            <Bottone onClick={copia} titolo="Copia negli appunti, separata da tabulazioni">copia</Bottone>
+            <Bottone onClick={esporta} titolo="Scarica un file CSV">csv</Bottone>
+          </div>
+        </SoloComputer>
       </div>
       {righe.length === 0 && (
         <p className="px-3 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-attenuato)' }}>
@@ -246,10 +254,12 @@ function Tabella({ componenti }: { componenti: ComponenteReazione[] }) {
           ))}
         </tbody>
       </table>
-      <p className="px-3 pt-1 text-[length:var(--t-minuto)] leading-relaxed"
-         style={{ color: 'var(--testo-debole)' }}>
-        I moduli sono positivi: il verso è quello disegnato dalla freccia.
-      </p>
+      <SoloComputer>
+        <p className="px-3 pt-1 text-[length:var(--t-minuto)] leading-relaxed"
+           style={{ color: 'var(--testo-debole)' }}>
+          I moduli sono positivi: il verso è quello disegnato dalla freccia.
+        </p>
+      </SoloComputer>
     </div>
   );
 }

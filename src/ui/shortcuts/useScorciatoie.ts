@@ -15,6 +15,7 @@ import { useStore, MODALITA, type Modalita } from '../../state/store.js';
 import {
   aggiornaDigitato, annullaOperazione, avviaTrasformazione, confermaOperazione,
   duplicaSelezione, eliminaSelezione, estrudiSelezione, vincolaAsse,
+  annullaSegmento, terminaCatena,
 } from '../../state/azioni.js';
 import { accumulaDigitato } from '../../state/operazioni.js';
 import { ribaltaVincolo } from '../../state/commands.js';
@@ -148,27 +149,12 @@ export function useScorciatoie(o: Opzioni): void {
       if (op.tipo === 'disegnaAsta') {
         if (e.key === 'Enter') {
           e.preventDefault();
-          st.impostaOperazione({ tipo: 'nessuna' });
-          st.messaggia('tracciamento terminato');
+          terminaCatena();
           return;
         }
         if (e.key === 'Backspace') {
-          // torna indietro di un segmento: si annulla il comando che l'ha
-          // creato e si riprende dal punto precedente, senza uscire dallo
-          // strumento — è la correzione che serve mentre si sta disegnando
           e.preventDefault();
-          const catena = op.catena ?? [];
-          const ultimo = catena[catena.length - 1];
-          if (!ultimo) { st.impostaOperazione({ tipo: 'nessuna' }); return; }
-          st.annulla();
-          st.impostaOperazione({
-            tipo: 'disegnaAsta',
-            daNodo: ultimo.nodo,
-            daPunto: ultimo.punto,
-            direzionePrecedente: ultimo.direzione,
-            catena: catena.slice(0, -1),
-          });
-          st.messaggia('segmento annullato');
+          annullaSegmento();
           return;
         }
       }

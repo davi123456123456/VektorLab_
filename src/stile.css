@@ -432,24 +432,11 @@ canvas { display: block; touch-action: none; }
 /*
   ═══════════ TELEFONO IN VERTICALE ═══════════
 
-  Sotto i 720 px il disegno prende TUTTA la larghezza e i pannelli gli passano
-  sopra quando servono. Affiancati lasciavano al modello una striscia di
-  centocinquanta pixel: si vedeva la griglia e nient'altro.
+  Sotto i 720 px il disegno prende TUTTA la larghezza: il pannello di
+  sinistra non c'è e quello di destra è un cassetto che gli passa sopra
+  (vedi «TELEFONO: IL CASSETTO» più sotto).
 */
 @media (max-width: 720px) {
-  .pannello-laterale {
-    position: absolute;
-    inset: 0;
-    z-index: 30;
-    width: 100% !important;
-    border: 0;
-  }
-  /* chiuso, sparisce del tutto: a zero pixel di larghezza restava un velo */
-  .pannello-laterale:not(.aperto) { display: none; }
-  .pannello-laterale > div { width: 100% !important; }
-  /* la maniglia di ridimensionamento non ha senso a tutta larghezza */
-  .pannello-laterale [title^='Trascina per cambiare'] { display: none; }
-
   /*
     La barra di stato porta cinque voci: coordinate, passo della griglia,
     suggerimento sul gesto, conteggio della selezione e cronologia. Su 390 px
@@ -570,4 +557,98 @@ canvas { display: block; touch-action: none; }
     overflow-x: auto;
     scrollbar-width: none;
   }
+}
+
+/*
+  ═══════════ TELEFONO: LA CRONOLOGIA E LA FINE DELLA CATENA ═══════════
+
+  Annulla e ripeti in alto a destra, appaiati come in ogni programma di
+  disegno. Spenti quando non c'è niente da annullare o ripetere: un tasto che
+  non fa niente deve almeno dirlo. Il ✓ che chiude la catena è verde perché è
+  una conferma, e compare solo mentre si traccia.
+*/
+.cronologia-telefono {
+  position: absolute;
+  top: var(--s2);
+  right: var(--s2);
+  z-index: 22;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--bordo-chiaro);
+  border-radius: var(--raggio-pannello);
+  background: var(--sfondo-pannello);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 40%);
+}
+.tasto-cronologia {
+  display: flex;
+  width: 44px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  color: var(--testo);
+  -webkit-tap-highlight-color: transparent;
+}
+.tasto-cronologia + .tasto-cronologia { border-left: 1px solid var(--bordo); }
+.tasto-cronologia:active:not(:disabled) { background: var(--sfondo-elevato); }
+.tasto-cronologia:disabled { color: var(--testo-debole); opacity: 0.5; }
+
+.tasto-strumento.tasto-termina {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: #0d1a12;
+}
+
+/*
+  ═══════════ TELEFONO: IL CASSETTO ═══════════
+
+  Il pannello delle proprietà entra da destra e lascia scoperta una striscia
+  di disegno, velata: toccarla chiude. Chiuso, sul bordo resta solo una
+  linguetta — abbastanza per dire che lì c'è qualcosa, e sopra il disegno
+  invece che accanto, così non gli toglie larghezza.
+
+  `touch-action: pan-y` lascia al pannello lo scorrimento verticale e manda
+  a noi quello orizzontale: senza, il browser si terrebbe anche i gesti di
+  lato e il cassetto non si chiuderebbe col dito.
+*/
+.cassetto-velo {
+  position: absolute;
+  inset: 0;
+  z-index: 29;
+  background: rgb(0 0 0 / 50%);
+  transition: opacity 220ms ease;
+}
+.cassetto {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  width: min(85%, 420px);
+  flex-direction: column;
+  border-left: 1px solid var(--bordo);
+  background: var(--sfondo-pannello);
+  box-shadow: -8px 0 24px rgb(0 0 0 / 45%);
+  touch-action: pan-y;
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.cassetto-bordo {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 21;
+  display: flex;
+  width: 22px;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 3px;
+  touch-action: none;
+  cursor: pointer;
+}
+.cassetto-linguetta {
+  width: 5px;
+  height: 56px;
+  border-radius: 3px;
+  background: var(--bordo-chiaro);
 }

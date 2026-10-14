@@ -71,6 +71,41 @@ export function confermaOperazione(): void {
   st.impostaOperazione({ tipo: 'nessuna' });
 }
 
+/**
+ * FINE DEL TRACCIAMENTO A CATENA: le aste posate restano, la catena si chiude.
+ * Invio sulla tastiera, il tasto ✓ sul telefono.
+ */
+export function terminaCatena(): void {
+  const st = useStore.getState();
+  if (st.operazione.tipo !== 'disegnaAsta') return;
+  st.impostaOperazione({ tipo: 'nessuna' });
+  st.messaggia('tracciamento terminato');
+}
+
+/**
+ * TORNA INDIETRO DI UN SEGMENTO durante il tracciamento: si annulla il comando
+ * che l'ha creato e si riprende dal punto precedente, senza uscire dallo
+ * strumento — è la correzione che serve mentre si sta disegnando.
+ * Backspace sulla tastiera, ↶ sul telefono.
+ */
+export function annullaSegmento(): void {
+  const st = useStore.getState();
+  const op = st.operazione;
+  if (op.tipo !== 'disegnaAsta') return;
+  const catena = op.catena ?? [];
+  const ultimo = catena[catena.length - 1];
+  if (!ultimo) { st.impostaOperazione({ tipo: 'nessuna' }); return; }
+  st.annulla();
+  st.impostaOperazione({
+    tipo: 'disegnaAsta',
+    daNodo: ultimo.nodo,
+    daPunto: ultimo.punto,
+    direzionePrecedente: ultimo.direzione,
+    catena: catena.slice(0, -1),
+  });
+  st.messaggia('segmento annullato');
+}
+
 export function annullaOperazione(): void {
   const st = useStore.getState();
   if (st.operazione.tipo !== 'nessuna') {

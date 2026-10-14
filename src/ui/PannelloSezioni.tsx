@@ -24,6 +24,8 @@ import { ConfrontoMateriali } from './ConfrontoMateriali.js';
 import { DettaglioFibre } from './DettaglioFibre.js';
 import { proprietaDa } from '../core/materials/sezioniParametriche.js';
 import type { Asta, ParametriSezione, Sezione } from '../core/index.js';
+import { SoloComputer } from './SoloComputer.js';
+import { usaTelefono } from './usaTelefono.js';
 
 const MPa = (v: number) => (v / 1e6).toFixed(1);
 
@@ -37,6 +39,7 @@ export function PannelloSezioni() {
   const inModifica = useStore((s) => s.sezioneInModifica);
   const selezionaInModifica = useStore((s) => s.selezionaSezioneInModifica);
   const calcola = useStore((s) => s.calcolaRisultati);
+  const telefono = usaTelefono();
 
   const sezioni = progetto.sezioniPersonalizzate;
   const sezioneCorrente = sezioni.find((s) => (s.id as string) === inModifica) ?? sezioni[0];
@@ -50,7 +53,8 @@ export function PannelloSezioni() {
   };
 
   return (
-    <Pannello titolo="Sezioni, materiali e verifica">
+    // sul telefono la verifica non c'è (vedi `SoloComputer` più sotto)
+    <Pannello titolo={telefono ? 'Sezioni e materiale' : 'Sezioni, materiali e verifica'}>
       <div className="space-y-2 py-2">
 
         {/* ───────────── materiale del modello ───────────── */}
@@ -200,6 +204,11 @@ export function PannelloSezioni() {
           </Blocco>
         )}
 
+        {/*
+          Sul telefono si ferma qui: S_y si inserisce sopra, nel materiale del
+          modello, e la verifica e le tabelle dei materiali restano al computer.
+        */}
+        <SoloComputer>
         {/* ───────────── verifica ───────────── */}
         <Blocco titolo="Verifica di resistenza">
           <div className="flex gap-1 px-3 pb-2">
@@ -230,6 +239,7 @@ export function PannelloSezioni() {
         <Blocco titolo="Confronto fra materiali">
           <ConfrontoMateriali />
         </Blocco>
+        </SoloComputer>
       </div>
     </Pannello>
   );

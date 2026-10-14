@@ -33,6 +33,7 @@ import {
   espressioniPerAsta, scrivi, type Polinomio,
 } from '../core/statica/espressioni.js';
 import type { RisultatoAnalisi, RisultatoAsta } from '../core/model/results.js';
+import { SoloComputer } from './SoloComputer.js';
 
 /**
  * Cifre significative, non decimali fissi: 0.00123 e 123000 vanno scritti
@@ -68,12 +69,18 @@ export function PannelloRisultati() {
   return (
     <Pannello
       titolo="Risultati"
-      azione={<Bottone minore onClick={() => void calcola()}
+      azione={<SoloComputer><Bottone minore onClick={() => void calcola()}
                        titolo="Rifà l'analisi sul modello corrente">
         {inCorso ? 'in corso…' : 'ricalcola'}
-      </Bottone>}
+      </Bottone></SoloComputer>}
     >
       <div className="space-y-1.5 py-2">
+        {/*
+          Sul telefono i Risultati sono il PDF e basta. Resta solo «calcola»
+          quando manca il risultato — dopo un annulla, per esempio — perché
+          senza risultato il PDF è spento e non ci sarebbe modo di riaccenderlo.
+        */}
+        <SoloComputer>
         <Riga etichetta="Sorgente">
           <Selettore
             valore={valoreSorgente}
@@ -86,6 +93,7 @@ export function PannelloRisultati() {
             }}
           />
         </Riga>
+        </SoloComputer>
 
         {/*
           §4.1 — LA STESSA AZIONE NELLO STESSO POSTO.
@@ -109,6 +117,7 @@ export function PannelloRisultati() {
           </div>
         )}
 
+        <SoloComputer>
         {risultato && (
           <>
             <Sintesi r={risultato} />
@@ -142,6 +151,7 @@ export function PannelloRisultati() {
             </Blocco>
           </>
         )}
+        </SoloComputer>
         {/*
           §1 — «Scarica relazione» sta IN FONDO e c'è sempre, anche senza
           risultati: spento e con il motivo nel suggerimento. Nasconderlo

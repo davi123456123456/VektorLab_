@@ -19,6 +19,7 @@ import { Bottone, Pannello } from './Pannelli.js';
 import type {
   Classificazione, Diagnosi, RisultatoCinematico,
 } from '../core/model/results.js';
+import { SoloComputer } from './SoloComputer.js';
 
 const COLORE_CLASSE: Record<Classificazione, string> = {
   isostatica: 'var(--ok)',
@@ -108,13 +109,17 @@ export function PannelloCinematica() {
             </p>
           )}
 
+          <SoloComputer>
           {k.diagnosi.length > 0 && (
             <div style={{ display: 'grid', gap: 'var(--s1)', paddingTop: 'var(--s1)' }}>
               {k.diagnosi.map((d, i) => <MessaggioDiagnosi key={i} d={d} />)}
             </div>
           )}
+          </SoloComputer>
         </details>
 
+        {/* sul telefono l'analisi è il verdetto e il conteggio: nient'altro */}
+        <SoloComputer>
         {k.labilita > 0 && k.meccanismi.length > 0 && (
           <div className="border-t pt-2" style={{ borderColor: 'var(--bordo)' }}>
             <div className="mb-1 text-[length:var(--t-minuto)] font-semibold uppercase tracking-wider"
@@ -159,6 +164,7 @@ export function PannelloCinematica() {
             </div>
           </details>
         )}
+        </SoloComputer>
 
       </div>
     </Pannello>

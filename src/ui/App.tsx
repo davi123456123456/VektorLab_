@@ -31,7 +31,9 @@ import { BarraFogli } from './BarraFogli.js';
 import { AvvisoIntegrita } from './AvvisoIntegrita.js';
 import { useFogli } from '../state/fogli.js';
 import { usaTelefono } from './usaTelefono.js';
-import { StrumentiTelefono } from './StrumentiTelefono.js';
+import { CronologiaTelefono, StrumentiTelefono } from './StrumentiTelefono.js';
+import { CassettoTelefono } from './CassettoTelefono.js';
+import { SoloComputer } from './SoloComputer.js';
 
 export function App() {
   const [aiuto, setAiuto] = useState(false);
@@ -134,11 +136,25 @@ export function App() {
           telefono && modalita === 'modellazione' ? ' con-strumenti' : ''}`}>
           <CanvasView />
           {telefono && modalita === 'modellazione' && <StrumentiTelefono />}
+          {telefono && <CronologiaTelefono />}
         </main>
 
-        <Laterale lato="destra" stato={destra} etichetta="proprietà">
-          <PannelloDiModalita />
-        </Laterale>
+        {telefono ? (
+          /*
+            `destra.apri` qui non va: su schermo stretto lo store rifiuta di
+            aprire il pannello da sé (vedi `apriPannelloDestro`). Il cassetto
+            lo apre il dito, ed è una richiesta, non un'apertura automatica.
+          */
+          <CassettoTelefono aperto={destra.aperto}
+                            apri={() => { if (!destra.aperto) destra.alterna(); }}
+                            chiudi={destra.chiudi}>
+            <PannelloDiModalita />
+          </CassettoTelefono>
+        ) : (
+          <Laterale lato="destra" stato={destra} etichetta="proprietà">
+            <PannelloDiModalita />
+          </Laterale>
+        )}
 
         {aiuto && <Aiuto onChiudi={() => setAiuto(false)} />}
         {informazioni && <RiquadroLogo onChiudi={() => setInformazioni(false)} />}
@@ -162,7 +178,7 @@ function PannelloDiModalita() {
     case 'analisi': return (
       <>
         <PannelloCinematica />
-        <PannelloTopologia />
+        <SoloComputer><PannelloTopologia /></SoloComputer>
       </>
     );
     case 'reazioni': return <PannelloReazioni />;
