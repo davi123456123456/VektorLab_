@@ -195,15 +195,13 @@ function medie(gruppo: readonly number[], n: number, valori: readonly number[]):
 }
 
 /**
- * Arrotonda al passo, tranne le coordinate esenti, e garantisce che le
- * colonne (o righe) restino in ordine e distinte.
+ * Arrotonda al passo, tranne le coordinate esenti. Due colonne (o righe) che
+ * finiscono sullo stesso valore sono la stessa: in una foto un po' storta la
+ * verticale di un telaio si spezza in due colonne vicine, e l'arrotondamento
+ * è proprio ciò che le riunisce.
  */
 function arrotonda(v: readonly number[], passo: number, esenti: ReadonlySet<number>): number[] {
-  const out = v.map((x, i) => (esenti.has(i) ? x : Math.round(x / passo) * passo));
-  for (let i = 1; i < out.length; i++) {
-    if (out[i] <= out[i - 1] + 1e-9) out[i] = out[i - 1] + passo;
-  }
-  return out;
+  return v.map((x, i) => (esenti.has(i) ? x : Math.round(x / passo) * passo));
 }
 
 /**
