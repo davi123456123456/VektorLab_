@@ -94,6 +94,23 @@ describe('senza quote, e casi difficili', () => {
     expect(codici(g)).toContain('nessunaQuota');
   });
 
+  it('una trave lunga fotografata storta di 5° resta orizzontale', () => {
+    const g = misurato(disegno().asta(0, 0, 3, 0)
+      .appoggio('triangolo', 0, 0, 0).appoggio('triangoloRulli', 3, 0, 0)
+      .quota(3, 0, -0.5, 3, -0.5).ruota(5));
+    vicine(posizioni(g), [[0, 0], [3, 0]]);
+  });
+
+  it('dopo un\'asta inclinata quotata lungo di sé, la successiva conserva la sua quota', () => {
+    const c = Math.cos(Math.PI / 6);
+    const s = Math.sin(Math.PI / 6);
+    const g = misurato(disegno().asta(0, 0, c, s).asta(c, s, c + 1, s)
+      .quota(1, 0, 0, c, s).quota(1, c, s + 0.5, c + 1, s + 0.5));
+    const [, b, d] = posizioni(g);
+    expect(d.x - b.x).toBeCloseTo(1, 9);
+    expect(Math.hypot(b.x, b.y)).toBeCloseTo(1, 9);
+  });
+
   it('un\'asta a quasi 45° si aggancia a 45°', () => {
     const g = misurato(disegno().asta(0, 0, 1, 1.26).quota(1, 0, -0.5, 1, -0.5));
     const [a, b] = posizioni(g);

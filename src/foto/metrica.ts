@@ -27,6 +27,7 @@ const GRADI = Math.PI / 180;
 const PESO_QUOTA = 100;
 const PESO_PROPORZIONE = 1;
 const PESO_45 = 10;
+const PESO_ASSE = 10;
 const PESO_ANCORA = 1000;
 
 /** Ogni quota letta diventa un tratto fra due punti del grafo. */
@@ -127,6 +128,22 @@ export function misura(g: Grafo, tol: Tolleranze): void {
     equazioni.push({ termini: [[Y(r + 1), 1], [Y(r), -1]], b: (pxRig[r + 1] - pxRig[r]) / scala, peso: PESO_PROPORZIONE });
   }
 
+  // ── aste quasi orizzontali o verticali: lo sono davvero. Senza questa
+  // equazione una trave lunga in una foto storta di qualche grado scavalca
+  // mezza riga e si arrotonda inclinata ──
+  for (const t of g.tratti) {
+    const [ia, ib] = [indice.get(t.i)!, indice.get(t.j)!];
+    const ang = angoloDi(g.punti[ia].px, g.punti[ib].px);
+    const orizzontale = differenzaAngoli(ang * 2, 0) / 2 <= 7 * GRADI;
+    const verticale = differenzaAngoli(ang * 2, Math.PI) / 2 <= 7 * GRADI;
+    if (orizzontale && rig[ia] !== rig[ib]) {
+      equazioni.push({ termini: [[Y(rig[ib]), 1], [Y(rig[ia]), -1]], b: 0, peso: PESO_ASSE });
+    }
+    if (verticale && col[ia] !== col[ib]) {
+      equazioni.push({ termini: [[X(col[ib]), 1], [X(col[ia]), -1]], b: 0, peso: PESO_ASSE });
+    }
+  }
+
   // ── aste quasi a 45°: ΔX = ±ΔY ──
   for (const t of g.tratti) {
     const [ia, ib] = [indice.get(t.i)!, indice.get(t.j)!];
@@ -148,20 +165,6 @@ export function misura(g: Grafo, tol: Tolleranze): void {
 
   const soluzione = risolviMinimiQuadrati(equazioni, nc + nr);
 
-  // ── quote incoerenti: lo dicono i residui ──
-  const incoerenti = new Set<QuotaGrafo>();
-  for (const e of equazioni) {
-    if (!e.quota) continue;
-    const valore = e.termini.reduce((s, [i, a]) => s + a * soluzione[i], 0);
-    if (Math.abs(valore - e.b) > 0.1 * e.quota.valore) incoerenti.add(e.quota);
-  }
-  for (const q of incoerenti) {
-    g.avvisi.push({
-      codice: 'quoteIncoerenti', punti: [q.da, q.a],
-      messaggio: `La quota ${formatta(q.valore)} non torna con le altre.`,
-    });
-  }
-
   // ── griglia: L/2, o più fine se una quota lo chiede ──
   const passo = 1 / g.quote.reduce((m, q) => mcm(m, denominatore(q.valore)), 2);
   const Xr = arrotonda(soluzione.slice(0, nc), passo, esentiX);
@@ -169,6 +172,22 @@ export function misura(g: Grafo, tol: Tolleranze): void {
   g.punti.forEach((q, i) => { q.pos = { x: Xr[col[i]], y: Yr[rig[i]] }; });
 
   riproietta(g);
+
+  // ── quote incoerenti: si misurano sul risultato finale, arrotondamento
+  // compreso, così si vede anche una quota che la griglia ha tradito ──
+  const posDi = (id: string): Punto => g.punti[indice.get(id)!].pos!;
+  for (const q of g.quote) {
+    const a = posDi(q.da);
+    const b = posDi(q.a);
+    const misurata = q.direzione === 'x' ? Math.abs(b.x - a.x)
+      : q.direzione === 'y' ? Math.abs(b.y - a.y) : distanza(a, b);
+    if (Math.abs(misurata - q.valore) > 0.1 * q.valore) {
+      g.avvisi.push({
+        codice: 'quoteIncoerenti', punti: [q.da, q.a],
+        messaggio: `La quota ${formatta(q.valore)} non torna con le altre.`,
+      });
+    }
+  }
 }
 
 // ──────────────────────────── aiuti ────────────────────────────
@@ -201,7 +220,16 @@ function medie(gruppo: readonly number[], n: number, valori: readonly number[]):
  * è proprio ciò che le riunisce.
  */
 function arrotonda(v: readonly number[], passo: number, esenti: ReadonlySet<number>): number[] {
-  return v.map((x, i) => (esenti.has(i) ? x : Math.round(x / passo) * passo));
+  // una coordinata esente (asta inclinata quotata lungo di sé) non sta sulla
+  // griglia: le altre si arrotondano per DISTANZA dalla esente più vicina,
+  // altrimenti l'asta che la segue erediterebbe il suo resto irrazionale
+  const riferimenti = [...esenti];
+  return v.map((x, i) => {
+    if (esenti.has(i)) return x;
+    if (riferimenti.length === 0) return Math.round(x / passo) * passo;
+    const r = riferimenti.reduce((m, j) => (Math.abs(v[j] - x) < Math.abs(v[m] - x) ? j : m));
+    return v[r] + Math.round((x - v[r]) / passo) * passo;
+  });
 }
 
 /**
