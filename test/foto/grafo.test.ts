@@ -102,6 +102,29 @@ describe('regole del pallino nel grafo', () => {
   });
 });
 
+describe('pallini senza vincolo sotto', () => {
+  it('su una linea continua: cerniera interna, con avviso', () => {
+    const g = grafo(disegno().asta(0, 0, 2, 0).cerniera(1, 0));
+    expect(g.giunti).toHaveLength(1);
+    expect(g.giunti[0].gruppi).toHaveLength(2);
+    expect(g.avvisi.map((a) => a.codice)).toContain('cernieraAmbigua');
+  });
+
+  it('disegnato mezzo raggio fuori dalla linea: ancora cerniera, con avviso', () => {
+    const g = grafo(disegno().asta(0, 0, 1, 0).asta(1, 0, 2, 0).cerniera(1, 0.03));
+    expect(g.giunti).toHaveLength(1);
+    expect(g.giunti[0].gruppi).toHaveLength(2);
+    expect(g.avvisi.map((a) => a.codice)).toContain('cernieraAmbigua');
+  });
+
+  it('su un estremo libero: nessun vincolo inventato, un avviso', () => {
+    const g = grafo(disegno().asta(0, 0, 1, 0).cerniera(1, 0));
+    expect(g.giunti).toEqual([]);
+    expect(g.vincoli).toEqual([]);
+    expect(g.avvisi.map((a) => a.codice)).toContain('simboloIsolato');
+  });
+});
+
 describe('vincoli senza pallino', () => {
   it('incastro all\'estremo', () => {
     const g = grafo(disegno().asta(0, 0, 1, 0).appoggio('incastro', 0, 0, 270, { pallino: false }));

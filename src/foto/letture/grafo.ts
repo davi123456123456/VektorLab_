@@ -41,8 +41,12 @@ const TIPO_INTERNO: Partial<Record<TipoCorpo, GiuntoGrafo['tipo']>> = {
   pattinoInterno: 'pattino',
 };
 
-/** Giunto in costruzione: i gruppi sono indici di segmento, i tratti non esistono ancora. */
-interface GiuntoInSospeso { punto: number; tipo: GiuntoGrafo['tipo']; gruppi: number[][] }
+/**
+ * Giunto in costruzione: i gruppi sono indici di segmento, i tratti non
+ * esistono ancora. Con `ognuno` ogni tratto che tocca il punto fa gruppo a
+ * sé, anche le due metà di uno stesso segmento spezzato lì.
+ */
+interface GiuntoInSospeso { punto: number; tipo: GiuntoGrafo['tipo']; gruppi: number[][]; ognuno?: boolean }
 
 class Punti {
   readonly pos: Punto[] = [];
@@ -169,6 +173,15 @@ export function costruisciGrafo(p: Primitive, tol: Tolleranze): Grafo {
               ...l.terminano.map((e) => [e.segmento]),
             ],
           });
+        } else if (l.corpo === null) {
+          // un pallino su una linea continua, senza niente sotto: non può
+          // essere un appoggio, e l'unica lettura sensata è una cerniera
+          // disegnata sopra la linea. Si dice, perché non è certa
+          giunti.push({ punto: contatto, tipo: 'cerniera', gruppi: [], ognuno: true });
+          avvisi.push({
+            codice: 'cernieraAmbigua',
+            messaggio: 'Pallino senza vincolo su una linea continua: letto come cerniera interna.',
+          });
         } else {
           appoggiati.push(contatto);
         }
@@ -184,6 +197,9 @@ export function costruisciGrafo(p: Primitive, tol: Tolleranze): Grafo {
           const x = l.passanti[0];
           punto = estremo(x.segmento, estremoSfiorato(x));
           consumati.add(chiave(x.segmento, estremoSfiorato(x)));
+        }
+        if (l.corpo === null) {
+          avvisi.push({ codice: 'simboloIsolato', messaggio: "Pallino all'estremo libero di un'asta, senza vincolo." });
         }
         vincola(l.corpo, punto);
         break;
@@ -364,9 +380,11 @@ function componi(
     });
   for (const gs of giunti) {
     const punto = idDi(gs.punto);
-    const gruppi = gs.gruppi
-      .map((gr) => [...new Set(gr.flatMap((k) => incidenti(punto, k)))])
-      .filter((gr) => gr.length > 0);
+    const gruppi = gs.ognuno
+      ? g.tratti.filter((t) => t.i === punto || t.j === punto).map((t) => [t.id])
+      : gs.gruppi
+        .map((gr) => [...new Set(gr.flatMap((k) => incidenti(punto, k)))])
+        .filter((gr) => gr.length > 0);
     if (gruppi.length >= 2) g.giunti.push({ punto, tipo: gs.tipo, gruppi });
   }
 

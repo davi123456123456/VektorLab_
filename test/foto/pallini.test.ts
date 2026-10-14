@@ -73,6 +73,14 @@ describe('il pallino: divide la linea o ci si appoggia?', () => {
     expect(l.terminano).toEqual([]);
   });
 
+  it('estremo che si ferma un po\' prima del pallino ma lo punta: finisce lì', () => {
+    const p = disegno().asta(0, 0, 1, 0).asta(1, 0, 2, 0).cerniera(1, 0).primitive();
+    const c = p.pallini[0].c;
+    // tratto rilevato con un errore di qualche pixel: 3.5 px fuori asse, 10 px corto
+    p.aste[0] = { ...p.aste[0], a: { x: p.aste[0].a.x, y: c.y + 3.5 }, b: { x: c.x - 10, y: c.y + 3.5 } };
+    expect(leggi(p)[0].esito).toBe('cerniera');
+  });
+
   it('pallino lontano da tutte le aste: isolato', () => {
     const [l] = leggi(disegno().asta(0, 0, 1, 0).cerniera(3, 3).primitive());
     expect(l.esito).toBe('isolato');

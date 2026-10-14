@@ -61,9 +61,21 @@ export function leggiPallini(p: Primitive, tol: Tolleranze): LetturaPallino[] {
       const pr = proiezione(c, s.a, s.b);
       const da = distanza(c, s.a);
       const db = distanza(c, s.b);
-      // finisce: l'estremo è sul bordo E la linea punta al centro
-      if (pr.distanza < 0.5 * r && Math.min(da, db) < r + tol.tau) {
-        terminano.push({ segmento: k, estremo: da <= db ? 'a' : 'b' });
+      // finisce: l'estremo è vicino al pallino E il centro gli sta più davanti
+      // che di fianco. È il confronto fra le due componenti, non una soglia
+      // sulla distanza dalla retta, a reggere i pochi pixel d'errore di una
+      // rilevazione vera: chi punta al centro e si ferma un po' prima resta
+      // "davanti", chi lo sfiora di lato resta "di fianco"
+      const e: 'a' | 'b' = da <= db ? 'a' : 'b';
+      const fine = s[e];
+      const altro = e === 'a' ? s.b : s.a;
+      const l = Math.max(distanza(fine, altro), 1e-9);
+      const d = { x: (fine.x - altro.x) / l, y: (fine.y - altro.y) / l };
+      const w = { x: c.x - fine.x, y: c.y - fine.y };
+      const davanti = w.x * d.x + w.y * d.y;
+      const fianco = Math.abs(w.x * d.y - w.y * d.x);
+      if (Math.min(da, db) < r + tol.tau && davanti > fianco) {
+        terminano.push({ segmento: k, estremo: e });
         return;
       }
       // passa: il corpo della linea sfiora o attraversa il pallino. Il piede
