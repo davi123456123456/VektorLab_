@@ -16,6 +16,13 @@ describe('file .vektor', () => {
     expect(deserializza('ciao')).toEqual({ errore: 'Il file non è un progetto VektorLab' });
   });
 
+  it('un JSON con i campi del tipo sbagliato non è un progetto, e non lancia', () => {
+    expect(deserializza('{"nodi":[],"aste":[],"vincoliInterni":{}}'))
+      .toEqual({ errore: 'Il file non è un progetto VektorLab' });
+    expect(deserializza('{"nodi":[1],"aste":[{}]}'))
+      .toEqual({ errore: 'Il file non è un progetto VektorLab' });
+  });
+
   it('un JSON senza nodi né aste non è un progetto', () => {
     expect(deserializza('{"nome": "x"}')).toEqual({ errore: 'Il file non è un progetto VektorLab' });
   });

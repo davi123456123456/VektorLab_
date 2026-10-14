@@ -25,10 +25,8 @@ export function deserializza(testo: string): { progetto: Progetto } | { errore: 
   } catch {
     return { errore: NON_E_UN_PROGETTO };
   }
-  const p = dati as Partial<Progetto> | null;
-  if (!p || typeof p !== 'object' || !Array.isArray(p.nodi) || !Array.isArray(p.aste)) {
-    return { errore: NON_E_UN_PROGETTO };
-  }
+  if (!formaDiProgetto(dati)) return { errore: NON_E_UN_PROGETTO };
+  const p = dati as Partial<Progetto>;
   const completo: Progetto = {
     ...p,
     vincoliInterni: p.vincoliInterni ?? [],
@@ -38,5 +36,31 @@ export function deserializza(testo: string): { progetto: Progetto } | { errore: 
     materialiPersonalizzati: p.materialiPersonalizzati ?? [],
     sezioniPersonalizzate: p.sezioniPersonalizzate ?? [],
   } as Progetto;
-  return { progetto: verificaIntegrita(migra(completo)).progetto };
+  // un file scritto a mano può superare il controllo di forma e rompersi
+  // dopo: dentro l'app un file sbagliato deve dare un messaggio, mai un errore
+  try {
+    return { progetto: verificaIntegrita(migra(completo)).progetto };
+  } catch {
+    return { errore: NON_E_UN_PROGETTO };
+  }
+}
+
+/** Controllo di forma: nodi con id e coordinate, aste con id e due nodi, elenchi dove servono elenchi. */
+function formaDiProgetto(d: unknown): boolean {
+  if (!d || typeof d !== 'object') return false;
+  const p = d as Record<string, unknown>;
+  if (!Array.isArray(p.nodi) || !Array.isArray(p.aste)) return false;
+  const elenchi = ['vincoliInterni', 'carichi', 'casi', 'combinazioni', 'vincoliSuAsta',
+    'sconnessioni', 'materialiPersonalizzati', 'sezioniPersonalizzate'];
+  if (elenchi.some((k) => p[k] !== undefined && !Array.isArray(p[k]))) return false;
+  const nodoValido = (n: unknown): boolean => {
+    const x = n as Record<string, unknown> | null;
+    return !!x && typeof x.id === 'string' && Number.isFinite(x.x) && Number.isFinite(x.y);
+  };
+  const astaValida = (a: unknown): boolean => {
+    const x = a as Record<string, unknown> | null;
+    return !!x && typeof x.id === 'string'
+      && typeof x.nodoIniziale === 'string' && typeof x.nodoFinale === 'string';
+  };
+  return p.nodi.every(nodoValido) && p.aste.every(astaValida);
 }
