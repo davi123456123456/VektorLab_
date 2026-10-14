@@ -42,7 +42,7 @@
 
 ---
 
-### Compito 1: Contratti, tolleranze, geometria e disegni di prova
+### Task 1: Contratti, tolleranze, geometria e disegni di prova
 
 **Files:**
 - Create: `src/foto/tipi.ts`, `src/foto/parametri.ts`, `src/foto/geometria.ts`
@@ -101,7 +101,7 @@ export interface Grafo {
 - [ ] **Step 4:** stesso comando → PASS; `npx tsc -b` pulito.
 - [ ] **Step 5:** commit `foto: contratti, tolleranze, geometria`.
 
-### Compito 2: Lettura dei pallini
+### Task 2: Lettura dei pallini
 
 **Files:** Create `src/foto/letture/pallini.ts` · Test `test/foto/pallini.test.ts`
 
@@ -140,7 +140,7 @@ esito: k = #termina, h = #passa
 - [ ] **Step 4:** → PASS.
 - [ ] **Step 5:** commit `foto: lettura dei pallini`.
 
-### Compito 3: Costruzione del grafo (tracciamento e vincoli)
+### Task 3: Costruzione del grafo (tracciamento e vincoli)
 
 **Files:** Create `src/foto/letture/grafo.ts` · Test `test/foto/grafo.test.ts`
 
@@ -164,7 +164,7 @@ Ordine delle operazioni (ciascuna ha almeno un test):
 - [ ] **Step 4:** → PASS.
 - [ ] **Step 5:** commit `foto: tracciamento delle aste e regole del pallino`.
 
-### Compito 4: Carichi
+### Task 4: Carichi
 
 **Files:** Create `src/foto/letture/carichi.ts` · Test `test/foto/carichi.test.ts`
 
@@ -186,7 +186,7 @@ Regole:
 - [ ] **Step 4:** → PASS.
 - [ ] **Step 5:** commit `foto: carichi distribuiti, forze e momenti`.
 
-### Compito 5: Metrica — dai tratti alle posizioni
+### Task 5: Metrica — dai tratti alle posizioni
 
 **Files:** Create `src/foto/metrica.ts` · Test `test/foto/metrica.test.ts`
 
@@ -222,7 +222,7 @@ pos dei punti = (X[colonna], Y[riga]); i punti intermedi di un tratto inclinato 
 - [ ] **Step 4:** → PASS.
 - [ ] **Step 5:** commit `foto: metrica dai tratti alle posizioni`.
 
-### Compito 6: Confronto fra due Progetto
+### Task 6: Confronto fra due Progetto
 
 **Files:** Create `src/foto/confronto.ts` · Test `test/foto/confronto.test.ts`
 
@@ -248,7 +248,7 @@ export function confronta(ottenuto: Progetto, atteso: Progetto): Confronto;
 - [ ] **Step 4:** → PASS.
 - [ ] **Step 5:** commit `foto: confronto e conteggio delle correzioni`.
 
-### Compito 7: Traduzione in Progetto e `leggi`
+### Task 7: Traduzione in Progetto e `leggi`
 
 **Files:** Create `src/foto/traduci.ts`, `src/foto/index.ts` · Test `test/foto/traduci.test.ts`, `test/foto/esercizi.test.ts`
 
@@ -279,7 +279,7 @@ export function leggi(p: Primitive): EsitoLettura;
 - [ ] **Step 5:** `npx vitest run test/foto/` → PASS; `npm test` verde; `npm run baseline:check` verde; `npx tsc -b` pulito.
 - [ ] **Step 6:** commit `foto: traduzione in Progetto e lettura completa`.
 
-### Compito 8: Salva e Apri file `.vektor`
+### Task 8: Salva e Apri file `.vektor`
 
 **Files:** Create `src/state/file.ts` · Modify `src/ui/BarraFogli.tsx` · Test `test/unit/file.test.ts`
 
@@ -293,7 +293,7 @@ export function leggi(p: Primitive): EsitoLettura;
 - [ ] **Step 4:** test → PASS; anteprima (`preview_start`): Salva scarica il file, Apri lo riapre in un foglio nuovo; `npm run baseline:check` verde.
 - [ ] **Step 5:** commit `file .vektor: salva e apri`.
 
-### Compito 9: Banco di prova con le foto vere
+### Task 9: Banco di prova con le foto vere
 
 **Files:**
 - Modify: `.gitignore` (aggiunge `dati-foto/`)
