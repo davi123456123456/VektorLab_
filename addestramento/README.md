@@ -66,3 +66,30 @@ Mancano ancora, da aggiungere se la rete sbaglia su questi casi:
   successivo;
 - caratteri con grazie e grassetti dei titoli vari come nei fogli veri;
 - riflessi e mosso; pieghe orizzontali; foto di uno schermo (moiré).
+
+## Da fare (revisione della Fase 2, 2026-10-15)
+
+Da decidere nel piano della Fase 3, **prima** di addestrare:
+- **Risoluzione per la seconda passata.** Le foto sintetiche sono larghe
+  600–1400 px e il riquadro della figura ha il lato lungo mediano di ~310 px:
+  per la seconda passata a 768 px (spec §5.3) andrebbe ingrandito ~2,5×, mentre
+  le foto vere (3000–4000 px) si rimpiccioliscono. Strade: generare
+  direttamente il ritaglio attorno alla figura alla risoluzione giusta (anche
+  più veloce), oppure pagine renderizzate più grandi.
+
+Minori rinviati:
+- frecce dei carichi che attraversano i simboli di vincolo (2,6 % delle scene);
+- la sezione trasversale può cadere sulla figura e sovrascriverne la maschera (~1/1500);
+- angolo dei vincoli interni: è l'asse dell'asta, ma `trasforma_primitive` lo
+  tratta come un puntamento, ed è ambiguo di 180° (conta solo per la testa
+  d'orientamento della rete);
+- le classi sottili (quote, richiami) si frammentano col campionamento al più
+  vicino e la riduzione: dilatarle o usare il max-pool per i bersagli;
+- test d'allineamento ancora permissivi (finestre di qualche pixel);
+- le primitive `nodi` sono sempre vuote: serviranno alla testa Nodi;
+- i font calligrafici sono solo di macOS: su Colab lo stile a mano ricade sui
+  font da stampa (e ∫ σ τ diventano quadratini);
+- le lettere dei nodi possono cadere sulle aste a 45° (testo sopra l'asta nella maschera);
+- `serializza` sta in `__main__` (meglio in `campione`); `meta.riquadro` è in
+  pixel y giù mentre le primitive sono y su;
+- ~0,4 s a campione (`applica` 60 %): per generare al volo servono più processi.
