@@ -7,7 +7,9 @@
  * correzioni servono in media; poi i casi peggiori, con il seme per
  * riprodurli. È una misura: esce sempre con 0.
  *
- *   npm run foto:campagna -- --n 500 --seme 1 --rumore 3
+ *   npm run foto:campagna -- --n 500 --seme 1 --rumore 3 [--rari]
+ *
+ * Con `--rari` gli schemi usano anche doppi pendoli, pattini e bielle.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -34,6 +36,7 @@ const cartella = mkdtempSync(join(tmpdir(), 'campagna-'));
 const esito = spawnSync(python, [
   '-m', 'generatore', '--solo-etichette', '--n', String(n), '--seme', String(seme),
   '--rumore', String(rumore), '--uscita', cartella,
+  ...(process.argv.includes('--rari') ? ['--rari'] : []),
 ], { cwd: join(radice, 'addestramento'), stdio: 'inherit' });
 if (esito.status !== 0) {
   console.error(`Il generatore è uscito con ${esito.status}. Python usato: ${python} (variabile FOTO_PYTHON)`);

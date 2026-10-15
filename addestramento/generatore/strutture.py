@@ -492,7 +492,58 @@ def _specchia(s: Schema) -> Schema:
     return s
 
 
-def genera_schema(rng: np.random.Generator, famiglia: Optional[str] = None) -> Schema:
+def _allineate_nel_nodo(s: Schema, nodo: int) -> bool:
+    """Nel nodo arrivano esattamente due aste, in direzioni opposte."""
+    uscite = []
+    for i, j in s.aste:
+        if nodo in (i, j):
+            (x0, y0), (x1, y1) = s.nodi[nodo], s.nodi[j if i == nodo else i]
+            l = math.hypot(x1 - x0, y1 - y0)
+            uscite.append(((x1 - x0) / l, (y1 - y0) / l))
+    return len(uscite) == 2 and abs(uscite[0][0] * uscite[1][0] + uscite[0][1] * uscite[1][1] + 1) < EPS
+
+
+def _biella_staccata(s: Schema, v: Vincolo) -> bool:
+    """L'asse della biella forma almeno 30° con ogni asta del nodo: allineata sembrerebbe l'asta che prosegue."""
+    a = math.radians(v.angolo)
+    u = (-math.sin(a), math.cos(a))
+    for i, j in s.aste:
+        if v.nodo in (i, j):
+            (x0, y0), (x1, y1) = s.nodi[v.nodo], s.nodi[j if i == v.nodo else i]
+            l = math.hypot(x1 - x0, y1 - y0)
+            if abs(u[0] * (x1 - x0) / l + u[1] * (y1 - y0) / l) >= math.cos(math.radians(30)):
+                return False
+    return True
+
+
+def _vincoli_rari(rng: np.random.Generator, s: Schema) -> None:
+    """
+    Doppi pendoli, pattini e bielle: le famiglie non li usano quasi mai, ma
+    la rete deve vederli. Si cambia solo il tipo, a parità di gradi di
+    vincolo: cerniera → doppio pendolo o pattino, carrello → biella, e le
+    cerniere interne fra due aste allineate → doppio pendolo o pattino
+    interni. Dove un vincolo e una sconnessione stanno nello stesso nodo
+    restano entrambi come sono (un doppio pendolo interno sopra un carrello
+    non si disegna).
+    """
+    sconnessi = {c.nodo for c in s.sconnessioni}
+    vincolati = {v.nodo for v in s.vincoli if v.nodo is not None}
+    for v in s.vincoli:
+        if v.nodo is None or v.nodo in sconnessi:
+            continue
+        if v.tipo == "cerniera" and rng.random() < 0.45:
+            v.tipo = scegli(rng, ("bipendolo", "pattino"))
+        elif v.tipo == "carrello" and rng.random() < 0.35 and _biella_staccata(s, v):
+            v.tipo = "biella"
+    for c in s.sconnessioni:
+        if c.tipo == "cerniera" and c.svincolate is None and c.nodo not in vincolati \
+                and _allineate_nel_nodo(s, c.nodo) \
+                and rng.random() < 0.45:
+            c.tipo = scegli(rng, ("bipendolo", "pattino"))
+
+
+def genera_schema(rng: np.random.Generator, famiglia: Optional[str] = None, rari: bool = False) -> Schema:
+    """Con `rari` anche doppi pendoli, pattini e bielle (per la rete); senza, lo schema di sempre."""
     famiglia = famiglia or scegli(rng, FAMIGLIE)
     c = _Costruttore(famiglia)
     COSTRUTTORI[famiglia](rng, c)
@@ -501,4 +552,6 @@ def genera_schema(rng: np.random.Generator, famiglia: Optional[str] = None) -> S
     s = c.schema()
     if rng.random() < 0.5:
         s = _specchia(s)
+    if rari:
+        _vincoli_rari(rng, s)
     return s

@@ -145,14 +145,15 @@ def _attorno(d: Deformazione, riquadro, margine: float, rng: np.random.Generator
 
 
 def genera(seme: int, solo_etichette: bool = True, rumore: float = 0.0, stile: Optional[str] = None,
-           modo: str = "foto") -> dict:
+           modo: str = "foto", rari: bool = False) -> dict:
     """
     Un campione. Con `solo_etichette` restano le primitive ideali della scena
     (per la campagna sulle regole); altrimenti l'intera foto: pagina, effetti,
-    e le primitive portate nella foto con la stessa trasformazione.
+    e le primitive portate nella foto con la stessa trasformazione. Con
+    `rari` lo schema usa anche doppi pendoli, pattini e bielle.
     """
     rng = np.random.default_rng(seme)
-    schema = genera_schema(rng)
+    schema = genera_schema(rng, rari=rari)
     if solo_etichette:
         scala = float(rng.uniform(70, 130))
         stile_quote = scegli(rng, ("catena", "catena", "accanto"))

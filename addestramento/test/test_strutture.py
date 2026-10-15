@@ -12,8 +12,8 @@ from generatore.strutture import FAMIGLIE, genera_schema
 GRADI_VINCOLO = {"incastro": 3, "cerniera": 2, "bipendolo": 2, "pattino": 2, "carrello": 1, "biella": 1}
 
 
-def schemi(famiglia, n=300):
-    return [genera_schema(np.random.default_rng(seme), famiglia) for seme in range(n)]
+def schemi(famiglia, n=300, rari=False):
+    return [genera_schema(np.random.default_rng(seme), famiglia, rari=rari) for seme in range(n)]
 
 
 def allineate(s, k1, k2, nodo):
@@ -27,9 +27,10 @@ def allineate(s, k1, k2, nodo):
     return abs(d - math.pi) < 1e-9
 
 
+@pytest.mark.parametrize("rari", [False, True])
 @pytest.mark.parametrize("famiglia", FAMIGLIE)
-def test_invarianti(famiglia):
-    for s in schemi(famiglia):
+def test_invarianti(famiglia, rari):
+    for s in schemi(famiglia, rari=rari):
         assert valida(s) == [], (famiglia, valida(s))
         # nodi sulla griglia L/2 e distinti
         for x, y in s.nodi:
@@ -121,3 +122,43 @@ def test_carichi_puntuali_ben_distanziati():
             for i in range(len(momenti)):
                 for j in range(i + 1, len(momenti)):
                     assert math.dist(momenti[i], momenti[j]) >= 0.75, (f, s.a_json())
+
+
+def test_con_i_vincoli_rari_compaiono_tutti_i_tipi():
+    # doppi pendoli, pattini e bielle: senza l'opzione mancano quasi del tutto
+    tutti = [s for f in FAMIGLIE for s in schemi(f, 80, rari=True)]
+    esterni = Counter(v.tipo for s in tutti for v in s.vincoli)
+    interni = Counter(c.tipo for s in tutti for c in s.sconnessioni)
+    assert all(esterni[t] >= 20 for t in GRADI_VINCOLO), esterni
+    assert all(interni[t] >= 20 for t in ("cerniera", "bipendolo", "pattino")), interni
+
+
+def test_i_vincoli_rari_cambiano_solo_i_tipi():
+    def senza_tipi(s):
+        j = s.a_json()
+        for x in j["vincoli"] + j["sconnessioni"]:
+            del x["tipo"]
+        return j
+    cambiati = 0
+    for seme in range(100):
+        a = genera_schema(np.random.default_rng(seme))
+        b = genera_schema(np.random.default_rng(seme), rari=True)
+        assert senza_tipi(a) == senza_tipi(b)
+        cambiati += a.a_json() != b.a_json()
+    assert cambiati >= 30
+
+
+def test_la_biella_non_prosegue_un_asta():
+    # allineata all'asta sembrerebbe la sua continuazione
+    for f in FAMIGLIE:
+        for s in schemi(f, 80, rari=True):
+            for v in s.vincoli:
+                if v.tipo != "biella":
+                    continue
+                a = math.radians(v.angolo)
+                u = (-math.sin(a), math.cos(a))
+                for i, j in s.aste:
+                    if v.nodo in (i, j):
+                        (x0, y0), (x1, y1) = s.nodi[v.nodo], s.nodi[j if i == v.nodo else i]
+                        l = math.hypot(x1 - x0, y1 - y0)
+                        assert abs(u[0] * (x1 - x0) / l + u[1] * (y1 - y0) / l) < math.cos(math.radians(30))

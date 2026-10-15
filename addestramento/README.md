@@ -30,7 +30,7 @@ Le uscite generate (immagini, gallerie) vanno in `esiti/`, esclusa da git.
 ## Campagna sulle regole di lettura
 
 ```bash
-npm run foto:campagna -- --n 500 --seme 1 [--rumore 3]
+npm run foto:campagna -- --n 500 --seme 1 [--rumore 3] [--rari]
 ```
 
 Il generatore produce le primitive ideali di N schemi casuali; la lettura
@@ -41,6 +41,13 @@ della Fase 1 (`src/foto/`) le legge e le confronta con lo schema di partenza.
 | semi 1–500, nessun rumore | 100 % | 0.00 |
 | semi 1001–1500, nessun rumore | 100 % | 0.00 |
 | semi 1–500, punti spostati di ±3 px | 97.0 % | 0.05 |
+| semi 1–1000, `--rari`, nessun rumore (2026-10-16) | 99.9 % | 0.00 |
+| semi 1–500, `--rari`, ±3 px (2026-10-16) | 96.6 % | 0.04 |
+
+Con `--rari` (anche nel generatore) alcune cerniere diventano doppi pendoli o
+pattini, alcuni carrelli bielle e alcune cerniere interne fra aste allineate
+doppi pendoli o pattini interni: le famiglie da sole non li usano quasi mai,
+ma la rete deve vederli. Senza l'opzione gli schemi restano quelli di prima.
 
 Con il rumore gli errori residui sono soprattutto cerniere con pallini piccoli
 (r ≈ 6 px) rispetto all'errore: andranno rivisti sulle uscite vere della rete
@@ -89,6 +96,7 @@ Risolto nella Fase 3:
   il riquadro va da 480 a 660 px.
 
 Minori rinviati:
+- due scritte di forze vicine (11 px) si possono scambiare (seme 285 con `--rari`, 1/1000);
 - frecce dei carichi che attraversano i simboli di vincolo (2,6 % delle scene);
 - la sezione trasversale può cadere sulla figura e sovrascriverne la maschera (~1/1500);
 - angolo dei vincoli interni: è l'asse dell'asta, ma `trasforma_primitive` lo
