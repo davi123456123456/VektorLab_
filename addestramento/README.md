@@ -7,17 +7,22 @@ Spec: `../docs/superpowers/specs/2026-10-14-struttura-da-foto-design.md`.
 
 ## Ambiente
 
-Si usa il `.venv` della cartella superiore (Python 3.9 con numpy, scipy,
-Pillow, pytest). Per ricrearlo altrove:
+Ambiente dedicato `addestramento/.venv` (Python 3.9 del sistema, escluso da
+git), con numpy, scipy, Pillow, pytest, torch, onnx, onnxruntime:
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+/usr/bin/python3 -m venv .venv
+.venv/bin/python -m pip install -U pip
+.venv/bin/python -m pip install -r requirements.txt
 ```
+
+Sul Mac M2 installa torch 2.8 con la GPU (MPS); occupa ~650 MB su disco.
+Il generatore della Fase 2 gira anche col `.venv` della cartella superiore.
 
 ## Comandi
 
 ```bash
-../../.venv/bin/python -m pytest
+.venv/bin/python -m pytest
 ```
 
 Le uscite generate (immagini, gallerie) vanno in `esiti/`, esclusa da git.

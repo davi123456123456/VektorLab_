@@ -2,3 +2,6 @@ numpy>=2.0
 scipy>=1.13
 Pillow>=11.0
 pytest>=8.0
+torch>=2.0
+onnx>=1.15
+onnxruntime>=1.17
