@@ -87,6 +87,28 @@ Mancano ancora, da aggiungere se la rete sbaglia su questi casi:
 - caratteri con grazie e grassetti dei titoli vari come nei fogli veri;
 - riflessi e mosso; pieghe orizzontali; foto di uno schermo (moiré).
 
+## Rete (Fase 3)
+
+```bash
+.venv/bin/python -m generatore.dataset --uscita esiti/dati      # ~10 700 campioni, ~1 GB, ~25 min con 6 processi
+.venv/bin/python -m rete.addestra --dati esiti/dati --uscita esiti/rete   # riprende da solo se interrotto
+.venv/bin/python -m rete.esporta --pesi esiti/rete/migliore.pt \
+    --onnx ../public/modelli/foto.onnx --json ../public/modelli/foto.json
+.venv/bin/python -m rete.guarda --pesi esiti/rete/migliore.pt   # sovrapposizioni in ../dati-foto/esiti-rete/
+```
+
+- `rete/vocabolario.py`: i 43 canali della testa e le 7 classi (contratto con la Fase 4);
+- `rete/bersagli.py`: dalle etichette ai bersagli; `rete/dati.py`: pezzi quadrati casuali;
+- `rete/modello.py`: MobileNetV2 + U-Net, 1,07 M parametri;
+- `rete/perdite.py`, `rete/metriche.py`, `rete/addestra.py`, `rete/esporta.py`, `rete/guarda.py`.
+
+Misura sul Mac M2 da 8 GB (MPS, pezzi da 512, 2026-10-16):
+
+| Lotto | s/passo | Memoria GPU | Note |
+|---|---|---|---|
+| 8 | 3,3 (0,53 senza swap) | 4,4 GB | il sistema va in swap: sconsigliato |
+| 4 | 0,25 | 2,2 GB | predefinito: 20 epoche ≈ 3,5 ore |
+
 ## Da fare (revisione della Fase 2, 2026-10-15)
 
 Risolto nella Fase 3:
