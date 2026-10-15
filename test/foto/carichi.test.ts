@@ -63,6 +63,38 @@ describe('carichi distribuiti', () => {
     expect(distribuiti(g)).toHaveLength(1);
   });
 
+  it('due distribuiti concordi affiancati con valori diversi restano due (q e 2q)', () => {
+    const g = letto(disegno().asta(0, 0, 1, 0).asta(1, 0, 2, 0).cerniera(1, 0)
+      .appoggio('incastro', 0, 0, 270, { pallino: false })
+      .distribuito(0, 0, 0.95, 0, -90).scritta('q', 1, 0.5, 0.62)
+      .distribuito(1.05, 0, 2, 0, -90).scritta('q', 2, 1.5, 0.62));
+    const qs = distribuiti(g).sort((a, b) =>
+      Math.min(px(g, a.da).x, px(g, a.a).x) - Math.min(px(g, b.da).x, px(g, b.a).x));
+    expect(qs).toHaveLength(2);
+    expect(qs.map((q) => q.coefficiente)).toEqual([1, 2]);
+  });
+
+  it('q e 3q su due aste a 45° allineate, frecce lunghe appese: restano due', () => {
+    // le scritte stanno oltre le punte: proiettate sull'asta cadono fuori dal blocco
+    const g = letto(disegno().asta(0, 0, 0.5, 0.5).asta(0.5, 0.5, 1, 1).cerniera(0.5, 0.5)
+      .appoggio('triangolo', 0, 0, 0).appoggio('triangolo', 1, 1, 180)
+      .distribuito(0, 0, 0.45, 0.45, -90, { punte: false, lung: 0.6 }).scritta('q', 3, 0.225, -0.595)
+      .distribuito(0.55, 0.55, 1, 1, -90, { punte: false, lung: 0.6 }).scritta('q', 1, 0.775, -0.045));
+    const qs = distribuiti(g).sort((a, b) =>
+      Math.min(px(g, a.da).x, px(g, a.a).x) - Math.min(px(g, b.da).x, px(g, b.a).x));
+    expect(qs.map((q) => q.coefficiente)).toEqual([3, 1]);
+  });
+
+  it('la scritta di un altro blocco vicino non spezza la trave (es. T, seme 1022)', () => {
+    const g = letto(disegno().asta(0, 0, 1, 0).asta(1, 0, 1, -1)
+      .appoggio('triangolo', 0, 0, 0).appoggio('triangoloRulli', 1, -1, 90)
+      .distribuito(0, 0, 1, 0, -90).scritta('q', 3, 0.5, 0.62)
+      .distribuito(1, 0, 1, -1, 0).scritta('q', 2, 0.38, -0.5));
+    const qs = distribuiti(g);
+    expect(qs).toHaveLength(2);
+    expect(qs.map((q) => q.coefficiente).sort()).toEqual([2, 3]);
+  });
+
   it('una freccia contraria isolata dentro un distribuito si scarta con un avviso', () => {
     const g = letto(trave().distribuito(0, 0, 2, 0, -90).freccia(1.1, 0, 90));
     expect(g.carichi).toHaveLength(1);

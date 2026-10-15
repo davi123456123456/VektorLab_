@@ -213,22 +213,46 @@ def costruisci_scena(schema: Schema, rng: np.random.Generator, scala: float, sti
         el.append(Elemento(ASTA, "linea", [a, b], spessore="asta",
                            primitiva={"genere": "asta", "a": _pt(a), "b": _pt(b), "spessore": 0.03 * scala}))
 
-    _carichi(schema, sc, rng, lungo, nodi_px)
+    _carichi(schema, sc, rng, lungo, nodi_px, estremi)
     _quote(schema, sc, rng, stileQuote)
     _distrattori(schema, sc, rng, nodi_px, estremi)
     sc.riquadro = _riquadro(sc)
     return sc
 
 
-def _carichi(schema: Schema, sc: Scena, rng, lungo, nodi_px) -> None:
+def _distanza_segmento(q: Punto, a: Punto, b: Punto) -> float:
+    d = _sub(b, a)
+    l2 = d[0] ** 2 + d[1] ** 2
+    t = 0.0 if l2 < EPS else max(0.0, min(1.0, ((q[0] - a[0]) * d[0] + (q[1] - a[1]) * d[1]) / l2))
+    return math.hypot(q[0] - a[0] - t * d[0], q[1] - a[1] - t * d[1])
+
+
+def _carichi(schema: Schema, sc: Scena, rng, lungo, nodi_px, estremi) -> None:
+    """
+    Carichi disegnati dove un disegnatore li metterebbe: le frecce non corrono
+    sopra le aste, i blocchi dei distribuiti non si coprono a vicenda e stanno
+    di preferenza fuori dalla struttura, la coda di una forza non tocca un'altra
+    asta. Sono le ambiguità che la campagna ha trovato nei disegni casuali, e
+    che sui fogli d'esame non si vedono.
+    """
     el, s = sc.elementi, sc.scala
+    aste = [(a, b) for a, b in estremi]
+    disegnate: List[Tuple[Punto, Punto]] = []
+    baricentro = (sum(x for x, _ in nodi_px) / len(nodi_px), sum(y for _, y in nodi_px) / len(nodi_px))
+
+    def da_aste(q: Punto) -> float:
+        return min(_distanza_segmento(q, a, b) for a, b in aste)
+
+    def da_frecce(q: Punto) -> float:
+        return min((_distanza_segmento(q, a, b) for a, b in disegnate), default=math.inf)
 
     def posizione(c) -> Punto:
         return nodi_px[c.nodo] if c.nodo is not None else lungo(c.asta, c.s)
 
-    def freccia(coda: Punto, punta: Punto) -> None:
+    def freccia(coda: Punto, punta: Punto, etichetta: str) -> None:
         d = _sub(punta, coda)
-        el.append(Elemento(CARICO, "freccia", [coda, punta], spessore="simbolo", primitiva={
+        disegnate.append((coda, punta))
+        el.append(Elemento(CARICO, "freccia", [coda, punta], spessore="simbolo", testo=etichetta, primitiva={
             "genere": "freccia", "punta": _pt(punta), "direzione": math.atan2(d[1], d[0]),
             "lunghezza": math.hypot(*d)}))
 
@@ -237,47 +261,74 @@ def _carichi(schema: Schema, sc: Scena, rng, lungo, nodi_px) -> None:
                            primitiva={"genere": "scritta", "centro": _pt(centro),
                                       "valore": {"famiglia": famiglia, "coefficiente": coeff}}))
 
+    # ── distribuiti per primi: le forze poi evitano i loro blocchi ──
+    for indice, c in enumerate(x for x in schema.carichi if x.tipo == "distribuito"):
+        P1, P2 = lungo(c.asta, c.s1), lungo(c.asta, c.s2)
+        lunghezza = math.hypot(*_sub(P2, P1))
+        d = _dir_px(c.direzione)
+        n = int(min(9, max(3, round(4 * lunghezza / s) + 1)))
+        lung = float(rng.uniform(0.35, 0.55)) * s
+        # le frecce d'estremità rientrano di poco: due blocchi affiancati non
+        # hanno una freccia in comune
+        rientro = min(0.06 * s / lunghezza, 0.1) if lunghezza > 0.4 * s else 0.0
+        posti = [_add(P1, _sub(P2, P1), float(t)) for t in np.linspace(rientro, 1 - rientro, n)]
+
+        def frecce_per(punte: bool, lung: float):
+            return [(_add(v, d, -lung), v) if punte else (v, _add(v, d, lung)) for v in posti]
+
+        def penalita(punte: bool, lung: float) -> float:
+            pen = 0.0
+            for coda, punta in frecce_per(punte, lung):
+                lontano, vicino = (coda, punta) if punte else (punta, coda)
+                quarto = ((3 * lontano[0] + vicino[0]) / 4, (3 * lontano[1] + vicino[1]) / 4)
+                medio = ((coda[0] + punta[0]) / 2, (coda[1] + punta[1]) / 2)
+                pen += da_aste(quarto) <= 0.1 * s
+                pen += da_frecce(medio) <= 0.1 * s
+            lato = (-d[0], -d[1]) if punte else d
+            centro = ((P1[0] + P2[0]) / 2 - baricentro[0], (P1[1] + P2[1]) / 2 - baricentro[1])
+            pen += 0.5 * (lato[0] * centro[0] + lato[1] * centro[1] < 0)
+            return pen
+
+        # si prova il lato preferito, poi l'altro, e frecce via via più corte
+        # dove lo spazio è stretto (le aste a 45° di uno zigzag)
+        preferito = rng.random() < 0.75
+        prove = [(punte, k) for k in (lung, 0.3 * s, 0.22 * s) for punte in (preferito, not preferito)]
+        punte, lung = min(prove, key=lambda x: penalita(*x))
+        lontani = []
+        for coda, punta in frecce_per(punte, lung):
+            freccia(coda, punta, f"distribuito{indice}")
+            lontani.append(coda if punte else punta)
+        if rng.random() < 0.6:
+            el.append(Elemento(CARICO, "linea", [lontani[0], lontani[-1]]))
+        fuori = (-d[0], -d[1]) if punte else d
+        medio = ((lontani[0][0] + lontani[-1][0]) / 2, (lontani[0][1] + lontani[-1][1]) / 2)
+        scritta(_add(medio, fuori, 0.22 * s), "q", c.coefficiente)
+
     for c in schema.carichi:
-        if c.tipo == "distribuito":
-            P1, P2 = lungo(c.asta, c.s1), lungo(c.asta, c.s2)
-            d = _dir_px(c.direzione)
-            n = int(min(9, max(3, round(4 * math.hypot(*_sub(P2, P1)) / s) + 1)))
-            lung = float(rng.uniform(0.35, 0.55)) * s
-            punte = rng.random() < 0.75
-            lontani = []
-            for t in np.linspace(0, 1, n):
-                vicino = _add(P1, _sub(P2, P1), float(t))
-                if punte:
-                    coda = _add(vicino, d, -lung)
-                    freccia(coda, vicino)
-                    lontani.append(coda)
-                else:
-                    punta = _add(vicino, d, lung)
-                    freccia(vicino, punta)
-                    lontani.append(punta)
-            if rng.random() < 0.6:
-                el.append(Elemento(CARICO, "linea", [lontani[0], lontani[-1]]))
-            fuori = (-d[0], -d[1]) if punte else d
-            medio = ((lontani[0][0] + lontani[-1][0]) / 2, (lontani[0][1] + lontani[-1][1]) / 2)
-            scritta(_add(medio, fuori, 0.22 * s), "q", c.coefficiente)
-        elif c.tipo == "forza":
+        if c.tipo == "forza":
             P = posizione(c)
             d = _dir_px(c.direzione)
-            lung = 0.5 * s
             # la freccia sta dalla parte libera: non lungo un'asta, non dentro
-            # il simbolo del vincolo; a parità, entra nel punto con la punta
+            # il simbolo del vincolo; la sua coda non tocca altre aste né altre
+            # frecce; a parità entra nel punto con la punta
             occupate = _occupate(schema, sc, c, P, nodi_px)
             libero = lambda v: all(v[0] * u[0] + v[1] * u[1] < math.cos(math.radians(30)) for u in occupate)  # noqa: E731
-            punte = libero((-d[0], -d[1])) and (rng.random() < 0.7 or not libero(d))
+            ordine = [True, False] if rng.random() < 0.7 else [False, True]
+            prove = [(punte, k * s) for punte in ordine if libero((-d[0], -d[1]) if punte else d)
+                     for k in (0.5, 0.38, 0.28)]
+            scelta = next((x for x in prove if da_aste(_add(P, d, -x[1] if x[0] else x[1])) >= 0.1 * s
+                           and da_frecce(_add(P, d, -x[1] if x[0] else x[1])) >= 0.1 * s),
+                          prove[0] if prove else (True, 0.5 * s))
+            punte, lung = scelta
             if punte:
                 coda, punta = _add(P, d, -lung), P
                 lontano = coda
             else:
                 coda, punta = P, _add(P, d, lung)
                 lontano = punta
-            freccia(coda, punta)
+            freccia(coda, punta, "forza")
             scritta(_add(lontano, (-d[1], d[0]), 0.18 * s), "F", c.coefficiente)
-        else:
+        elif c.tipo == "momento":
             P = posizione(c)
             raggio = 0.25 * s
             inizio = float(rng.uniform(0, 360))

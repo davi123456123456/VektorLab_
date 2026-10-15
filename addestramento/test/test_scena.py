@@ -143,3 +143,59 @@ def test_la_freccia_di_una_forza_non_si_sovrappone_alle_aste():
                 asta = math.atan2(Q[1] - P[1], Q[0] - P[0])
                 diff = abs((occupa - asta + math.pi) % (2 * math.pi) - math.pi)
                 assert diff > math.radians(30), (seme, schema.a_json())
+
+
+def _dist_seg(p, a, b):
+    ax, ay, bx, by = a[0], a[1], b[0], b[1]
+    dx, dy = bx - ax, by - ay
+    l2 = dx * dx + dy * dy
+    t = 0.0 if l2 == 0 else max(0.0, min(1.0, ((p[0] - ax) * dx + (p[1] - ay) * dy) / l2))
+    return math.hypot(p[0] - ax - t * dx, p[1] - ay - t * dy)
+
+
+def _aste_px(sc):
+    return [e.punti for e in sc.elementi if e.forma == "linea" and e.spessore == "asta"]
+
+
+def test_la_punta_lontana_di_una_forza_non_tocca_altre_aste():
+    from generatore.strutture import genera_schema
+    viste = 0
+    for seme in range(300):
+        sc = scena(genera_schema(np.random.default_rng(seme)), seme=seme)
+        aste = _aste_px(sc)
+        for e in sc.elementi:
+            if e.forma != "freccia" or e.testo != "forza":
+                continue
+            capi = sorted(e.punti, key=lambda q: min(_dist_seg(q, a, b) for a, b in aste))
+            lontano = capi[1]
+            assert min(_dist_seg(lontano, a, b) for a, b in aste) >= 0.1 * sc.scala, seme
+            viste += 1
+    assert viste > 50
+
+
+def test_i_blocchi_dei_distribuiti_non_si_sovrappongono():
+    from generatore.strutture import genera_schema
+    viste = 0
+    for seme in range(300):
+        sc = scena(genera_schema(np.random.default_rng(seme)), seme=seme)
+        aste = _aste_px(sc)
+        blocchi = {}
+        for e in sc.elementi:
+            if e.forma == "freccia" and e.testo.startswith("distribuito"):
+                blocchi.setdefault(e.testo, []).append(e.punti)
+        for nome, frecce in blocchi.items():
+            for k, (c, t) in enumerate(frecce):
+                medio = ((c[0] + t[0]) / 2, (c[1] + t[1]) / 2)
+                for altro, frecce2 in blocchi.items():
+                    if altro == nome:
+                        continue
+                    assert min(_dist_seg(medio, a, b) for a, b in frecce2) > 0.08 * sc.scala, seme
+                # la metà lontana di una freccia interna al blocco non sta sopra
+                # un'altra asta (quelle d'estremità possono sfiorare il nodo)
+                if k in (0, len(frecce) - 1):
+                    continue
+                capi = sorted((c, t), key=lambda q: min(_dist_seg(q, a, b) for a, b in aste))
+                quarto = ((capi[1][0] * 3 + capi[0][0]) / 4, (capi[1][1] * 3 + capi[0][1]) / 4)
+                assert min(_dist_seg(quarto, a, b) for a, b in aste) > 0.08 * sc.scala, seme
+                viste += 1
+    assert viste > 200

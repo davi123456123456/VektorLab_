@@ -86,6 +86,23 @@ export function leggiPallini(p: Primitive, tol: Tolleranze): LetturaPallino[] {
       }
     });
 
+    // uno SPIGOLO posato sul pallino: due aste che finiscono nello stesso
+    // punto non puntano al centro, lo sfiorano insieme. È ciò che lo distingue
+    // da una cerniera, dove le aste si fermano sul bordo in punti diversi,
+    // lontani fra loro almeno quanto il raggio
+    const estremoDi = (e: EstremoRef): Punto => p.aste[e.segmento][e.estremo];
+    const toccati = [
+      ...terminano.map(estremoDi),
+      ...passanti.map((x) => (x.t < 0.5 ? p.aste[x.segmento].a : p.aste[x.segmento].b)),
+    ];
+    for (let i = terminano.length - 1; i >= 0; i--) {
+      const q = estremoDi(terminano[i]);
+      const insieme = toccati.filter((u) => distanza(u, q) < 0.5 * r).length > 1;
+      if (!insieme) continue;
+      const e = terminano.splice(i, 1)[0];
+      passanti.push({ segmento: e.segmento, t: e.estremo === 'a' ? 0 : 1 });
+    }
+
     const prosegue = passanti.filter((x) => interno(p, x, tol));
     const sfiorano = passanti.filter((x) => !interno(p, x, tol));
     // una linea spezzata proprio nel punto di contatto (la rete la spezza

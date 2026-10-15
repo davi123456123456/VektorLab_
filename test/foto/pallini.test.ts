@@ -89,6 +89,12 @@ describe('il pallino: divide la linea o ci si appoggia?', () => {
     expect(l.terminano).toEqual([{ segmento: 2, estremo: 'b' }]);
   });
 
+  it('asta a 45° che arriva sullo spigolo posato sul pallino: lo sfiora, non finisce lì', () => {
+    const [l] = leggi(disegno().asta(1, 2, 1, 0).asta(0, 1, 1, 0)
+      .appoggio('triangoloRulli', 1, 0, 0).primitive());
+    expect(l.esito).toBe('appoggiato');
+  });
+
   it('pallino lontano da tutte le aste: isolato', () => {
     const [l] = leggi(disegno().asta(0, 0, 1, 0).cerniera(3, 3).primitive());
     expect(l.esito).toBe('isolato');

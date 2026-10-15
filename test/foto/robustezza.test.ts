@@ -92,3 +92,17 @@ describe('modello senza vincoli', () => {
     expect(codici(esito.avvisi)).toContain('nessunVincolo');
   });
 });
+
+describe('punti che l\'arrotondamento fa coincidere', () => {
+  it('si fondono: niente aste lunghe zero, il carico va sul nodo', () => {
+    // la freccia cade 0.15 L dal nodo: abbastanza per un punto nuovo, troppo
+    // poco per sopravvivere all'arrotondamento a L/2
+    const { progetto, avvisi } = leggi(disegno().asta(0, 0, 2, 0)
+      .appoggio('incastro', 0, 0, 270, { pallino: false })
+      .freccia(0.15, 0, -90).quota(2, 0, -0.5, 2, -0.5).primitive());
+    expect(progetto.aste).toHaveLength(1);
+    expect(progetto.carichi).toEqual([expect.objectContaining({ tipo: 'forzaNodale' })]);
+    expect(codici(avvisi)).not.toContain('integrita');
+  });
+});
+

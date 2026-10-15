@@ -110,3 +110,14 @@ def test_forze_mai_sopra_un_distribuito_ne_lungo_l_asta():
                     d = math.radians(c.direzione)
                     croce = math.cos(d) * (y1 - y0) - math.sin(d) * (x1 - x0)
                     assert abs(croce) > 1e-6, (f, s.a_json())
+
+
+def test_carichi_puntuali_ben_distanziati():
+    for f in FAMIGLIE:
+        for s in schemi(f, 150):
+            forze = [_punto(s, c) for c in s.carichi if c.tipo == "forza"]
+            assert len(set(forze)) == len(forze), (f, s.a_json())
+            momenti = [_punto(s, c) for c in s.carichi if c.tipo == "momento"]
+            for i in range(len(momenti)):
+                for j in range(i + 1, len(momenti)):
+                    assert math.dist(momenti[i], momenti[j]) >= 0.75, (f, s.a_json())

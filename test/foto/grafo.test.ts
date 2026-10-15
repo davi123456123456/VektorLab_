@@ -93,6 +93,14 @@ describe('regole del pallino nel grafo', () => {
     expect(g.avvisi.map((a) => a.codice)).toContain('cernieraAmbigua');
   });
 
+  it('lo spigolo posato sul pallino resta dov\'è disegnato', () => {
+    const p = disegno().asta(0, 1, 0, 0).asta(0, 0, 2, 1).appoggio('triangolo', 0, 0, 0).primitive();
+    const g = costruisciGrafo(p, tolleranze(p));
+    const spigolo = p.aste[0].b;
+    const q = g.punti.find((x) => Math.hypot(x.px.x - spigolo.x, x.px.y - spigolo.y) < 6)!;
+    expect(Math.hypot(q.px.x - spigolo.x, q.px.y - spigolo.y)).toBeLessThan(0.1);
+  });
+
   it('asta a T sopra l\'appoggio: incrocio rigido con il vincolo sotto', () => {
     const g = grafo(disegno().asta(0, 0, 2, 0).asta(1, 1, 1, 0).appoggio('triangolo', 1, 0, 0));
     expect(g.punti).toHaveLength(4);

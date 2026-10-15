@@ -196,6 +196,61 @@ export function misura(g: Grafo, tol: Tolleranze): void {
       });
     }
   }
+
+  fondiCoincidenti(g);
+}
+
+/**
+ * Due punti che l'arrotondamento porta nello stesso posto sono lo stesso
+ * punto: un carico rilevato poco lontano da un nodo, un estremo tremolante.
+ * Si fondono, e il tratto di lunghezza zero che li univa sparisce — altrimenti
+ * diventerebbe un'asta lunga zero e due nodi sovrapposti.
+ */
+function fondiCoincidenti(g: Grafo): void {
+  const rappresentante = new Map<string, string>();
+  for (let i = 0; i < g.punti.length; i++) {
+    if (rappresentante.has(g.punti[i].id)) continue;
+    for (let j = i + 1; j < g.punti.length; j++) {
+      const [a, b] = [g.punti[i].pos!, g.punti[j].pos!];
+      if (Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9) rappresentante.set(g.punti[j].id, g.punti[i].id);
+    }
+  }
+  if (rappresentante.size === 0) return;
+  const r = (id: string): string => rappresentante.get(id) ?? id;
+
+  const sostituto = new Map<string, string>();
+  const tratti: Grafo['tratti'] = [];
+  for (const t of g.tratti) {
+    const [i, j] = [r(t.i), r(t.j)];
+    if (i === j) continue;
+    const doppio = tratti.find((x) => (x.i === i && x.j === j) || (x.i === j && x.j === i));
+    if (doppio) { sostituto.set(t.id, doppio.id); continue; }
+    tratti.push({ ...t, i, j });
+  }
+  g.tratti = tratti;
+  const vivi = new Set(tratti.map((t) => t.id));
+  const tratto = (id: string): string | null => {
+    const x = sostituto.get(id) ?? id;
+    return vivi.has(x) ? x : null;
+  };
+
+  const giunti: Grafo['giunti'] = [];
+  for (const gj of g.giunti) {
+    const punto = r(gj.punto);
+    if (giunti.some((x) => x.punto === punto)) continue;
+    const gruppi = gj.gruppi
+      .map((gr) => [...new Set(gr.map(tratto).filter((x): x is string => x !== null))])
+      .filter((gr) => gr.length > 0);
+    if (gruppi.length >= 2) giunti.push({ ...gj, punto, gruppi });
+  }
+  g.giunti = giunti;
+  g.vincoli = g.vincoli.map((v) => ({ ...v, punto: r(v.punto) }))
+    .filter((v, k, tutti) => tutti.findIndex((x) => x.punto === v.punto) === k);
+  g.carichi = g.carichi
+    .map((c) => (c.tipo === 'distribuito' ? { ...c, da: r(c.da), a: r(c.a) } : { ...c, punto: r(c.punto) }))
+    .filter((c) => c.tipo !== 'distribuito' || c.da !== c.a);
+  g.quote = g.quote.map((q) => ({ ...q, da: r(q.da), a: r(q.a) })).filter((q) => q.da !== q.a);
+  g.punti = g.punti.filter((p) => !rappresentante.has(p.id));
 }
 
 // ──────────────────────────── aiuti ────────────────────────────

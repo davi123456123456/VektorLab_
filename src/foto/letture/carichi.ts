@@ -68,21 +68,24 @@ export function leggiCarichi(g: Grafo, p: Primitive, tol: Tolleranze): void {
   };
 
   // ── distribuiti per primi: servono a riconoscere le frecce discordanti ──
-  for (const gr of gruppi.filter((x) => x.length >= 3)) {
-    const passo = mediana(passi(gr));
-    const primo = gr[0];
-    const ultimo = gr[gr.length - 1];
-    const direzione = aggancioDirezione(mediaAngoli(gr.map((x) => x.direzione)));
-    const da = puntoVicino(g, primo.px, 0.6 * passo) ?? inserisci(g, primo.px, tol.tau);
-    const a = puntoVicino(g, ultimo.px, 0.6 * passo) ?? inserisci(g, ultimo.px, tol.tau);
-    const carico: CaricoGrafo = { tipo: 'distribuito', da, a, direzione, coefficiente: 1 };
-    g.carichi.push(carico);
-    const t = gr.map((x) => ascissa(x.retta, x.px));
-    estensioni.push({ retta: primo.retta, da: Math.min(...t), a: Math.max(...t), direzione });
-    rappresentati.push({
-      carico, famiglia: 'q',
-      distanzaDa: (q) => Math.min(...gr.map((x) => distanzaSegmento(q, ...segmentoFreccia(x.freccia)))),
-    });
+  for (const tutto of gruppi.filter((x) => x.length >= 3)) {
+    const passo = mediana(passi(tutto));
+    const direzione = aggancioDirezione(mediaAngoli(tutto.map((x) => x.direzione)));
+    for (const pezzo of spezzaPerScritte(g, p, tutto, tol, segmentoFreccia)) {
+      const gr = pezzo.frecce;
+      const primo = gr[0];
+      const ultimo = gr[gr.length - 1];
+      const da = pezzo.da ?? puntoVicino(g, primo.px, 0.6 * passo) ?? inserisci(g, primo.px, tol.tau);
+      const a = pezzo.a ?? puntoVicino(g, ultimo.px, 0.6 * passo) ?? inserisci(g, ultimo.px, tol.tau);
+      const carico: CaricoGrafo = { tipo: 'distribuito', da, a, direzione, coefficiente: 1 };
+      g.carichi.push(carico);
+      const t = gr.map((x) => ascissa(x.retta, x.px));
+      estensioni.push({ retta: primo.retta, da: Math.min(...t), a: Math.max(...t), direzione });
+      rappresentati.push({
+        carico, famiglia: 'q',
+        distanzaDa: (q) => Math.min(...gr.map((x) => distanzaSegmento(q, ...segmentoFreccia(x.freccia)))),
+      });
+    }
   }
 
   // ── frecce isolate: forze, salvo quelle contrarie dentro un blocco ──
@@ -221,6 +224,81 @@ function raggruppa(agganci: readonly Aggancio[], tau: number): Aggancio[][] {
   }
   // un gruppo spezzato rimasto con meno di tre frecce torna a essere fatto di forze
   return gruppi.flatMap((gr) => (gr.length >= 3 ? [gr] : gr.map((x) => [x])));
+}
+
+/**
+ * Un blocco di frecce concordi con DUE o più scritte (q e 2q affiancati) sono
+ * due carichi: si spezza dove finisce l'uno e comincia l'altro. Il confine è
+ * il punto della struttura fra le due scritte più vicino al loro punto medio
+ * (di solito il nodo che separa le due campate); se non ce n'è, il buco più
+ * largo fra le frecce che stanno fra le due scritte.
+ */
+function spezzaPerScritte(
+  g: Grafo, p: Primitive, gr: Aggancio[], tol: Tolleranze,
+  segmentoFreccia: (i: number) => [Punto, Punto],
+): { frecce: Aggancio[]; da?: string; a?: string }[] {
+  const r = gr[0].retta;
+  const t = gr.map((x) => ascissa(r, x.px));
+  // la scritta sta oltre le code (o le punte): proiettata sull'asta può
+  // cadere fuori dal blocco di quanto sono lunghe le frecce
+  const margine = Math.max(mediana(passi(gr)), mediana(gr.map((x) => p.frecce[x.freccia].lunghezza)));
+  // dove cade la scritta sull'asta: la si fa scorrere lungo le frecce, non
+  // perpendicolarmente all'asta — su un'asta a 45° con frecce verticali la
+  // proiezione perpendicolare la porterebbe dentro il blocco accanto
+  const d = { x: Math.cos(gr[0].direzione), y: Math.sin(gr[0].direzione) };
+  const u = { x: Math.cos(r.angolo), y: Math.sin(r.angolo) };
+  const croce = u.x * d.y - u.y * d.x;
+  const lungoLeFrecce = (q: Punto): number => (Math.abs(croce) < 0.2
+    ? ascissa(r, q)
+    : ((q.x - r.o.x) * d.y - (q.y - r.o.y) * d.x) / croce);
+  // una scritta conta per questo blocco solo se è più vicina alle sue frecce
+  // che a qualunque altra freccia: la scritta del blocco accanto non lo spezza
+  const mie = new Set(gr.map((x) => x.freccia));
+  const daMie = (q: Punto): number => Math.min(...gr.map((x) => distanzaSegmento(q, ...segmentoFreccia(x.freccia))));
+  const daAltre = (q: Punto): number => Math.min(Infinity, ...p.frecce
+    .map((_, i) => i).filter((i) => !mie.has(i)).map((i) => distanzaSegmento(q, ...segmentoFreccia(i))));
+  const scritte = p.scritte
+    .filter((s) => s.valore.famiglia === 'q')
+    .filter((s) => daMie(s.centro) <= 6 * tol.tau && daMie(s.centro) < daAltre(s.centro))
+    .map((s) => lungoLeFrecce(s.centro))
+    .filter((a) => a >= t[0] - margine && a <= t[t.length - 1] + margine)
+    .sort((a, b) => a - b);
+  if (scritte.length < 2) return [{ frecce: gr }];
+
+  const fine = { x: r.o.x + Math.cos(r.angolo), y: r.o.y + Math.sin(r.angolo) };
+  const sullaRetta = g.punti
+    .filter((q) => proiezione(q.px, r.o, fine).distanza < tol.tau)
+    .map((q) => ({ id: q.id, a: ascissa(r, q.px) }));
+  const tagli: { a: number; id?: string }[] = [];
+  for (let k = 1; k < scritte.length; k++) {
+    const [ea, eb] = [scritte[k - 1], scritte[k]];
+    const medio = (ea + eb) / 2;
+    const fra = sullaRetta.filter((q) => q.a > ea && q.a < eb)
+      .sort((u, v) => Math.abs(u.a - medio) - Math.abs(v.a - medio));
+    if (fra.length > 0) { tagli.push(fra[0]); continue; }
+    let buco = { a: medio, ampiezza: -1 };
+    for (let i = 1; i < t.length; i++) {
+      const m = (t[i - 1] + t[i]) / 2;
+      if (m > ea && m < eb && t[i] - t[i - 1] > buco.ampiezza) buco = { a: m, ampiezza: t[i] - t[i - 1] };
+    }
+    tagli.push({ a: buco.a });
+  }
+  const confini = tagli.map((x) => x.id ?? inserisci(g, {
+    x: r.o.x + x.a * Math.cos(r.angolo), y: r.o.y + x.a * Math.sin(r.angolo),
+  }, tol.tau));
+  const pezzi: { frecce: Aggancio[]; da?: string; a?: string }[] = [];
+  for (let k = 0; k <= tagli.length; k++) {
+    const lo = k === 0 ? -Infinity : tagli[k - 1].a;
+    const hi = k === tagli.length ? Infinity : tagli[k].a;
+    const frecce = gr.filter((_, i) => t[i] > lo && t[i] < hi);
+    if (frecce.length === 0) continue;
+    pezzi.push({
+      frecce,
+      ...(k > 0 ? { da: confini[k - 1] } : {}),
+      ...(k < tagli.length ? { a: confini[k] } : {}),
+    });
+  }
+  return pezzi;
 }
 
 function passi(gr: readonly Aggancio[]): number[] {

@@ -339,10 +339,19 @@ def _carichi(rng, c: _Costruttore) -> None:
             q = Carico(tipo="distribuito", coefficiente=coeff, direzione=float(direzione), asta=k, s1=s1, s2=s2)
             if any(x.tipo == "forza" and _sotto(c, _punto(c, x), q) for x in c.carichi):
                 continue
+            if not _blocco_disegnabile(c, q):
+                continue
             c.carichi.append(q)
             continue
         posto = _posto_puntuale(rng, c)
         if posto is None:
+            continue
+        # due frecce nello stesso punto si sovrappongono, due archi vicini si
+        # toccano e le loro scritte si confondono
+        qui = _punto(c, Carico(tipo=tipo, coefficiente=coeff, **posto))
+        if tipo == "forza" and any(x.tipo == "forza" and _punto(c, x) == qui for x in c.carichi):
+            continue
+        if tipo == "momento" and any(x.tipo == "momento" and math.dist(_punto(c, x), qui) < 0.75 for x in c.carichi):
             continue
         if tipo == "forza":
             # una forza non si disegna sopra un distribuito, né lungo l'asta che
@@ -386,6 +395,35 @@ def _sotto(c: _Costruttore, p: Tuple[float, float], q: Carico) -> bool:
     t = ((p[0] - x0) * (x1 - x0) + (p[1] - y0) * (y1 - y0)) / l2
     retta = abs((p[0] - x0) * (y1 - y0) - (p[1] - y0) * (x1 - x0)) < EPS
     return retta and q.s1 - EPS <= t <= q.s2 + EPS
+
+
+def _blocco_disegnabile(c: _Costruttore, q: Carico) -> bool:
+    """
+    Almeno un lato dell'asta ha posto per le frecce del distribuito: nello
+    zigzag di aste a 45° un carico verticale sull'asta di mezzo attraversa
+    comunque un'altra asta, e sul foglio non si disegna.
+    """
+    (x0, y0), (x1, y1) = c.nodi[c.aste[q.asta][0]], c.nodi[c.aste[q.asta][1]]
+    d = (math.cos(math.radians(q.direzione)), math.sin(math.radians(q.direzione)))
+    altre = [(c.nodi[i], c.nodi[j]) for k, (i, j) in enumerate(c.aste) if k != q.asta]
+
+    def libero(lato: float) -> bool:
+        for t in np.linspace(q.s1 + 0.1 * (q.s2 - q.s1), q.s2 - 0.1 * (q.s2 - q.s1), 5):
+            px, py = x0 + t * (x1 - x0), y0 + t * (y1 - y0)
+            for k in (0.12, 0.22):
+                p = (px + lato * k * d[0], py + lato * k * d[1])
+                if any(_dist_segmento(p, a, b) < 0.1 for a, b in altre):
+                    return False
+        return True
+
+    return libero(1.0) or libero(-1.0)
+
+
+def _dist_segmento(p, a, b) -> float:
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    l2 = dx * dx + dy * dy
+    t = 0.0 if l2 < EPS else max(0.0, min(1.0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2))
+    return math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy)
 
 
 def _disegnabile(c: _Costruttore, f: Carico) -> bool:

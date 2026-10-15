@@ -159,8 +159,12 @@ export function costruisciGrafo(p: Primitive, tol: Tolleranze): Grafo {
       }
       case 'accanto':
       case 'appoggiato': {
-        const contatti = l.passanti.map((x) =>
-          proiezione(c, segs[x.segmento].a, segs[x.segmento].b).punto);
+        // il contatto sta sull'asta che prosegue; se nessuna prosegue (uno
+        // spigolo posato sul pallino) è l'estremo stesso: proiettare il
+        // centro su aste di direzioni diverse sposterebbe lo spigolo
+        const contatti = prosegue.length > 0
+          ? prosegue.map((x) => proiezione(c, segs[x.segmento].a, segs[x.segmento].b).punto)
+          : sfiorano.map((x) => segs[x.segmento][estremoSfiorato(x)]);
         const contatto = punti.nuovo(media(contatti), PESO_SIMBOLO);
         for (const x of prosegue) tagli.push({ seg: x.segmento, t: x.t, punto: contatto });
         for (const x of sfiorano) tieni(x.segmento, estremoSfiorato(x), contatto);
