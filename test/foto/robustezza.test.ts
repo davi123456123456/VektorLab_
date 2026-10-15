@@ -106,3 +106,14 @@ describe('punti che l\'arrotondamento fa coincidere', () => {
   });
 });
 
+describe('quando la fusione dei punti fa sparire qualcosa', () => {
+  it('un\'asta troppo corta che si annulla dà un avviso', () => {
+    // mensolina di 0.15 L: l'arrotondamento a L/2 la riduce a un punto
+    const { progetto, avvisi } = leggi(disegno().asta(0, 0, 2, 0).asta(1, 0, 1, 0.15)
+      .appoggio('incastro', 0, 0, 270, { pallino: false })
+      .quota(1, 0, -0.5, 1, -0.5).quota(1, 1, -0.5, 2, -0.5).primitive());
+    expect(progetto.aste.length).toBeLessThan(3);
+    expect(codici(avvisi)).toContain('puntiFusi');
+  });
+});
+

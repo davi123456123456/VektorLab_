@@ -218,6 +218,19 @@ function fondiCoincidenti(g: Grafo): void {
   if (rappresentante.size === 0) return;
   const r = (id: string): string => rappresentante.get(id) ?? id;
 
+  // fondere un punto interno di un tratto diritto non perde niente; fondere
+  // un estremo, uno spigolo o un incrocio sì: un'asta è sparita, e lo si dice
+  const perso = [...rappresentante.keys()].filter((id) => {
+    const att = g.tratti.filter((t) => t.i === id || t.j === id);
+    return att.length !== 2 || !allineati(g, id, att[0], att[1]);
+  });
+  if (perso.length > 0) {
+    g.avvisi.push({
+      codice: 'puntiFusi', punti: perso.map(r),
+      messaggio: "Un tratto troppo corto è stato annullato dall'arrotondamento: controlla le aste in quel punto.",
+    });
+  }
+
   const sostituto = new Map<string, string>();
   const tratti: Grafo['tratti'] = [];
   for (const t of g.tratti) {
@@ -244,11 +257,17 @@ function fondiCoincidenti(g: Grafo): void {
     if (gruppi.length >= 2) giunti.push({ ...gj, punto, gruppi });
   }
   g.giunti = giunti;
-  g.vincoli = g.vincoli.map((v) => ({ ...v, punto: r(v.punto) }))
-    .filter((v, k, tutti) => tutti.findIndex((x) => x.punto === v.punto) === k);
-  g.carichi = g.carichi
-    .map((c) => (c.tipo === 'distribuito' ? { ...c, da: r(c.da), a: r(c.a) } : { ...c, punto: r(c.punto) }))
-    .filter((c) => c.tipo !== 'distribuito' || c.da !== c.a);
+  const vincoli = g.vincoli.map((v) => ({ ...v, punto: r(v.punto) }));
+  g.vincoli = vincoli.filter((v, k, tutti) => tutti.findIndex((x) => x.punto === v.punto) === k);
+  if (g.vincoli.length < vincoli.length) {
+    g.avvisi.push({ codice: 'puntiFusi', messaggio: 'Due vincoli sono finiti nello stesso punto: ne resta uno.' });
+  }
+  const carichi = g.carichi
+    .map((c) => (c.tipo === 'distribuito' ? { ...c, da: r(c.da), a: r(c.a) } : { ...c, punto: r(c.punto) }));
+  g.carichi = carichi.filter((c) => c.tipo !== 'distribuito' || c.da !== c.a);
+  if (g.carichi.length < carichi.length) {
+    g.avvisi.push({ codice: 'puntiFusi', messaggio: 'Un carico distribuito si è ridotto a un punto ed è stato tolto.' });
+  }
   g.quote = g.quote.map((q) => ({ ...q, da: r(q.da), a: r(q.a) })).filter((q) => q.da !== q.a);
   g.punti = g.punti.filter((p) => !rappresentante.has(p.id));
 }

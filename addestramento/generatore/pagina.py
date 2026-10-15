@@ -86,7 +86,10 @@ def componi_pagina(sc: Scena, stile: Stile, rng: np.random.Generator,
     # passano sotto il disegno senza doppioni sfasati
     figura, mfigura = rasterizza(sc, dataclasses.replace(stile, colore_quadretti=None), rng)
     W = max(int(rng.integers(1100, 1601)), figura.width + 160)
-    H = int(W * 1.414)
+    # la tela parte abbondante: una figura alta e stretta con un'intestazione
+    # lunga non ci starebbe in un A4. Alla fine si taglia all'altezza giusta
+    A4 = int(W * 1.414)
+    H = A4 + figura.height + 400
     pg = _Pagina(W, H, stile, rng)
     if stile.colore_quadretti is not None:
         passo = sc.scala / 5
@@ -137,6 +140,7 @@ def componi_pagina(sc: Scena, stile: Stile, rng: np.random.Generator,
         _sezione(pg, xs, y_fig + figura.height * 0.2, largo_sezione * 0.8, corpo)
 
     # ── enunciato e dati ──
+    H = max(A4, y_fig + figura.height + 6 * corpo)
     y = y_fig + figura.height + corpo
     for frase in FRASI[int(rng.integers(0, 4)) * 2:][: int(rng.integers(3, 7))]:
         if y > H - 3 * corpo:
@@ -156,7 +160,7 @@ def componi_pagina(sc: Scena, stile: Stile, rng: np.random.Generator,
     x0, y0, x1, y1 = sc.riquadro
     info = {"spostamento": (float(x_fig), float(y_fig)),
             "riquadro": (x0 + x_fig, y0 + y_fig, x1 + x_fig, y1 + y_fig), "sezione": con_sezione}
-    return pg.img, np.asarray(pg.m, dtype=np.uint8).copy(), info
+    return pg.img.crop((0, 0, W, H)), np.asarray(pg.m, dtype=np.uint8)[:H].copy(), info
 
 
 def _sezione(pg: _Pagina, x: float, y: float, larghezza: float, corpo: int) -> None:

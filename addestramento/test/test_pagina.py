@@ -60,3 +60,12 @@ def test_stesso_seme_stessi_byte():
     _, a, ma, _ = pagina(9)
     _, b, mb, _ = pagina(9)
     assert a.tobytes() == b.tobytes() and ma.tobytes() == mb.tobytes()
+
+
+@pytest.mark.parametrize("seme", [7736, 48308])
+def test_figura_piu_alta_del_resto_della_pagina(seme):
+    # figura alta e stretta alla scala massima, con un'intestazione lunga:
+    # la pagina si allunga invece di tagliarla
+    from generatore.campione import genera
+    c = genera(seme, solo_etichette=False)
+    assert c["maschera"].shape[::-1] == c["immagine"].size

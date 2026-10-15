@@ -42,11 +42,17 @@ def main(argv: Optional[List[str]] = None) -> None:
     a.add_argument("--rumore", type=float, default=0.0)
     a.add_argument("--stile", choices=("stampato", "mano", "quadretti"), default=None)
     a.add_argument("--galleria", action="store_true")
+    a.add_argument("--solo-json", action="store_true",
+                   help="percorso completo (foglio e foto), ma su disco solo il JSON")
     arg = a.parse_args(argv)
     campioni = []
     for seme in range(arg.seme, arg.seme + arg.n):
         c = genera(seme, solo_etichette=arg.solo_etichette, rumore=arg.rumore, stile=arg.stile)
-        scrivi(c, arg.uscita, f"{seme:05d}", serializza)
+        if arg.solo_json:
+            c_scritto = {k: v for k, v in c.items() if k not in ("immagine", "maschera")}
+        else:
+            c_scritto = c
+        scrivi(c_scritto, arg.uscita, f"{seme:05d}", serializza)
         if arg.galleria and not arg.solo_etichette:
             campioni.append(c)
     if campioni:
