@@ -36,6 +36,9 @@ class _Tela:
         self.di = ImageDraw.Draw(self.img)
         self.maschera = Image.new("L", (sc.larghezza, sc.altezza), 0)
         self.dm = ImageDraw.Draw(self.maschera)
+        # senza antialiasing: sulla maschera i bordi sfumati delle lettere
+        # diventerebbero valori intermedi, cioè altre classi
+        self.dm.fontmode = "1"
         self._font: Dict[Tuple[str, int], ImageFont.ImageFont] = {}
 
     # ── primitive di disegno ──

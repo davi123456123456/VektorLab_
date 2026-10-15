@@ -90,3 +90,11 @@ def test_il_tremolio_e_liscio_anche_sugli_archi():
     scarti = [math.hypot(x - 100, y - 100) - r for x, y in t.trema(arco)[1:-1]]
     cambi = sum(1 for a, b in zip(scarti, scarti[1:]) if a * b < 0)
     assert cambi <= 4
+
+
+def test_le_scritte_nella_maschera_sono_solo_testo():
+    from generatore.scena import Elemento, Scena
+    sc = Scena([Elemento(TESTO, "testo", [(100, 50)], testo="3L/2 q M")], 200, 100, SCALA, (0, 0, 200, 100))
+    rng = np.random.default_rng(0)
+    _, m = rasterizza(sc, scegli_stile(rng, "stampato"), rng)
+    assert set(np.unique(m).tolist()) == {0, TESTO}
