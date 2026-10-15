@@ -10,7 +10,10 @@ import argparse
 import json
 from pathlib import Path
 
-from .campione import genera
+from typing import List, Optional
+
+from .campione import genera, scrivi
+from .galleria import galleria
 
 
 def _arrotonda(x):
@@ -30,19 +33,24 @@ def serializza(c: dict) -> str:
     return json.dumps(uscita, separators=(",", ":"), ensure_ascii=False)
 
 
-def main() -> None:
+def main(argv: Optional[List[str]] = None) -> None:
     a = argparse.ArgumentParser(prog="generatore")
     a.add_argument("--n", type=int, default=10)
     a.add_argument("--seme", type=int, default=1)
     a.add_argument("--uscita", type=Path, default=Path("esiti/prova"))
     a.add_argument("--solo-etichette", action="store_true")
     a.add_argument("--rumore", type=float, default=0.0)
+    a.add_argument("--stile", choices=("stampato", "mano", "quadretti"), default=None)
     a.add_argument("--galleria", action="store_true")
-    arg = a.parse_args()
-    arg.uscita.mkdir(parents=True, exist_ok=True)
+    arg = a.parse_args(argv)
+    campioni = []
     for seme in range(arg.seme, arg.seme + arg.n):
-        c = genera(seme, solo_etichette=arg.solo_etichette, rumore=arg.rumore)
-        (arg.uscita / f"{seme:05d}.json").write_text(serializza(c) + "\n", encoding="utf-8")
+        c = genera(seme, solo_etichette=arg.solo_etichette, rumore=arg.rumore, stile=arg.stile)
+        scrivi(c, arg.uscita, f"{seme:05d}", serializza)
+        if arg.galleria and not arg.solo_etichette:
+            campioni.append(c)
+    if campioni:
+        galleria(campioni, arg.uscita / "galleria.png")
 
 
 if __name__ == "__main__":

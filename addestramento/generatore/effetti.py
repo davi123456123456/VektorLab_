@@ -132,7 +132,7 @@ def fotometria(img: Image.Image, rng: np.random.Generator) -> Image.Image:
     campo = (campo - campo.min()) / (np.ptp(campo) + 1e-9)
     ombra = np.array(Image.fromarray((campo * 255).astype(np.uint8)).resize((W, H), Image.BILINEAR), dtype=float) / 255
     a *= (1 - float(rng.uniform(0, 0.35)) * ombra)[..., None]
-    a *= rng.uniform(0.9, 1.05, size=3)  # dominante di colore
+    a *= rng.uniform(0.95, 1.03, size=3)  # dominante di colore, lieve come nelle foto vere
     a += rng.normal(0, float(rng.uniform(0, 6)), size=a.shape)
     out = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
     sigma = float(rng.uniform(0, 1.2))
