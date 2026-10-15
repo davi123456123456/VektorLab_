@@ -57,6 +57,14 @@ spec §6), `NNNNN.json` (primitive nel contratto di `src/foto/tipi.ts`, schema,
 meta con il riquadro della figura). `galleria.png` mette ogni foto accanto
 alla stessa con maschera e primitive sovrapposte: è lì che si controlla.
 
+Con `--modo` si sceglie che cosa fotografare:
+
+| Modo | Che cos'è | Lato lungo |
+|---|---|---|
+| `foto` (predefinito) | il foglio intero, come la foto di un telefono rimpicciolita | 600–1400 px |
+| `pagina` | la stessa foto, come la vede la rete nella prima passata | 768 px |
+| `ritaglio` | la figura e un margine dell'8–30 % attorno (seconda passata); la figura si disegna già alla risoluzione con cui finisce nel ritaglio, e si deforma solo il ritaglio | 768 px |
+
 ### Confronto a occhio con le foto vere (2026-10-15, foto 18–24)
 
 Ci sono: fogli d'esame con intestazione, enunciato e riga GRUPPO, prospettiva,
@@ -74,13 +82,11 @@ Mancano ancora, da aggiungere se la rete sbaglia su questi casi:
 
 ## Da fare (revisione della Fase 2, 2026-10-15)
 
-Da decidere nel piano della Fase 3, **prima** di addestrare:
-- **Risoluzione per la seconda passata.** Le foto sintetiche sono larghe
-  600–1400 px e il riquadro della figura ha il lato lungo mediano di ~310 px:
-  per la seconda passata a 768 px (spec §5.3) andrebbe ingrandito ~2,5×, mentre
-  le foto vere (3000–4000 px) si rimpiccioliscono. Strade: generare
-  direttamente il ritaglio attorno alla figura alla risoluzione giusta (anche
-  più veloce), oppure pagine renderizzate più grandi.
+Risolto nella Fase 3:
+- **Risoluzione per la seconda passata.** Le foto sintetiche erano larghe
+  600–1400 px, con il riquadro della figura di ~310 px di lato lungo mediano.
+  Ora c'è il modo `ritaglio`, che genera la figura direttamente a 768 px:
+  il riquadro va da 480 a 660 px.
 
 Minori rinviati:
 - frecce dei carichi che attraversano i simboli di vincolo (2,6 % delle scene);

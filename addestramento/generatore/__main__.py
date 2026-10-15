@@ -2,6 +2,7 @@
 Riga di comando del generatore.
 
     python -m generatore --n 50 --seme 1 --uscita esiti/prova [--solo-etichette] [--rumore 3]
+                         [--modo foto|pagina|ritaglio]
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ from pathlib import Path
 
 from typing import List, Optional
 
-from .campione import genera, scrivi
+from .campione import MODI, genera, scrivi
 from .galleria import galleria
 
 
@@ -41,13 +42,16 @@ def main(argv: Optional[List[str]] = None) -> None:
     a.add_argument("--solo-etichette", action="store_true")
     a.add_argument("--rumore", type=float, default=0.0)
     a.add_argument("--stile", choices=("stampato", "mano", "quadretti"), default=None)
+    a.add_argument("--modo", choices=MODI, default="foto",
+                   help="foto: il foglio intero; pagina e ritaglio: come li vede la rete (lato lungo 768)")
     a.add_argument("--galleria", action="store_true")
     a.add_argument("--solo-json", action="store_true",
                    help="percorso completo (foglio e foto), ma su disco solo il JSON")
     arg = a.parse_args(argv)
     campioni = []
     for seme in range(arg.seme, arg.seme + arg.n):
-        c = genera(seme, solo_etichette=arg.solo_etichette, rumore=arg.rumore, stile=arg.stile)
+        c = genera(seme, solo_etichette=arg.solo_etichette, rumore=arg.rumore, stile=arg.stile,
+                   modo=arg.modo)
         if arg.solo_json:
             c_scritto = {k: v for k, v in c.items() if k not in ("immagine", "maschera")}
         else:
