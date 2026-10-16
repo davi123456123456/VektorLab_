@@ -87,3 +87,28 @@ def test_trasla_primitive():
     assert q["scritte"][0]["estremi"][1] == {"x": 45, "y": 33}
     assert (q["larghezza"], q["altezza"]) == (40, 40)
     assert p["aste"][0]["a"] == {"x": 10, "y": 70}  # l'originale non cambia
+
+
+def test_dataset_di_un_altro_generatore_si_rifiuta(dati):
+    impronta = dati / "addestramento" / "ritagli" / "impronta.txt"
+    vera = impronta.read_text()
+    impronta.write_text("generatore di prima\n")
+    try:
+        with pytest.raises(SystemExit):
+            dataset.main(["--uscita", str(dati), "--ritagli", "4", "--pagine", "2",
+                          "--val-ritagli", "1", "--val-pagine", "1", "--processi", "1"])
+    finally:
+        impronta.write_text(vera)
+
+
+def test_trasla_frecce_e_punte_dei_momenti():
+    f = {"punta": {"x": 20, "y": 70}, "direzione": 1.0, "lunghezza": 9}
+    m = {"centro": {"x": 30, "y": 60}, "raggio": 5, "verso": "orario",
+         "freccia": {"punta": {"x": 34, "y": 62}, "direzione": -0.5, "lunghezza": 3}}
+    p = {"larghezza": 100, "altezza": 80, "aste": [], "pallini": [{"c": {"x": 50, "y": 50}, "r": 4}],
+         "corpi": [{"attacco": {"x": 60, "y": 40}}], "frecce": [f], "momenti": [m], "nodi": [], "scritte": []}
+    q = trasla_primitive(p, 5, 8, 40)
+    assert q["frecce"][0]["punta"] == {"x": 15, "y": 38} and q["frecce"][0]["direzione"] == 1.0
+    assert q["momenti"][0]["centro"] == {"x": 25, "y": 28}
+    assert q["momenti"][0]["freccia"]["punta"] == {"x": 29, "y": 30}
+    assert q["pallini"][0]["c"] == {"x": 45, "y": 18} and q["corpi"][0]["attacco"] == {"x": 55, "y": 8}

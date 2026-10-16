@@ -14,7 +14,9 @@ riprendere) e `migliore.pt` (i pesi con la perdita di validazione più
 bassa). Se `ultimo.pt` c'è, si riprende da lì, anche a metà epoca: l'ordine
 dei campioni dipende solo da (seme, epoca) e i pezzi da (seme, epoca,
 indice), quindi un addestramento ripreso fa esattamente gli stessi passi di
-uno continuo. `max_passi` ferma dopo quel numero di passi totali.
+uno continuo. `ultimo.pt` si salva a ogni fine epoca e ogni SALVA_OGNI passi: un'interruzione
+brusca perde al più quei passi. Alla ripresa lato, lotto, epoche, lr e seme
+devono essere gli stessi. `max_passi` ferma dopo quel numero di passi totali.
 """
 
 from __future__ import annotations
@@ -40,6 +42,11 @@ from .dati import Campioni
 from .metriche import Misure
 from .modello import Rete
 from .perdite import pesi_classi_da, perdita
+
+
+SALVA_OGNI = 500  # passi fra due salvataggi di ultimo.pt a metà epoca
+# i campi che decidono l'ordine dei campioni e il ritmo: alla ripresa devono essere uguali
+CAMPI_DELLA_RIPRESA = ("lato", "lotto", "epoche", "lr", "seme")
 
 
 @dataclass
@@ -124,6 +131,10 @@ def addestra(cfg: Config) -> Path:
     ultimo, migliore = cfg.uscita / "ultimo.pt", cfg.uscita / "migliore.pt"
     if ultimo.exists():
         stato = torch.load(ultimo, map_location="cpu", weights_only=False)
+        diversi = [k for k in CAMPI_DELLA_RIPRESA if stato["config"].get(k) != str(getattr(cfg, k))]
+        if diversi:
+            raise ValueError(f"{ultimo} viene da una configurazione diversa ({', '.join(diversi)}): "
+                             "riprendi con gli stessi valori o usa un'altra cartella d'uscita")
         modello.load_state_dict(stato["modello"])
         ottimizzatore.load_state_dict(stato["ottimizzatore"])
         ritmo.load_state_dict(stato["ritmo"])
@@ -131,6 +142,14 @@ def addestra(cfg: Config) -> Path:
         passo, epoca, passo_in_epoca = stato["passo"], stato["epoca"], stato["passo_in_epoca"]
         migliore_perdita, somma, n_somma = stato["migliore_perdita"], stato["somma"], stato["n_somma"]
         print(f"ripresa dal passo {passo} (epoca {epoca}, passo {passo_in_epoca} dell'epoca)", flush=True)
+        # un'interruzione fra la riga del registro e il salvataggio lascerebbe righe in più
+        registro = cfg.uscita / "registro.jsonl"
+        if registro.exists():
+            per_epoca = {}
+            for r in registro.read_text(encoding="utf-8").splitlines():
+                if r.strip() and json.loads(r)["epoca"] < epoca:
+                    per_epoca[json.loads(r)["epoca"]] = r
+            registro.write_text("".join(per_epoca[e] + "\n" for e in sorted(per_epoca)), encoding="utf-8")
     else:
         frequenze = _frequenze(ds)
         pesi_classi = pesi_classi_da(frequenze)
@@ -177,6 +196,8 @@ def addestra(cfg: Config) -> Path:
             if cfg.max_passi is not None and passo >= cfg.max_passi and passo_in_epoca < passi_per_epoca:
                 salva()
                 return migliore
+            if passo % SALVA_OGNI == 0 and passo_in_epoca < passi_per_epoca:
+                salva()
         durata = time.time() - inizio
 
         v = valida(modello, ds_val, cfg, dev, pesi_classi_dev) if len(ds_val) else {"perdita": None, "metriche": {}}
@@ -190,7 +211,8 @@ def addestra(cfg: Config) -> Path:
         if v["perdita"] is not None and v["perdita"] < migliore_perdita:
             migliore_perdita = v["perdita"]
             torch.save({"modello": modello.state_dict(), "epoca": epoca, "perdita_validazione": v["perdita"]},
-                       migliore)
+                       cfg.uscita / "migliore.tmp")
+            (cfg.uscita / "migliore.tmp").replace(migliore)
         epoca += 1
         passo_in_epoca, somma, n_somma = 0, 0.0, 0
         salva()

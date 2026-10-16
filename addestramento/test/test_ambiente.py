@@ -9,6 +9,6 @@ def test_librerie_della_rete():
     from rete import dispositivo
 
     principale = tuple(int(x) for x in torch.__version__.split(".")[:2])
-    assert principale >= (2, 0)
+    assert principale >= (2, 5)  # torch.onnx.export(dynamo=False) esiste dalla 2.5
     d = dispositivo()
     assert (torch.ones(3, device=d) + 1).sum().item() == 6

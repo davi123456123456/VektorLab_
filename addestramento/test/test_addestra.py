@@ -49,3 +49,33 @@ def test_la_ripresa_da_gli_stessi_pesi(dati, tmp_path):
         assert torch.equal(a[k], b[k]), k
     registro = (tmp_path / "ripreso" / "registro.jsonl").read_text().splitlines()
     assert [json.loads(r)["epoca"] for r in registro] == [0, 1, 2, 3, 4]
+
+
+def test_ripresa_con_una_configurazione_diversa_si_rifiuta(dati, tmp_path):
+    addestra(config(dati, tmp_path / "c", epoche=2, max_passi=2))
+    with pytest.raises(ValueError, match="lotto"):
+        addestra(config(dati, tmp_path / "c", epoche=2, lotto=2))
+
+
+def test_salva_anche_a_meta_epoca(dati, tmp_path, monkeypatch):
+    # un'interruzione brusca (non max_passi) perde al più gli ultimi passi
+    import rete.addestra as A
+    monkeypatch.setattr(A, "SALVA_OGNI", 3)
+    salvati = []
+    vero = A.torch.save
+    monkeypatch.setattr(A.torch, "save", lambda stato, f: (salvati.append(stato.get("passo_in_epoca")), vero(stato, f)))
+    addestra(config(dati, tmp_path / "d", epoche=1))
+    assert 3 in salvati  # passo 3 della prima epoca (4 passi)
+
+
+def test_registro_senza_righe_doppie_dopo_la_ripresa(dati, tmp_path):
+    uscita = tmp_path / "e"
+    addestra(config(dati, uscita, epoche=3, max_passi=8))
+    # come se il processo fosse morto fra la riga del registro e il salvataggio
+    righe = (uscita / "registro.jsonl").read_text().splitlines()
+    (uscita / "registro.jsonl").write_text("\n".join(righe + [righe[-1]]) + "\n")
+    stato = torch.load(uscita / "ultimo.pt", weights_only=False)
+    assert stato["epoca"] == 2
+    addestra(config(dati, uscita, epoche=3))
+    epoche = [json.loads(r)["epoca"] for r in (uscita / "registro.jsonl").read_text().splitlines()]
+    assert epoche == [0, 1, 2]

@@ -91,7 +91,7 @@ Mancano ancora, da aggiungere se la rete sbaglia su questi casi:
 
 ```bash
 .venv/bin/python -m generatore.dataset --uscita esiti/dati      # ~10 700 campioni, ~1 GB, ~25 min con 6 processi
-.venv/bin/python -m rete.addestra --dati esiti/dati --uscita esiti/rete   # riprende da solo se interrotto
+.venv/bin/python -m rete.addestra --dati esiti/dati --uscita esiti/rete   # rilanciato riprende (al più 500 passi persi)
 .venv/bin/python -m rete.esporta --pesi esiti/rete/migliore.pt \
     --onnx ../public/modelli/foto.onnx --json ../public/modelli/foto.json
 .venv/bin/python -m rete.guarda --pesi esiti/rete/migliore.pt   # sovrapposizioni in ../dati-foto/esiti-rete/
@@ -127,16 +127,21 @@ Validazione sintetica (700 campioni, pezzi centrali da 512 px; picchi entro 1 ce
 | pallini | 0,96 | 0,99 |
 | vincoli (con il tipo) | 0,87 | 0,98 |
 | frecce | 0,93 | 0,97 |
-| nodi | 0,98 | 0,99 |
+| nodi | 0,97 | 0,99 |
 | scritte (con il valore) | 0,92 | 0,97 |
-| momenti (canali 16–17) | 0,49 | 0,94 |
+| momenti (canali 16–17) | 0,48 | 0,95 |
 
-Errore d'angolo medio: vincoli 3,8°, frecce 4,9°. IoU della segmentazione:
-asta 0,80, simbolo 0,68, carico 0,66, testo 0,65, ausiliaria 0,63, altro 0,50.
+Valori dell'epoca 18, quella esportata. Errore d'angolo medio: vincoli 3,9°,
+frecce 4,9°. IoU della segmentazione: asta 0,80, simbolo 0,68, carico 0,67,
+testo 0,65, ausiliaria 0,63, altro 0,47.
+
 I canali dei momenti trovano l'arco ma accendono entrambi i versi (per questo
-la precisione è 0,49): il verso si legge dalla punta dell'arco, che la rete
-trova nel 92 % dei momenti con il verso giusto nell'89 % (86 % scegliendo la
-punta a distanza ≈ raggio dal centro, come farà la decodifica).
+la precisione è 0,48): il verso si legge dalla punta dell'arco nel canale
+delle frecce. La regola per la decodifica è in `vocabolario.py` e in
+`foto.json` (centri = massimo dei canali 16 e 17; punta = la freccia più
+vicina, fra 6 e 90 px; verso dal prodotto vettoriale): dà il verso giusto
+nell'81 % dei momenti della validazione; conoscendo il raggio vero
+(per esempio dalla segmentazione dell'arco) si sale al 91 %.
 
 Foto vere (`python -m rete.guarda`, ritaglio sul riquadro scritto a mano):
 
@@ -166,18 +171,25 @@ Risolto nella Fase 3:
   600–1400 px, con il riquadro della figura di ~310 px di lato lungo mediano.
   Ora c'è il modo `ritaglio`, che genera la figura direttamente a 768 px:
   il riquadro va da 480 a 660 px.
+- angolo dei vincoli interni ambiguo di 180°: nei bersagli va nel semipiano
+  di `vocabolario.semipiano`;
+- classi sottili perse nella riduzione: la segmentazione si riduce per
+  priorità di classe (`bersagli.riduci_seg`);
+- primitive `nodi` sempre vuote: i nodi dei bersagli vengono dagli estremi delle aste.
+
+Dalla revisione della Fase 3 (2026-10-16), per le fasi successive:
+- l'inchiostro disegnato sta ~0,5 px in alto a sinistra delle etichette
+  (PIL tronca le coordinate e la tela è a 2×): la rete mette i picchi ~0,5 px
+  in basso a destra del tratto. Uniforme e sotto 1/8 di cella: correggibile
+  nella decodifica o nel raster;
+- l'elenco degli operatori ammessi non è stato provato in onnxruntime-web:
+  nel backend WASM ci sono tutti; HardSwish su WebGPU è da verificare (Fase 5).
 
 Minori rinviati:
 - due scritte di forze vicine (11 px) si possono scambiare (seme 285 con `--rari`, 1/1000);
 - frecce dei carichi che attraversano i simboli di vincolo (2,6 % delle scene);
 - la sezione trasversale può cadere sulla figura e sovrascriverne la maschera (~1/1500);
-- angolo dei vincoli interni: è l'asse dell'asta, ma `trasforma_primitive` lo
-  tratta come un puntamento, ed è ambiguo di 180° (conta solo per la testa
-  d'orientamento della rete);
-- le classi sottili (quote, richiami) si frammentano col campionamento al più
-  vicino e la riduzione: dilatarle o usare il max-pool per i bersagli;
 - test d'allineamento ancora permissivi (finestre di qualche pixel);
-- le primitive `nodi` sono sempre vuote: serviranno alla testa Nodi;
 - i font calligrafici sono solo di macOS: su Colab lo stile a mano ricade sui
   font da stampa (e ∫ σ τ diventano quadratini);
 - le lettere dei nodi possono cadere sulle aste a 45° (testo sopra l'asta nella maschera);

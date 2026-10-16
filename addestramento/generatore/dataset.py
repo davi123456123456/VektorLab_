@@ -14,11 +14,17 @@ Per ogni campione `NNNNNNN.png` (grigio), `NNNNNNN-maschera.png`,
 il segno che il campione è completo. Una nuova esecuzione salta i campioni
 completi: si riprende da dove ci si era fermati. Alla fine ogni cartella ha
 il suo `indice.json`.
+
+Ogni cartella ha anche `impronta.txt`, l'impronta del codice del generatore
+che l'ha scritta: se il generatore cambia, una nuova esecuzione si rifiuta
+di mescolare campioni vecchi e nuovi (si cancella la cartella o si cambia
+`--uscita`).
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from multiprocessing import Pool
@@ -31,6 +37,29 @@ from .__main__ import serializza
 from .campione import genera
 
 VALIDAZIONE = 1_000_001
+
+
+def impronta() -> str:
+    """Impronta dei file che decidono il contenuto dei campioni."""
+    h = hashlib.sha256()
+    for f in sorted(Path(__file__).parent.glob("*.py")):
+        if f.name not in ("dataset.py", "__main__.py", "galleria.py"):
+            h.update(f.name.encode())
+            h.update(f.read_bytes())
+    return h.hexdigest()[:16]
+
+
+def _controlla_impronta(cartella: Path, attuale: str) -> None:
+    file = cartella / "impronta.txt"
+    if file.exists():
+        if file.read_text().strip() != attuale:
+            raise SystemExit(f"{cartella}: campioni di un'altra versione del generatore; "
+                             "cancella la cartella o usa un'altra --uscita")
+    elif any(cartella.glob("*.json")):
+        raise SystemExit(f"{cartella}: campioni senza impronta del generatore; "
+                         "cancella la cartella o usa un'altra --uscita")
+    else:
+        file.write_text(attuale + "\n")
 
 
 def _nome(seme: int) -> str:
@@ -83,8 +112,10 @@ def main(argv: Optional[List[str]] = None) -> None:
                       range(primo + n_ritagli, primo + n_ritagli + n_pagine)))
 
     lavori = []
+    attuale = impronta()
     for cartella, modo, semi in parti:
         cartella.mkdir(parents=True, exist_ok=True)
+        _controlla_impronta(cartella, attuale)
         lavori += [(str(cartella), modo, s) for s in semi if not _completo(cartella, s)]
     totale = len(lavori)
     if totale:

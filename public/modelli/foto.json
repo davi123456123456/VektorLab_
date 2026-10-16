@@ -3,7 +3,9 @@
  "ingresso": {
   "canali": 1,
   "valori": "grigio in [0, 1], 1 = bianco",
-  "multiplo": 32
+  "multiplo": 32,
+  "grigio": "luminanza ITU-R 601 (PIL 'L'): 0.299 R + 0.587 G + 0.114 B, diviso 255",
+  "riempimento": "bianco (1) a destra e in basso fino a multipli di 32"
  },
  "passi": {
   "seg": 2,
@@ -118,13 +120,15 @@
    "canale": 16,
    "nome": "momento:antiorario",
    "genere": "mappa",
-   "verso": "antiorario"
+   "verso": "antiorario",
+   "nota": "i canali 16 e 17 non distinguono il verso: fonderli (massimo), il verso viene dalla punta"
   },
   {
    "canale": 17,
    "nome": "momento:orario",
    "genere": "mappa",
-   "verso": "orario"
+   "verso": "orario",
+   "nota": "i canali 16 e 17 non distinguono il verso: fonderli (massimo), il verso viene dalla punta"
   },
   {
    "canale": 18,
@@ -297,9 +301,14 @@
   }
  ],
  "centro_cella": "x = colonna·passo + (passo − 1)/2, y = riga·passo + (passo − 1)/2 (px, y giù)",
- "angoli": "radianti, y su; corpi interni e quote nel semipiano [-7π/8, π/8)",
+ "angoli": "radianti, y su; l'angolo dei corpi interni e la direzione dall'estremo 1 al 2 delle quote sono nel semipiano [-7π/8, π/8)",
  "sigma": 1.5,
- "verso_dei_momenti": "dalla punta di freccia vicina all'arco: antiorario se (punta − centro) × direzione > 0 (y su)",
+ "momenti": {
+  "centri": "massimo dei canali 16 e 17",
+  "punta": "il picco del canale freccia più vicino al centro, fra 6 e 90 px d'ingresso; non è un carico",
+  "raggio": "circa |punta − centro|",
+  "verso": "antiorario se (punta − centro) × direzione > 0 (y su), altrimenti orario"
+ },
  "modello": {
   "file": "foto.onnx",
   "opset": 17,

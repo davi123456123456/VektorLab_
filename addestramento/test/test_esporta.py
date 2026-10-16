@@ -57,3 +57,14 @@ def test_descrizione(esportata):
     assert len(d["canali"]) == V.CANALI
     assert d["modello"]["file"] == "foto.onnx" and d["modello"]["pesi"] == "fp16"
     assert set(d["uscite"]) == {"seg", "testa"}
+
+
+def test_regressioni_in_fp16(esportata):
+    import onnxruntime as ort
+    r, cartella = esportata
+    x = torch.rand(1, 1, 256, 320)
+    with torch.no_grad():
+        _, testa = r.predici(x)
+    s = ort.InferenceSession(str(cartella / "foto.onnx"), providers=["CPUExecutionProvider"])
+    _, testa_o = s.run(None, {"immagine": x.numpy()})
+    assert np.abs(testa_o[:, V.REGRESSIONI] - testa.numpy()[:, V.REGRESSIONI]).max() < 0.05

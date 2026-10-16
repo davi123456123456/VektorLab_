@@ -15,9 +15,14 @@ direzioni dei disegni (0°, 45°, 90°, 135°).
 
 Il canale delle frecce contiene le punte di TUTTE le frecce, comprese
 quelle degli archi dei momenti. La rete trova bene una punta e la sua
-direzione, mentre il verso di un arco, guardato dal centro, lo distingue
-male; la decodifica assegna al momento la punta vicina al suo arco e ne
-ricava il verso: antiorario se (punta − centro) × direzione > 0 (y su).
+direzione, mentre il verso di un arco, guardato dal centro, non lo
+distingue: i canali 16 e 17 si accendono insieme. La decodifica quindi:
+fonde i canali 16 e 17 (massimo) per trovare i centri; prende la punta
+del canale delle frecce più vicina al centro, fra 6 e 90 px d'ingresso;
+stima il raggio come |punta − centro|; il verso è antiorario se
+(punta − centro) × direzione > 0 (y su). Sulla validazione sintetica
+questa regola dà il verso giusto nell'81 % dei momenti (91 % conoscendo
+il raggio vero). Quella punta non è un carico: non diventa una Freccia.
 """
 
 from __future__ import annotations
@@ -102,8 +107,11 @@ def descrizione() -> dict:
     canali.append({"canale": SIN_FRECCIA, "nome": "freccia:sin", "genere": "regressione", "scala": 1.0})
     canali.append({"canale": LUNG_FRECCIA, "nome": "freccia:lunghezza", "genere": "regressione",
                    "scala": SCALA_LUNGHEZZA})
-    canali.append({"canale": MOMENTO0, "nome": "momento:antiorario", "genere": "mappa", "verso": "antiorario"})
-    canali.append({"canale": MOMENTO0 + 1, "nome": "momento:orario", "genere": "mappa", "verso": "orario"})
+    nota = "i canali 16 e 17 non distinguono il verso: fonderli (massimo), il verso viene dalla punta"
+    canali.append({"canale": MOMENTO0, "nome": "momento:antiorario", "genere": "mappa", "verso": "antiorario",
+                   "nota": nota})
+    canali.append({"canale": MOMENTO0 + 1, "nome": "momento:orario", "genere": "mappa", "verso": "orario",
+                   "nota": nota})
     canali.append({"canale": NODO, "nome": "nodo", "genere": "mappa"})
     for k, (f, v) in enumerate(SCRITTE):
         voce = {"canale": SCRITTA0 + k, "nome": f"scritta:{NOMI_SCRITTE[k]}", "genere": "mappa", "famiglia": f}
@@ -115,12 +123,20 @@ def descrizione() -> dict:
     assert [c["canale"] for c in canali] == list(range(CANALI))
     return {
         "versione": 1,
-        "ingresso": {"canali": 1, "valori": "grigio in [0, 1], 1 = bianco", "multiplo": 32},
+        "ingresso": {"canali": 1, "valori": "grigio in [0, 1], 1 = bianco", "multiplo": 32,
+                     "grigio": "luminanza ITU-R 601 (PIL 'L'): 0.299 R + 0.587 G + 0.114 B, diviso 255",
+                     "riempimento": "bianco (1) a destra e in basso fino a multipli di 32"},
         "passi": {"seg": PASSO_SEG, "testa": PASSO_TESTA},
         "classi": list(NOMI_CLASSI),
         "canali": canali,
         "centro_cella": "x = colonna·passo + (passo − 1)/2, y = riga·passo + (passo − 1)/2 (px, y giù)",
-        "angoli": "radianti, y su; corpi interni e quote nel semipiano [-7π/8, π/8)",
+        "angoli": "radianti, y su; l'angolo dei corpi interni e la direzione dall'estremo 1 al 2 delle quote "
+                  "sono nel semipiano [-7π/8, π/8)",
         "sigma": SIGMA,
-        "verso_dei_momenti": "dalla punta di freccia vicina all'arco: antiorario se (punta − centro) × direzione > 0 (y su)",
+        "momenti": {
+            "centri": "massimo dei canali 16 e 17",
+            "punta": "il picco del canale freccia più vicino al centro, fra 6 e 90 px d'ingresso; non è un carico",
+            "raggio": "circa |punta − centro|",
+            "verso": "antiorario se (punta − centro) × direzione > 0 (y su), altrimenti orario",
+        },
     }

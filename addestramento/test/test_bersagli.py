@@ -171,3 +171,19 @@ def test_le_punte_dei_momenti_sono_frecce(campioni):
             assert math.degrees(differenza_angolo(letto, f["direzione"])) < 2
             visti += 1
     assert visti > 0
+
+
+def test_confini_delle_celle():
+    # la cella k a passo 4 copre i pixel 4k … 4k+3 (centri dei pixel sugli interi)
+    from rete.bersagli import _in_cella
+    assert [_in_cella(x, 0)[1] for x in range(12)] == [0] * 4 + [1] * 4 + [2] * 4
+    assert centro_cella(0, 0) == (1.5, 1.5) and centro_cella(2, 3) == (13.5, 9.5)
+    assert _in_cella(13.5, 9.5) == (2, 3)
+
+
+def test_descrizione_dei_momenti_per_la_decodifica():
+    d = V.descrizione()
+    m = d["momenti"]
+    assert set(m) >= {"centri", "punta", "raggio", "verso"}
+    assert "16" in m["centri"] and "17" in m["centri"]
+    assert "601" in d["ingresso"]["grigio"] and "32" in d["ingresso"]["riempimento"]

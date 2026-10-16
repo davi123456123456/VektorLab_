@@ -105,3 +105,13 @@ def test_misure_si_sommano_sui_lotti(bersagli):
         mis.aggiungi(vuote(b), b)
     insieme = metriche(vuote(bersagli), bersagli)
     assert mis.risultato() == insieme
+
+
+def test_misure_perfette_si_sommano_sui_lotti(bersagli):
+    uno = {k: v[:1] for k, v in bersagli.items()}
+    due = {k: v[1:] for k, v in bersagli.items()}
+    mis = Misure()
+    for b in (uno, due):
+        mis.aggiungi(perfette(b), b)
+    assert mis.risultato() == metriche(perfette(bersagli), bersagli)
+    assert mis.risultato()["corpi:veri"] == mis.risultato()["corpi:trovati"] > 0
