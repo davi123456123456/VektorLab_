@@ -113,7 +113,9 @@ def costruisci(maschera: np.ndarray, primitive: dict, altezza: float) -> Dict[st
         a = V.semipiano(k["angolo"]) if k["tipo"] in V.INTERNI else k["angolo"]
         t.centro(V.CORPO0 + V.TIPI_CORPO.index(k["tipo"]), *giu(k["attacco"]),
                  {V.COS_CORPO: math.cos(a), V.SIN_CORPO: math.sin(a)})
-    for f in primitive["frecce"]:
+    # anche le punte degli archi dei momenti: il verso del momento è dove
+    # sta la sua punta e dove guarda, una cosa che la rete vede bene
+    for f in primitive["frecce"] + [m["freccia"] for m in primitive["momenti"] if "freccia" in m]:
         t.centro(V.FRECCIA, *giu(f["punta"]), {
             V.COS_FRECCIA: math.cos(f["direzione"]), V.SIN_FRECCIA: math.sin(f["direzione"]),
             V.LUNG_FRECCIA: f["lunghezza"] / V.SCALA_LUNGHEZZA})

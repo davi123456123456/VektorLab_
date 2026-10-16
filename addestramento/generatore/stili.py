@@ -75,6 +75,26 @@ class Stile:
     incastro: str = "muro"  # muro | tratteggio
     quota: str = "frecce"  # frecce | trattini
     freccia_piena: bool = True
+    # proporzioni dei simboli di vincolo: nei fogli veri cambiano parecchio
+    # (una cerniera con un tratteggio lungo e rado è alta quanto un carrello)
+    dim_vincolo: float = 1.0       # fattore sul triangolo
+    tratteggio: float = 1.0        # fattore sulla lunghezza dei tratti del terreno
+    base_terreno: float = 0.15     # mezza larghezza della linea del terreno, in L
+    righe_tratteggio: int = 6
+    verso_tratteggio: int = 1      # i tratti scendono a sinistra (1) o a destra (-1)
+
+
+def _simboli(st: Stile, rng: np.random.Generator) -> Stile:
+    st.dim_vincolo = float(rng.uniform(0.85, 1.45))
+    st.tratteggio = float(rng.uniform(0.8, 2.8))
+    st.base_terreno = float(rng.uniform(0.11, 0.24))
+    st.righe_tratteggio = int(rng.integers(3, 8))
+    st.verso_tratteggio = int(scegli(rng, (1, -1)))
+    if st.nome == "stampato" and rng.random() < 0.25:
+        # stampa chiara o fotocopia sbiadita: tratti grigi
+        grigio = int(rng.integers(70, 125))
+        st.colore_inchiostro = (grigio, grigio, grigio)
+    return st
 
 
 def scegli_stile(rng: np.random.Generator, nome: Optional[str] = None) -> Stile:
@@ -82,7 +102,7 @@ def scegli_stile(rng: np.random.Generator, nome: Optional[str] = None) -> Stile:
     stampa, mano = _font()
     if nome == "stampato":
         grigio = int(rng.integers(0, 40))
-        return Stile(
+        return _simboli(Stile(
             nome=nome, asta=float(rng.uniform(0.022, 0.04)), simbolo=float(rng.uniform(0.012, 0.02)),
             sottile=float(rng.uniform(0.006, 0.01)), tremolio=0.0,
             colore_inchiostro=(grigio, grigio, grigio), colore_carta=(255, 255, 255),
@@ -92,10 +112,10 @@ def scegli_stile(rng: np.random.Generator, nome: Optional[str] = None) -> Stile:
             incastro=scegli(rng, ("muro", "tratteggio")),
             quota=scegli(rng, ("frecce", "frecce", "trattini")),
             freccia_piena=bool(rng.random() < 0.8),
-        )
+        ), rng)
     inchiostro = scegli(rng, ((20, 30, 110), (25, 25, 30), (40, 40, 60)))
     carta = (int(rng.integers(240, 256)), int(rng.integers(240, 256)), int(rng.integers(230, 250)))
-    return Stile(
+    return _simboli(Stile(
         nome=nome, asta=float(rng.uniform(0.022, 0.035)), simbolo=float(rng.uniform(0.014, 0.022)),
         sottile=float(rng.uniform(0.008, 0.012)), tremolio=float(rng.uniform(0.006, 0.015)),
         colore_inchiostro=inchiostro, colore_carta=carta,
@@ -104,4 +124,4 @@ def scegli_stile(rng: np.random.Generator, nome: Optional[str] = None) -> Stile:
         corpo_testo=float(rng.uniform(0.2, 0.28)),
         rulli="cerchietti", incastro="tratteggio",
         quota=scegli(rng, ("frecce", "trattini")), freccia_piena=False,
-    )
+    ), rng)

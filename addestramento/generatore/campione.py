@@ -33,6 +33,11 @@ from .stili import scegli_stile
 from .strutture import genera_schema, scegli
 
 
+def frecce_e_punte(p: dict) -> list:
+    """Le frecce e le punte degli archi dei momenti: si trasformano allo stesso modo."""
+    return p["frecce"] + [m["freccia"] for m in p["momenti"] if "freccia" in m]
+
+
 def a_contratto(prim: dict, altezza: float) -> dict:
     p = copy.deepcopy(prim)
 
@@ -47,7 +52,7 @@ def a_contratto(prim: dict, altezza: float) -> dict:
     for k in p["corpi"]:
         ribalta(k["attacco"])
         k["angolo"] = -k["angolo"]
-    for f in p["frecce"]:
+    for f in frecce_e_punte(p):
         ribalta(f["punta"])
         f["direzione"] = -f["direzione"]
     for m in p["momenti"]:
@@ -76,7 +81,7 @@ def _con_rumore(prim: dict, rng: np.random.Generator, ampiezza: float) -> dict:
         sposta(c["c"])
     for k in p["corpi"]:
         sposta(k["attacco"])
-    for f in p["frecce"]:
+    for f in frecce_e_punte(p):
         sposta(f["punta"])
     for m in p["momenti"]:
         sposta(m["centro"])
@@ -101,7 +106,7 @@ def _trasla(prim: dict, dx: float, dy: float) -> dict:
         sposta(c["c"])
     for k in p["corpi"]:
         sposta(k["attacco"])
-    for f in p["frecce"]:
+    for f in frecce_e_punte(p):
         sposta(f["punta"])
     for m in p["momenti"]:
         sposta(m["centro"])
@@ -189,7 +194,7 @@ def genera(seme: int, solo_etichette: bool = True, rumore: float = 0.0, stile: O
         scala = float(np.clip(rng.uniform(0.35, 0.65) * rng.uniform(1100, 1600) / larghezza_l, 45, 190))
         sc = costruisci_scena(schema, rng, scala, stile_quote)
     pagina, maschera, info = componi_pagina(sc, st, rng)
-    prim = primitive_della_scena(sc)
+    prim = primitive_della_scena(sc, punte_momenti=True)
     for s in prim["aste"]:
         s["spessore"] = st.asta * scala  # lo spessore davvero disegnato
     prim = _trasla(prim, *info["spostamento"])

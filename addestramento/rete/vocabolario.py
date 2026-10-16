@@ -12,6 +12,12 @@ simbolo è lo stesso girato di 180°) e l'ordine dei due estremi di una quota.
 Una regressione su un valore ambiguo impara la media, cioè niente: le si
 porta in un semipiano fisso col confine a 22,5° (e 202,5°), lontano dalle
 direzioni dei disegni (0°, 45°, 90°, 135°).
+
+Il canale delle frecce contiene le punte di TUTTE le frecce, comprese
+quelle degli archi dei momenti. La rete trova bene una punta e la sua
+direzione, mentre il verso di un arco, guardato dal centro, lo distingue
+male; la decodifica assegna al momento la punta vicina al suo arco e ne
+ricava il verso: antiorario se (punta − centro) × direzione > 0 (y su).
 """
 
 from __future__ import annotations
@@ -90,7 +96,8 @@ def descrizione() -> dict:
         canali.append({"canale": CORPO0 + k, "nome": f"corpo:{t}", "genere": "mappa", "tipo": t})
     canali.append({"canale": COS_CORPO, "nome": "corpo:cos", "genere": "regressione", "scala": 1.0})
     canali.append({"canale": SIN_CORPO, "nome": "corpo:sin", "genere": "regressione", "scala": 1.0})
-    canali.append({"canale": FRECCIA, "nome": "freccia", "genere": "mappa"})
+    canali.append({"canale": FRECCIA, "nome": "freccia", "genere": "mappa",
+                   "nota": "punte di tutte le frecce, anche di quelle degli archi dei momenti"})
     canali.append({"canale": COS_FRECCIA, "nome": "freccia:cos", "genere": "regressione", "scala": 1.0})
     canali.append({"canale": SIN_FRECCIA, "nome": "freccia:sin", "genere": "regressione", "scala": 1.0})
     canali.append({"canale": LUNG_FRECCIA, "nome": "freccia:lunghezza", "genere": "regressione",
@@ -115,4 +122,5 @@ def descrizione() -> dict:
         "centro_cella": "x = colonna·passo + (passo − 1)/2, y = riga·passo + (passo − 1)/2 (px, y giù)",
         "angoli": "radianti, y su; corpi interni e quote nel semipiano [-7π/8, π/8)",
         "sigma": SIGMA,
+        "verso_dei_momenti": "dalla punta di freccia vicina all'arco: antiorario se (punta − centro) × direzione > 0 (y su)",
     }

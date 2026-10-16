@@ -156,3 +156,18 @@ def test_estrai_picchi():
     a[7, 7] = 0.2   # sotto soglia
     a[6, 1] = 0.4
     assert sorted(estrai_picchi(a)) == [(2, 3, pytest.approx(0.9)), (6, 1, pytest.approx(0.4))]
+
+
+def test_le_punte_dei_momenti_sono_frecce(campioni):
+    visti = 0
+    for c, b in campioni:
+        m, H = b["mappe"], c["immagine"].height
+        picchi = estrai_picchi(m[V.FRECCIA])
+        for a in c["primitive"]["momenti"]:
+            f = a["freccia"]
+            t = vicino(picchi, *giu(f["punta"], H), 4)
+            assert t, a
+            letto = angolo_da(m, V.COS_FRECCIA, V.SIN_FRECCIA, t[1], t[2])
+            assert math.degrees(differenza_angolo(letto, f["direzione"])) < 2
+            visti += 1
+    assert visti > 0

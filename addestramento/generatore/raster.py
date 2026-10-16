@@ -19,7 +19,7 @@ from typing import Dict, List, Sequence, Tuple
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from .scena import ALTRO, ASTA, AUSILIARIA, CARICO, SIMBOLO, TESTO, Elemento, Scena
+from .scena import ALTRO, ASTA, AUSILIARIA, CARICO, SIMBOLO, TESTO, Elemento, Scena, punta_dell_arco, punti_dell_arco
 from .stili import Stile
 
 SS = 2  # sovracampionamento dell'immagine
@@ -193,16 +193,9 @@ def _quota(t: _Tela, a: Punto, b: Punto, classe: int) -> None:
 
 
 def _arco(t: _Tela, e: Elemento) -> None:
-    (cx, cy), r = e.punti[0], e.raggio
-    inizio, fine = e.angoli
-    angoli = np.radians(np.linspace(inizio, fine, 36))
-    punti = [(cx + r * math.cos(a), cy + r * math.sin(a)) for a in angoli]
-    t.linea(punti, "simbolo", e.classe)
+    t.linea(punti_dell_arco(e.punti[0], e.raggio, e.angoli), "simbolo", e.classe)
     # il verso è quello visto sul foglio: gli angoli crescono in senso orario
-    if e.testo == "orario":
-        coda, punta = punti[-3], punti[-1]
-    else:
-        coda, punta = punti[2], punti[0]
+    coda, punta = punta_dell_arco(e.punti[0], e.raggio, e.angoli, e.testo)
     _punta(t, coda, punta, e.classe, True)
 
 
@@ -218,16 +211,20 @@ def _vincolo(t: _Tela, e: Elemento) -> None:
     def P(du: float, dv: float) -> Punto:
         return (ax + (du * u[0] + dv * v[0]) * s, ay + (du * u[1] + dv * v[1]) * s)
 
+    st = t.stile
+    lu, lv = 0.06 * st.tratteggio, 0.05 * st.tratteggio * st.verso_tratteggio
+
     def terreno(du: float) -> None:
-        t.linea([P(du, -0.15), P(du, 0.15)], "simbolo", SIMBOLO)
-        for k in np.linspace(-0.12, 0.15, 6):
-            t.linea([P(du, k), P(du - 0.06, k - 0.05)], "sottile", SIMBOLO)
+        b = st.base_terreno
+        t.linea([P(du, -b), P(du, b)], "simbolo", SIMBOLO)
+        for k in np.linspace(-0.8 * b, b, st.righe_tratteggio):
+            t.linea([P(du, k), P(du - lu, k - lv)], "sottile", SIMBOLO)
 
     def cerchietto(du: float, dv: float, r: float) -> None:
         t.cerchio(P(du, dv), r * s, "simbolo", SIMBOLO)
 
     if tipo in ("triangolo", "triangoloRulli"):
-        h, w = 0.16, 0.1
+        h, w = 0.16 * st.dim_vincolo, 0.1 * st.dim_vincolo
         t.poligono([P(0, 0), P(-h, -w), P(-h, w)], "simbolo", SIMBOLO)
         base = -h
         if tipo == "triangoloRulli":
@@ -242,8 +239,9 @@ def _vincolo(t: _Tela, e: Elemento) -> None:
         terreno(base)
     elif tipo == "incastro":
         t.linea([P(0, -0.15), P(0, 0.15)], "asta" if t.stile.incastro == "muro" else "simbolo", SIMBOLO)
-        for k in np.linspace(-0.13, 0.15, 6):
-            t.linea([P(0, k), P(-0.08, k - 0.06)], "sottile", SIMBOLO)
+        for k in np.linspace(-0.13, 0.15, st.righe_tratteggio):
+            t.linea([P(0, k), P(-0.08 * st.tratteggio, k - 0.06 * st.tratteggio * st.verso_tratteggio)],
+                    "sottile", SIMBOLO)
     elif tipo == "doppioPendolo":
         for dv in (-0.05, 0.05):
             t.linea([P(0, dv), P(-0.14, dv)], "simbolo", SIMBOLO)

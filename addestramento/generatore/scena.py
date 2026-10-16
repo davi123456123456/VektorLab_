@@ -93,6 +93,18 @@ def _pt(p: Punto) -> dict:
     return {"x": float(p[0]), "y": float(p[1])}
 
 
+def punti_dell_arco(centro: Punto, raggio: float, angoli: Tuple[float, float]) -> List[Punto]:
+    """L'arco di un momento come lo disegna `raster` (angoli in gradi, y giù: crescono in senso orario)."""
+    a = np.radians(np.linspace(angoli[0], angoli[1], 36))
+    return [(centro[0] + raggio * math.cos(t), centro[1] + raggio * math.sin(t)) for t in a]
+
+
+def punta_dell_arco(centro: Punto, raggio: float, angoli: Tuple[float, float], verso: str) -> Tuple[Punto, Punto]:
+    """(coda, punta) della punta di freccia dell'arco: alla fine se orario, all'inizio se antiorario."""
+    punti = punti_dell_arco(centro, raggio, angoli)
+    return (punti[-3], punti[-1]) if verso == "orario" else (punti[2], punti[0])
+
+
 def formatta_l(v: float) -> str:
     n2 = round(v * 2)
     if abs(v * 2 - n2) > 1e-6:
@@ -333,9 +345,13 @@ def _carichi(schema: Schema, sc: Scena, rng, lungo, nodi_px, estremi) -> None:
             raggio = 0.25 * s
             inizio = float(rng.uniform(0, 360))
             verso = "antiorario" if c.verso == 1 else "orario"
+            coda, punta = punta_dell_arco(P, raggio, (inizio, inizio + 270), verso)
+            freccia_arco = {"punta": _pt(punta), "lunghezza": 0.08 * s,
+                            "direzione": math.atan2(punta[1] - coda[1], punta[0] - coda[0])}
             el.append(Elemento(CARICO, "arco", [P], raggio=raggio, spessore="simbolo", testo=verso,
                                angoli=(inizio, inizio + 270),
-                               primitiva={"genere": "momento", "centro": _pt(P), "raggio": raggio, "verso": verso}))
+                               primitiva={"genere": "momento", "centro": _pt(P), "raggio": raggio, "verso": verso,
+                                          "freccia": freccia_arco}))
             vuoto = math.radians(inizio - 45)
             scritta(_add(P, (math.cos(vuoto), math.sin(vuoto)), 1.5 * raggio), "M", c.coefficiente)
 
@@ -466,8 +482,12 @@ def _riquadro(sc: Scena) -> Tuple[float, float, float, float]:
 
 # ═══════════════════════════════ PRIMITIVE ═══════════════════════════════
 
-def primitive_della_scena(sc: Scena) -> dict:
-    """Le Primitive del contratto TS, ancora in pixel y giù."""
+def primitive_della_scena(sc: Scena, punte_momenti: bool = False) -> dict:
+    """
+    Le Primitive del contratto TS, ancora in pixel y giù. Con `punte_momenti`
+    ogni momento porta anche `freccia`, la punta del suo arco (stessa forma
+    di una Freccia): è da lì che la rete ricava il verso.
+    """
     p = {"larghezza": sc.larghezza, "altezza": sc.altezza, "aste": [], "pallini": [], "corpi": [],
          "frecce": [], "momenti": [], "nodi": [], "scritte": []}
     for e in sc.elementi:
@@ -485,7 +505,10 @@ def primitive_della_scena(sc: Scena) -> dict:
             p["frecce"].append({"punta": q["punta"], "direzione": q["direzione"], "lunghezza": q["lunghezza"],
                                 "confidenza": 1})
         elif g == "momento":
-            p["momenti"].append({"centro": q["centro"], "raggio": q["raggio"], "verso": q["verso"], "confidenza": 1})
+            m = {"centro": q["centro"], "raggio": q["raggio"], "verso": q["verso"], "confidenza": 1}
+            if punte_momenti:
+                m["freccia"] = dict(q["freccia"], punta=dict(q["freccia"]["punta"]))
+            p["momenti"].append(m)
         elif g == "scritta":
             voce = {"centro": q["centro"], "valore": q["valore"], "confidenza": 1}
             if "estremi" in q:

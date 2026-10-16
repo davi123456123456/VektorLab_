@@ -132,7 +132,11 @@ def fotometria(img: Image.Image, rng: np.random.Generator) -> Image.Image:
     campo = (campo - campo.min()) / (np.ptp(campo) + 1e-9)
     ombra = np.array(Image.fromarray((campo * 255).astype(np.uint8)).resize((W, H), Image.BILINEAR), dtype=float) / 255
     a *= (1 - float(rng.uniform(0, 0.35)) * ombra)[..., None]
-    a *= rng.uniform(0.95, 1.03, size=3)  # dominante di colore, lieve come nelle foto vere
+    if rng.random() < 0.3:
+        # foto slavata: carta grigia e tratti chiari, poco contrasto
+        a = a.mean() + (a - a.mean()) * float(rng.uniform(0.55, 0.9))
+    # dominante di colore: di solito lieve, a volte forte (luce fredda, carta azzurrina)
+    a *= rng.uniform(0.95, 1.03, size=3) if rng.random() < 0.7 else rng.uniform(0.85, 1.08, size=3)
     a += rng.normal(0, float(rng.uniform(0, 6)), size=a.shape)
     out = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
     sigma = float(rng.uniform(0, 1.2))
@@ -177,7 +181,7 @@ def trasforma_primitive(prim: dict, d: Deformazione) -> dict:
         v = p1 - p0
         k["angolo"] = float(math.atan2(v[0], -v[1]))
         a["x"], a["y"] = float(p0[0]), float(p0[1])
-    for f in p["frecce"]:
+    for f in p["frecce"] + [m["freccia"] for m in p["momenti"] if "freccia" in m]:
         punta = np.array([f["punta"]["x"], f["punta"]["y"]])
         coda = punta - f["lunghezza"] * np.array([math.cos(f["direzione"]), math.sin(f["direzione"])])
         nuova_punta, nuova_coda = d.avanti(np.array([punta, coda]))

@@ -47,7 +47,7 @@ def trasla_primitive(prim: dict, ox: float, oy: float, lato: int) -> dict:
         sposta(c["c"])
     for k in p["corpi"]:
         sposta(k["attacco"])
-    for f in p["frecce"]:
+    for f in p["frecce"] + [m["freccia"] for m in p["momenti"] if "freccia" in m]:
         sposta(f["punta"])
     for m in p["momenti"]:
         sposta(m["centro"])

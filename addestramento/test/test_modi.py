@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import numpy as np
 import pytest
 
 from generatore.campione import genera
-from generatore.scena import ASTA, SIMBOLO
+from generatore.scena import ASTA, CARICO, SIMBOLO
 
 CAMPIONI = Path(__file__).resolve().parents[2] / "test" / "foto" / "campioni"
 
@@ -55,3 +56,30 @@ def test_il_percorso_solo_etichette_non_cambia():
     from generatore.__main__ import serializza
     atteso = json.loads((CAMPIONI / "00005.json").read_text())
     assert json.loads(serializza(genera(5))) == atteso
+
+
+def verso_dalla_punta(m):
+    """Contratto, y su: la punta gira attorno al centro in senso antiorario se (punta − centro) × direzione > 0."""
+    f = m["freccia"]
+    rx, ry = f["punta"]["x"] - m["centro"]["x"], f["punta"]["y"] - m["centro"]["y"]
+    croce = rx * math.sin(f["direzione"]) - ry * math.cos(f["direzione"])
+    return "antiorario" if croce > 0 else "orario"
+
+
+def test_la_punta_dei_momenti_da_il_verso():
+    visti = 0
+    for seme in range(1, 40):
+        c = genera(seme, solo_etichette=False, modo="ritaglio")
+        m_img, H = c["maschera"], c["immagine"].height
+        for m in c["primitive"]["momenti"]:
+            assert verso_dalla_punta(m) == m["verso"]
+            x, y = m["freccia"]["punta"]["x"], H - m["freccia"]["punta"]["y"]
+            finestra = m_img[int(y) - 3:int(y) + 4, int(x) - 3:int(x) + 4]
+            assert (finestra == CARICO).any()
+            visti += 1
+    assert visti >= 5
+
+
+def test_solo_etichette_senza_punte_dei_momenti():
+    for seme in range(1, 30):
+        assert all("freccia" not in m for m in genera(seme)["primitive"]["momenti"])
