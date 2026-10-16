@@ -12,11 +12,15 @@ import { segDaLogit, type Uscite } from './tensori.js';
 
 export type Esegui = (t: { dati: Float32Array; H: number; W: number }) => Promise<Uscite>;
 
-/** `wasm`: l'indirizzo del file .wasm, quando chi impacchetta l'app lo sposta (Vite). */
-export async function creaEsecutore(modello: Uint8Array | ArrayBuffer, opzioni: { thread?: number; wasm?: string } = {}): Promise<Esegui> {
+/**
+ * `wasm`: l'indirizzo del file .wasm, quando chi impacchetta l'app lo sposta (Vite);
+ * `wasmBinary`: il .wasm già scaricato (con la sua barra di avanzamento).
+ */
+export async function creaEsecutore(modello: Uint8Array | ArrayBuffer, opzioni: { thread?: number; wasm?: string; wasmBinary?: Uint8Array } = {}): Promise<Esegui> {
   const ort = await import('onnxruntime-web/wasm');
   ort.env.wasm.numThreads = opzioni.thread ?? 1;
   if (opzioni.wasm) ort.env.wasm.wasmPaths = { wasm: opzioni.wasm };
+  if (opzioni.wasmBinary) ort.env.wasm.wasmBinary = opzioni.wasmBinary;
   const dati = modello instanceof Uint8Array ? modello : new Uint8Array(modello);
   const sessione = await ort.InferenceSession.create(dati, { executionProviders: ['wasm'] });
   return async ({ dati: ingresso, H, W }) => {

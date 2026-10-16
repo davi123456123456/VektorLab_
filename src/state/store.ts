@@ -499,6 +499,22 @@ function calcolaTronco(
  * che condividessero anche solo la cronologia produrrebbero l'errore peggiore
  * possibile — annullare in un foglio e vedere cambiare l'altro.
  */
+/**
+ * Il caso corrente e la sorgente dei risultati devono esistere nel progetto:
+ * annullando un comando che aveva cambiato i casi (la struttura da foto
+ * sostituisce l'intero progetto) potrebbero indicare un caso sparito.
+ */
+function casiValidi(p: Progetto, st: Pick<Stato, 'casoCorrente' | 'sorgenteRisultati'>): Partial<Stato> {
+  const esiste = (id: LoadCaseId) => p.casi.some((c) => c.id === id);
+  const primo = p.casi[0]?.id ?? ('principale' as LoadCaseId);
+  const out: Partial<Stato> = {};
+  if (!esiste(st.casoCorrente)) out.casoCorrente = primo;
+  if (st.sorgenteRisultati.tipo === 'caso' && !esiste(st.sorgenteRisultati.id)) {
+    out.sorgenteRisultati = { tipo: 'caso', id: primo };
+  }
+  return out;
+}
+
 export function creaStore(): UseBoundStore<StoreApi<Stato>> {
   // §4.2 — un ponte, e quindi un worker, PER FOGLIO. Condividerne uno solo
   // farebbe scartare come «sorpassata» la risposta del foglio che ha chiesto
@@ -639,6 +655,7 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
         progetto: esito.progetto,
         passato: passato.slice(0, -1),
         futuro: [c, ...futuro],
+        ...casiValidi(esito.progetto, get()),
         messaggio: `annullato: ${c.etichetta}`,
         risultato: null, cinematica: null, verifiche: null,
         ...STATICA_AZZERATA,
@@ -657,6 +674,7 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
         progetto: esito.progetto,
         passato: [...passato, c],
         futuro: futuro.slice(1),
+        ...casiValidi(esito.progetto, get()),
         messaggio: `ripetuto: ${c.etichetta}`,
         risultato: null, cinematica: null, verifiche: null,
         ...STATICA_AZZERATA,

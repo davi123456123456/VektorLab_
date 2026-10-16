@@ -87,6 +87,25 @@ async function main() {
   verifica(await page.locator('.foto-velo').count() === 0 && await annulla.isDisabled(),
     'annullare al riquadro non cambia il disegno');
 
+  // ruotare il telefono durante il riquadro non perde la foto
+  await scegliFoto(page, FOTO);
+  await page.getByRole('button', { name: 'Riconosci' }).waitFor({ timeout: 60_000 });
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForTimeout(300);
+  verifica(await page.getByRole('button', { name: 'Riconosci' }).count() === 1, 'ruotando il telefono il riquadro resta');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(300);
+  await scatta(page, '6-dopo-rotazione');
+
+  // chiudere mentre legge e riaprire: niente disegni non chiesti
+  await page.getByRole('button', { name: 'Riconosci' }).click();
+  await page.getByRole('button', { name: 'Chiudi' }).first().click();
+  await page.getByRole('button', { name: 'Struttura da foto' }).click();
+  await page.waitForTimeout(3000);
+  verifica(await page.getByRole('button', { name: 'Galleria' }).count() === 1 && await annulla.isDisabled(),
+    'chiuso durante la lettura e riaperto: niente disegno e si riparte da capo');
+  await page.getByRole('button', { name: 'Chiudi' }).first().click();
+
   await scegliFoto(page, BIANCA);
   await page.getByText('Nella foto non ho trovato uno schema').waitFor({ timeout: 60_000 });
   await scatta(page, '5-senza-schema');

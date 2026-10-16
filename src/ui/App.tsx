@@ -178,8 +178,13 @@ export function App() {
 
       <BarraStato />
 
-      {telefono && foto && <FotoTelefono chiudi={chiudiFoto} disegnato={setAvvisiFoto} />}
-      {telefono && avvisiFoto && <AvvisiFoto avvisi={avvisiFoto} chiudi={() => setAvvisiFoto(null)} />}
+      {/*
+        Si aprono solo dal tasto della fotocamera, che c'è solo sul telefono;
+        una volta aperti restano anche se lo schermo si allarga: ruotando il
+        telefono in orizzontale (più di 720 px) la foto non deve andare persa.
+      */}
+      {foto && <FotoTelefono chiudi={chiudiFoto} disegnato={setAvvisiFoto} />}
+      {avvisiFoto && <AvvisiFoto avvisi={avvisiFoto} chiudi={() => setAvvisiFoto(null)} />}
     </div>
   );
 }

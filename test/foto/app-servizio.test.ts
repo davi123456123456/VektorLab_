@@ -31,7 +31,7 @@ function servizio(opzioni: { vuota?: boolean; senzaRete?: boolean } = {}) {
 }
 
 // la foto ha le misure del ritaglio; il riquadro è quello che, allargato del 15 %, la copre tutta
-const foto = () => ({ tipo: 'foto' as const, dati: new Uint8Array(f.larghezza * f.altezza).fill(255),
+const foto = () => ({ tipo: 'foto' as const, id: 1, dati: new Uint8Array(f.larghezza * f.altezza).fill(255),
   larghezza: f.larghezza, altezza: f.altezza });
 const lato = Math.max(f.larghezza, f.altezza), m = (0.15 * lato) / 1.3;
 const tutto = f.larghezza >= f.altezza
@@ -47,7 +47,7 @@ describe('il servizio del worker', () => {
     const figure = risposte.find((r) => r.tipo === 'figure');
     expect(figure && figure.tipo === 'figure' && figure.scelta).toBeGreaterThanOrEqual(0);
     expect(s.haFoto()).toBe(true);
-    await invia({ tipo: 'leggi', riquadro: tutto });
+    await invia({ tipo: 'leggi', riquadro: tutto, id: 2 });
     const letto = risposte.find((r) => r.tipo === 'letto');
     expect(letto && letto.tipo === 'letto' && letto.progetto.aste.length).toBeGreaterThan(0);
     expect(s.haFoto()).toBe(false);
@@ -56,7 +56,7 @@ describe('il servizio del worker', () => {
   it('una foto senza schema: nessunoSchema, e la foto si dimentica', async () => {
     const { s, risposte, invia } = servizio({ vuota: true });
     await invia(foto());
-    expect(risposte.at(-1)).toEqual({ tipo: 'nessunoSchema' });
+    expect(risposte.at(-1)).toEqual({ tipo: 'nessunoSchema', id: 1 });
     expect(s.haFoto()).toBe(false);
   });
 
@@ -70,7 +70,7 @@ describe('il servizio del worker', () => {
   it('primo uso senza rete: messaggio chiaro, niente foto in memoria', async () => {
     const { s, risposte, invia } = servizio({ senzaRete: true });
     await invia(foto());
-    expect(risposte.at(-1)).toEqual({ tipo: 'errore', messaggio: MESSAGGI.senzaRete });
+    expect(risposte.at(-1)).toEqual({ tipo: 'errore', messaggio: MESSAGGI.senzaRete, id: 1 });
     expect(MESSAGGI.senzaRete).toBe('Non riesco a scaricare il riconoscitore: serve la connessione la prima volta');
     expect(s.haFoto()).toBe(false);
   });
@@ -85,7 +85,46 @@ describe('il servizio del worker', () => {
 
   it('leggi senza foto è un errore, non un crollo', async () => {
     const { risposte, invia } = servizio();
-    await invia({ tipo: 'leggi', riquadro: tutto });
+    await invia({ tipo: 'leggi', riquadro: tutto, id: 2 });
     expect(risposte.at(-1)?.tipo).toBe('errore');
+  });
+});
+
+describe('annullare vuol dire annullare', () => {
+  it('ogni risposta porta l\'id della sua richiesta', async () => {
+    const { risposte, invia } = servizio();
+    await invia({ ...foto(), id: 7 });
+    expect(risposte.length).toBeGreaterThan(0);
+    expect(risposte.every((r) => r.id === 7)).toBe(true);
+  });
+
+  it('dimentica durante lo scaricamento: nessuna figura, niente in memoria', async () => {
+    let sblocca!: () => void;
+    const attesa = new Promise<void>((r) => { sblocca = r; });
+    const risposte: Risposta[] = [];
+    const s = creaServizio({
+      scaricaModello: async () => { await attesa; return new Uint8Array(4); },
+      creaEsegui: async () => (async () => f.uscite) as Esegui,
+    });
+    const inCorso = s.gestisci({ ...foto(), id: 1 }, (x) => risposte.push(x));
+    await s.gestisci({ tipo: 'dimentica' }, (x) => risposte.push(x));
+    sblocca();
+    await inCorso;
+    // in silenzio: né figure né errori per una richiesta annullata
+    expect(risposte.filter((r) => r.tipo !== 'avanzamento')).toEqual([]);
+    expect(s.haFoto()).toBe(false);
+  });
+
+  it('una lettura vuota non disegna niente: nessunoSchema', async () => {
+    let chiamate = 0;
+    const s = creaServizio({
+      scaricaModello: async () => new Uint8Array(4),
+      creaEsegui: async () => (async ({ H, W }: { H: number; W: number }) => (++chiamate === 1 ? f.uscite : vuote(H, W))) as Esegui,
+    });
+    const risposte: Risposta[] = [];
+    await s.gestisci({ ...foto(), id: 1 }, (x) => risposte.push(x));
+    await s.gestisci({ tipo: 'leggi', riquadro: tutto, id: 2 }, (x) => risposte.push(x));
+    expect(risposte.some((r) => r.tipo === 'letto')).toBe(false);
+    expect(risposte.at(-1)).toEqual({ tipo: 'nessunoSchema', id: 2 });
   });
 });

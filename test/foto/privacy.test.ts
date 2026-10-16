@@ -25,10 +25,14 @@ describe('privacy della foto (R2)', () => {
     }
   });
 
-  it('una sola richiesta di rete, ed è il modello', () => {
+  it('le sole richieste di rete scaricano il modello e il runtime', () => {
     const richieste = FILE.flatMap((f) => [...sorgente(f).matchAll(/fetch\(([^)]*)\)/g)].map((m) => `${f}: ${m[1]}`));
-    expect(richieste).toEqual(['src/worker/foto.worker.ts: URL_MODELLO']);
-    expect(sorgente('src/worker/foto.worker.ts')).toContain('modelli/foto.onnx');
+    expect(richieste).toEqual(['src/worker/foto.worker.ts: u']);
+    const w = sorgente('src/worker/foto.worker.ts');
+    expect(w).toContain('scaricaTutti([URL_MODELLO, wasm]');
+    expect(w).toContain("modelli/foto.onnx");
+    expect(w).toContain("from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url'");
+    expect(/https?:\/\//.test(FILE.map(sorgente).join('\n'))).toBe(false);
   });
 
   it('la bitmap si chiude e la tela d\'appoggio si svuota', () => {

@@ -6,6 +6,11 @@
  * e la seconda, che lo legge nel riquadro scelto o ritoccato dallo
  * studente; poi si dimentica. Si dimentica anche quando lo schema non c'è,
  * quando lo studente annulla e quando qualcosa va storto (R2).
+ *
+ * Una richiesta annullata (`dimentica`, o una foto nuova) si ferma in
+ * silenzio al primo punto d'attesa: niente figure né errori per lei. Una
+ * lettura che non trova aste risponde `nessunoSchema`: il disegno dello
+ * studente non si sostituisce con un progetto vuoto.
  */
 
 import { leggi } from '../index.js';
@@ -30,13 +35,17 @@ class SenzaRete extends Error {}
 export function creaServizio(dip: Dipendenze) {
   let esegui: Promise<Esegui> | null = null;
   let grigio: Grigio | null = null;
+  /** la richiesta viva: le altre, finita l'attesa, si fermano */
+  let viva: number | null = null;
 
-  async function rete(rispondi: (x: Risposta) => void): Promise<Esegui> {
+  async function rete(id: number, rispondi: (x: Risposta) => void): Promise<Esegui> {
     if (!esegui) {
       esegui = (async () => {
         let modello: Uint8Array;
         try {
-          modello = await dip.scaricaModello((fatto, totale) => rispondi({ tipo: 'avanzamento', fase: 'scarico', fatto, totale }));
+          modello = await dip.scaricaModello((fatto, totale) => {
+            if (viva === id) rispondi({ id, tipo: 'avanzamento', fase: 'scarico', fatto, totale });
+          });
         } catch {
           throw new SenzaRete();
         }
@@ -49,36 +58,51 @@ export function creaServizio(dip: Dipendenze) {
   }
 
   async function gestisci(r: Richiesta, rispondi: (x: Risposta) => void): Promise<void> {
+    if (r.tipo === 'dimentica') {
+      grigio = null;
+      viva = null;
+      return;
+    }
+    const id = r.id;
+    const annullata = () => viva !== id;
     try {
-      if (r.tipo === 'dimentica') {
-        grigio = null;
-        return;
-      }
       if (r.tipo === 'foto') {
-        grigio = { dati: r.dati, larghezza: r.larghezza, altezza: r.altezza };
-        const e = await rete(rispondi);
-        rispondi({ tipo: 'avanzamento', fase: 'cerco' });
-        const { figure, scelta } = await trovaSchemi(grigio, e);
+        viva = id;
+        const g: Grigio = { dati: r.dati, larghezza: r.larghezza, altezza: r.altezza };
+        grigio = g;
+        const e = await rete(id, rispondi);
+        if (annullata()) return;
+        rispondi({ id, tipo: 'avanzamento', fase: 'cerco' });
+        const { figure, scelta } = await trovaSchemi(g, e);
+        if (annullata()) return;
         if (scelta < 0) {
           grigio = null;
-          rispondi({ tipo: 'nessunoSchema' });
+          rispondi({ id, tipo: 'nessunoSchema' });
           return;
         }
-        rispondi({ tipo: 'figure', figure, scelta });
+        rispondi({ id, tipo: 'figure', figure, scelta });
         return;
       }
-      if (!grigio) {
-        rispondi({ tipo: 'errore', messaggio: MESSAGGI.senzaFoto });
+      const g = grigio;
+      if (!g) {
+        rispondi({ id, tipo: 'errore', messaggio: MESSAGGI.senzaFoto });
         return;
       }
-      rispondi({ tipo: 'avanzamento', fase: 'leggo' });
-      const { primitive } = await leggiRiquadro(grigio, r.riquadro, await rete(rispondi));
-      grigio = null;
+      viva = id;
+      grigio = null; // una lettura sola per foto: un secondo tocco non rilegge
+      rispondi({ id, tipo: 'avanzamento', fase: 'leggo' });
+      const { primitive } = await leggiRiquadro(g, r.riquadro, await rete(id, rispondi));
+      if (annullata()) return;
       const l = leggi(primitive);
-      rispondi({ tipo: 'letto', progetto: l.progetto, avvisi: l.avvisi, elementiDaPunti: l.elementiDaPunti });
+      if (l.progetto.aste.length === 0) {
+        rispondi({ id, tipo: 'nessunoSchema' });
+        return;
+      }
+      rispondi({ id, tipo: 'letto', progetto: l.progetto, avvisi: l.avvisi, elementiDaPunti: l.elementiDaPunti });
     } catch (e) {
+      if (annullata()) return;
       grigio = null;
-      rispondi({ tipo: 'errore', messaggio: e instanceof SenzaRete ? MESSAGGI.senzaRete : MESSAGGI.errore });
+      rispondi({ id, tipo: 'errore', messaggio: e instanceof SenzaRete ? MESSAGGI.senzaRete : MESSAGGI.errore });
     }
   }
 

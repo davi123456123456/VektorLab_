@@ -36,6 +36,8 @@ describe('il comando «Struttura da foto»', () => {
     disegnaDaFoto(store, nuovo);
     store.getState().annulla();
     expect(store.getState().progetto).toEqual(prima);
+    // il caso corrente torna a uno che esiste nel progetto rimesso
+    expect(prima.casi.map((c) => c.id)).toContain(store.getState().casoCorrente);
     store.getState().rifai();
     expect(store.getState().progetto.aste).toEqual(nuovo.aste);
   });
@@ -46,6 +48,24 @@ describe('il comando «Struttura da foto»', () => {
     const testo = serializza(store.getState().progetto);
     // il nome «Da foto» sì: è un nome; dati dell’immagine e avvisi no
     expect(testo).not.toMatch(/avvis|immagine|data:image|"grigio"|"primitive"/i);
+  });
+});
+
+describe('il caso di carico dopo Annulla', () => {
+  it('torna un caso che esiste nel disegno rimesso, anche se i casi avevano altri nomi', () => {
+    const store = creaStore();
+    // un disegno il cui unico caso non si chiama come quello della foto
+    const p = esempi[0].costruisci();
+    const vecchio = p.casi[0].id;
+    p.casi = p.casi.map((c) => (c.id === vecchio ? { ...c, id: 'vento' as never } : c));
+    p.carichi = p.carichi.map((c) => (c.casoId === vecchio ? { ...c, casoId: 'vento' as never } : c));
+    p.combinazioni = p.combinazioni.map((k) => ({ ...k, termini: k.termini.map((t) => (t.casoId === vecchio ? { ...t, casoId: 'vento' as never } : t)) }));
+    store.getState().caricaProgetto(p);
+    disegnaDaFoto(store, letto());
+    store.getState().annulla();
+    expect(store.getState().casoCorrente).toBe('vento');
+    store.getState().rifai();
+    expect(store.getState().progetto.casi.map((c) => c.id)).toContain(store.getState().casoCorrente);
   });
 });
 

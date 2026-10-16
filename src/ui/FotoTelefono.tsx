@@ -15,7 +15,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent as PE } from 'react';
 import { avvisiApp, type AvvisoApp } from '../foto/app/avvisi.js';
-import { dimensioniDecodifica } from '../foto/app/decodifica.js';
+import { decodificaRidotta, dimensioniDecodifica } from '../foto/app/decodifica.js';
 import { disegnaDaFoto } from '../foto/app/disegna.js';
 import { PonteFoto } from '../foto/app/ponte.js';
 import type { Risposta } from '../foto/app/protocollo.js';
@@ -30,6 +30,8 @@ const PRIVACY = 'La foto resta sul telefono e non viene salvata.';
 /** Uno solo per l'app: la rete scaricata resta pronta per la foto dopo. */
 let ponte: PonteFoto | null = null;
 const ilPonte = () => (ponte ??= new PonteFoto());
+/** numeri delle richieste: il pannello ascolta solo la risposta alla sua */
+let prossimaRichiesta = 1;
 
 type Passo =
   | { tipo: 'scegli'; errore?: string }
@@ -59,9 +61,16 @@ export function FotoTelefono({ chiudi, disegnato }: {
   // perché la sua pulizia fa dimenticare la foto al worker
   const fuori = useRef({ chiudi, disegnato });
   fuori.current = { chiudi, disegnato };
+  /** la richiesta di cui si aspetta la risposta; le altre si ignorano */
+  const richiesta = useRef<number | null>(null);
+  /** falso dopo la chiusura: una decodifica in corso si ferma senza inviare */
+  const aperto = useRef(true);
 
   useEffect(() => {
+    aperto.current = true;
+    const tela = anteprima.current;
     const via = ilPonte().ascolta((r: Risposta) => {
+      if (r.id !== richiesta.current) return;
       if (r.tipo === 'avanzamento') setPasso({ tipo: 'attendo', fase: r.fase, fatto: r.fatto, totale: r.totale });
       else if (r.tipo === 'figure') {
         setPasso({ tipo: 'riquadro', figure: r.figure, scelta: r.scelta, riquadro: r.figure[r.scelta].riquadro });
@@ -74,11 +83,12 @@ export function FotoTelefono({ chiudi, disegnato }: {
       }
     });
     return () => {
+      aperto.current = false;
+      richiesta.current = null;
       via();
       // chiudendo, in qualunque momento, il worker dimentica la foto
       ilPonte().invia({ tipo: 'dimentica' });
-      const c = anteprima.current;
-      if (c) { c.width = 0; c.height = 0; }
+      if (tela) { tela.width = 0; tela.height = 0; }
     };
   }, []);
 
@@ -100,7 +110,8 @@ export function FotoTelefono({ chiudi, disegnato }: {
     if (!file) return;
     setPasso({ tipo: 'attendo', fase: 'decodifico' });
     try {
-      const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      const bitmap = await decodificaRidotta(file);
+      if (!aperto.current) { bitmap.close(); return; }
       const { larghezza, altezza } = dimensioniDecodifica(bitmap.width, bitmap.height);
       const tela = document.createElement('canvas');
       tela.width = larghezza;
@@ -119,9 +130,12 @@ export function FotoTelefono({ chiudi, disegnato }: {
       }
       tela.width = 0;
       tela.height = 0;
-      ilPonte().invia({ tipo: 'foto', dati: g.dati, larghezza, altezza }, [g.dati.buffer]);
+      if (!aperto.current) return;
+      const id = prossimaRichiesta++;
+      richiesta.current = id;
+      ilPonte().invia({ tipo: 'foto', id, dati: g.dati, larghezza, altezza }, [g.dati.buffer]);
     } catch {
-      setPasso({ tipo: 'scegli', errore: 'Non riesco ad aprire questa immagine' });
+      if (aperto.current) setPasso({ tipo: 'scegli', errore: 'Non riesco ad aprire questa immagine' });
     }
   }
 
@@ -157,7 +171,7 @@ export function FotoTelefono({ chiudi, disegnato }: {
         <div className="foto-attesa" aria-live="polite">
           <p>{SCRITTE_ATTESA[passo.fase]}</p>
           {passo.fase === 'scarico' && passo.totale ? (
-            <div className="foto-barra"><div style={{ width: `${Math.round((100 * (passo.fatto ?? 0)) / passo.totale)}%` }} /></div>
+            <div className="foto-barra"><div style={{ width: `${Math.min(100, Math.round((100 * (passo.fatto ?? 0)) / passo.totale))}%` }} /></div>
           ) : <div className="foto-barra foto-barra-indefinita"><div /></div>}
         </div>
       )}
@@ -177,7 +191,13 @@ export function FotoTelefono({ chiudi, disegnato }: {
           <div className="foto-riga">
             <button type="button" className="foto-secondario" onClick={annulla}>Annulla</button>
             <button type="button" className="foto-primario"
-                    onClick={() => ilPonte().invia({ tipo: 'leggi', riquadro: passo.riquadro })}>
+                    onClick={() => {
+                      // subito in attesa: un secondo tocco non trova più il bottone
+                      const id = prossimaRichiesta++;
+                      richiesta.current = id;
+                      setPasso({ tipo: 'attendo', fase: 'leggo' });
+                      ilPonte().invia({ tipo: 'leggi', id, riquadro: passo.riquadro });
+                    }}>
               Riconosci
             </button>
           </div>
