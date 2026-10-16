@@ -68,3 +68,21 @@ describe('dal grafo al Progetto', () => {
     expect(avvisi.map((a) => a.codice)).not.toContain('integrita');
   });
 });
+
+describe('avvisi legati agli elementi del progetto', () => {
+  it('un punto del grafo porta al suo nodo, uno a metà asta alla sua asta', () => {
+    const p = disegno().asta(0, 0, 2, 0)
+      .appoggio('triangolo', 0, 0, 0).appoggio('triangoloRulli', 2, 0, 0)
+      .momento(1, 0, 'antiorario').momento(2, 0, 'orario').primitive();
+    p.momenti.forEach((m) => { m.confidenza = 0.1; });
+    const e = leggi(p);
+    const incerti = e.avvisi.filter((a) => a.codice === 'versoIncerto');
+    expect(incerti).toHaveLength(2);
+    const nodi = new Set(e.progetto.nodi.map((n) => n.id));
+    const aste = new Set(e.progetto.aste.map((a) => a.id));
+    const legati = incerti.map((a) => e.elementiDaPunti[a.punti![0]]);
+    // il momento in mezzo alla trave sta su un'asta, quello all'estremo su un nodo
+    expect(legati.some((x) => x.aste.length === 1 && aste.has(x.aste[0]) && x.nodi.length === 0)).toBe(true);
+    expect(legati.some((x) => x.nodi.length === 1 && nodi.has(x.nodi[0]))).toBe(true);
+  });
+});

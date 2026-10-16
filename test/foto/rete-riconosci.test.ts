@@ -8,7 +8,7 @@ import { leggi } from '../../src/foto/index.js';
 import type { Riquadro } from '../../src/foto/rete/figura.js';
 import { creaEsecutore, type Esegui } from '../../src/foto/rete/onnx.js';
 import { leggiPGM } from '../../src/foto/rete/pgm.js';
-import { riconosci } from '../../src/foto/rete/riconosci.js';
+import { leggiRiquadro, riconosci, trovaSchemi } from '../../src/foto/rete/riconosci.js';
 import type { Uscite } from '../../src/foto/rete/tensori.js';
 import { schemaInProgetto } from '../../src/foto/schema.js';
 import { CARTELLA_RETE, caricaIdeale, nomiIdeali } from './aiuti-rete.js';
@@ -64,6 +64,25 @@ describe('la rete in Node (onnxruntime-web)', () => {
     const c = confronta(leggi(r.primitive).progetto, schemaInProgetto(vero.schema));
     expect(c.correzioni, c.differenze.join(' | ')).toBeLessThanOrEqual(3);
   }, 60_000);
+});
+
+describe('le due passate separate (per scegliere lo schema)', () => {
+  it('trovaSchemi + leggiRiquadro danno quello che dà riconosci', async () => {
+    const g = leggiPGM(gunzipSync(readFileSync(join(CARTELLA_RETE, 'foto-2000201.pgm.gz'))));
+    const r = await riconosci(g, esegui);
+    const { figure, scelta } = await trovaSchemi(g, esegui);
+    expect(scelta).toBeGreaterThanOrEqual(0);
+    expect(figure[scelta].aste).toBeGreaterThan(0);
+    expect(figure[scelta].vincoli).toBeGreaterThan(0);
+    const l = await leggiRiquadro(g, figure[scelta].riquadro, esegui);
+    expect(r.esito).toBe('ok');
+    if (r.esito === 'ok') expect(l.primitive).toEqual(r.primitive);
+  }, 60_000);
+
+  it('una foto bianca non ha uno schema da scegliere', async () => {
+    const bianca = { dati: new Uint8Array(640 * 480).fill(255), larghezza: 640, altezza: 480 };
+    expect((await trovaSchemi(bianca, esegui)).scelta).toBe(-1);
+  });
 });
 
 describe('le due passate', () => {

@@ -15,9 +15,10 @@ import { associaQuote, misura } from './metrica.js';
 import { tolleranze } from './parametri.js';
 import { pulisci } from './pulizia.js';
 import type { Avviso, Grafo, Primitive } from './tipi.js';
-import { traduci } from './traduci.js';
+import { traduci, type ElementiDaPunti } from './traduci.js';
 
-export interface EsitoLettura { progetto: Progetto; avvisi: Avviso[]; grafo: Grafo }
+/** `elementiDaPunti`: per ogni punto del grafo, i nodi o le aste del progetto in cui è finito (gli avvisi citano punti). */
+export interface EsitoLettura { progetto: Progetto; avvisi: Avviso[]; grafo: Grafo; elementiDaPunti: ElementiDaPunti }
 
 export function leggi(ingresso: Primitive): EsitoLettura {
   try {
@@ -27,13 +28,13 @@ export function leggi(ingresso: Primitive): EsitoLettura {
     leggiCarichi(grafo, p, tol);
     associaQuote(grafo, p, tol);
     misura(grafo, tol);
-    const { progetto, avvisi } = traduci(grafo);
-    return { progetto, avvisi: [...scarti, ...avvisi], grafo };
+    const { progetto, avvisi, elementiDaPunti } = traduci(grafo);
+    return { progetto, avvisi: [...scarti, ...avvisi], grafo, elementiDaPunti };
   } catch (e) {
     // la lettura non deve mai far cadere l'app: un modello vuoto e il motivo
     const grafo: Grafo = { punti: [], tratti: [], giunti: [], vincoli: [], carichi: [], quote: [], avvisi: [] };
     return {
-      progetto: traduci(grafo).progetto, grafo,
+      progetto: traduci(grafo).progetto, grafo, elementiDaPunti: {},
       avvisi: [{ codice: 'erroreLettura', messaggio: `Lettura non riuscita: ${(e as Error).message}` }],
     };
   }

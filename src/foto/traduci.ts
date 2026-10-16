@@ -23,12 +23,15 @@ const SEZIONE = 'IPE 300';
 const KILO = 1000;
 const GRADI = Math.PI / 180;
 
-export function traduci(g: Grafo): { progetto: Progetto; avvisi: Avviso[] } {
+/** Gli elementi del progetto in cui è finito ogni punto del grafo: servono agli avvisi. */
+export type ElementiDaPunti = Record<string, { nodi: NodeId[]; aste: ElementId[] }>;
+
+export function traduci(g: Grafo): { progetto: Progetto; avvisi: Avviso[]; elementiDaPunti: ElementiDaPunti } {
   const avvisi = [...g.avvisi];
   const b = nuovoProgetto('Da foto');
   if (g.tratti.length === 0) {
     avvisi.push({ codice: 'nessunaAsta', messaggio: 'Nella foto non ho trovato nessuna asta.' });
-    return { progetto: migra(b.costruisci()), avvisi };
+    return { progetto: migra(b.costruisci()), avvisi, elementiDaPunti: {} };
   }
 
   if (g.vincoli.length === 0) {
@@ -157,7 +160,10 @@ export function traduci(g: Grafo): { progetto: Progetto; avvisi: Avviso[] } {
 
   const esito = verificaIntegrita(migra(b.costruisci()));
   for (const a of esito.anomalie) avvisi.push({ codice: 'integrita', messaggio: a.messaggio });
-  return { progetto: esito.progetto, avvisi };
+  const elementiDaPunti: ElementiDaPunti = {};
+  for (const [punto, n] of nodo) elementiDaPunti[punto] = { nodi: [n], aste: [] };
+  for (const [punto, x] of suAsta) elementiDaPunti[punto] ??= { nodi: [], aste: [x.asta] };
+  return { progetto: esito.progetto, avvisi, elementiDaPunti };
 }
 
 /** Assi globali quando la direzione è orizzontale o verticale, angolo assoluto altrimenti. */

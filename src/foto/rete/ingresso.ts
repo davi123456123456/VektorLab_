@@ -13,10 +13,13 @@ export interface Grigio { dati: Uint8Array; larghezza: number; altezza: number }
 
 export const LATO = 768;
 
+/** Grigio di una foto RGBA; i pixel trasparenti sono carta bianca (L·a/255 + 255 − a). */
 export function grigioDaRGBA(rgba: Uint8ClampedArray | Uint8Array, larghezza: number, altezza: number): Grigio {
   const dati = new Uint8Array(larghezza * altezza);
   for (let p = 0; p < dati.length; p++) {
-    dati[p] = (rgba[4 * p] * 19595 + rgba[4 * p + 1] * 38470 + rgba[4 * p + 2] * 7471 + 0x8000) >> 16;
+    const l = (rgba[4 * p] * 19595 + rgba[4 * p + 1] * 38470 + rgba[4 * p + 2] * 7471 + 0x8000) >> 16;
+    const a = rgba[4 * p + 3];
+    dati[p] = a === 255 ? l : Math.round((l * a) / 255 + 255 - a);
   }
   return { dati, larghezza, altezza };
 }

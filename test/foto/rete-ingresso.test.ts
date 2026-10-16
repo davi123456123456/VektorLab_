@@ -61,6 +61,11 @@ describe('ingresso della rete', () => {
     expect(grigio.dati[5 * 40 + 35]).toBe(255);
   });
 
+  it('i pixel trasparenti sono carta bianca', () => {
+    const rgba = new Uint8ClampedArray([0, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0, 255]);
+    expect(Array.from(grigioDaRGBA(rgba, 3, 1).dati)).toEqual([255, 127, 0]);
+  });
+
   it('grigio come PIL (ITU-R 601)', () => {
     const rgba = new Uint8ClampedArray([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 200, 100, 50, 255]);
     expect(Array.from(grigioDaRGBA(rgba, 4, 1).dati)).toEqual([76, 150, 29, 124]);

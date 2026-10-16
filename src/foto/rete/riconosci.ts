@@ -12,7 +12,7 @@
 
 import type { Primitive } from '../tipi.js';
 import { decodifica } from './decodifica.js';
-import { trovaFigure, type Riquadro } from './figura.js';
+import { trovaFigure, type Figura, type Riquadro } from './figura.js';
 import { LATO, riduci, ritaglia, tensore, type Grigio } from './ingresso.js';
 import type { Esegui } from './onnx.js';
 import { agganciaQuote } from './quote.js';
@@ -33,18 +33,30 @@ export type Riconoscimento =
   }
   | { esito: 'nessunoSchema'; figure: Riquadro[] };
 
-export async function riconosci(g: Grigio, esegui: Esegui): Promise<Riconoscimento> {
+/** Prima passata: le figure del foglio (px della foto) e quale è lo schema (−1 se nessuna). */
+export async function trovaSchemi(g: Grigio, esegui: Esegui): Promise<{ figure: Figura[]; scelta: number }> {
   const { grigio: pagina, scala } = riduci(g, LATO);
-  const figure = trovaFigure(await esegui(tensore(pagina)));
-  const inFoto = (r: Riquadro): Riquadro => ({ x0: r.x0 / scala, y0: r.y0 / scala, x1: r.x1 / scala, y1: r.y1 / scala });
-  const riquadri = figure.map((f) => inFoto(f.riquadro));
-  const schema = figure.findIndex((f) => f.aste > 0 && f.vincoli > 0);
-  if (schema < 0) return { esito: 'nessunoSchema', figure: riquadri };
+  const figure = trovaFigure(await esegui(tensore(pagina))).map((f) => ({
+    ...f, riquadro: { x0: f.riquadro.x0 / scala, y0: f.riquadro.y0 / scala, x1: f.riquadro.x1 / scala, y1: f.riquadro.y1 / scala },
+  }));
+  return { figure, scelta: figure.findIndex((f) => f.aste > 0 && f.vincoli > 0) };
+}
 
-  const riquadro = riquadri[schema];
+/** Seconda passata sul riquadro (px della foto), scelto o ritoccato dallo studente. */
+export async function leggiRiquadro(g: Grigio, riquadro: Riquadro, esegui: Esegui): Promise<{
+  primitive: Primitive; angolo: number; ritaglio: { origine: { x: number; y: number }; scala: number };
+}> {
   const { grigio: pezzo, origine } = ritaglia(g, riquadro, MARGINE_RITAGLIO);
-  const { grigio: vicino, scala: scalaRitaglio } = riduci(pezzo, LATO);
+  const { grigio: vicino, scala } = riduci(pezzo, LATO);
   const u = await esegui(tensore(vicino));
   const { primitive, angolo } = raddrizza(decodifica(u, { larghezza: vicino.larghezza, altezza: vicino.altezza }));
-  return { esito: 'ok', primitive: agganciaQuote(primitive), riquadro, figure: riquadri, angolo, ritaglio: { origine, scala: scalaRitaglio } };
+  return { primitive: agganciaQuote(primitive), angolo, ritaglio: { origine, scala } };
+}
+
+export async function riconosci(g: Grigio, esegui: Esegui): Promise<Riconoscimento> {
+  const { figure, scelta } = await trovaSchemi(g, esegui);
+  const riquadri = figure.map((f) => f.riquadro);
+  if (scelta < 0) return { esito: 'nessunoSchema', figure: riquadri };
+  const riquadro = riquadri[scelta];
+  return { esito: 'ok', ...(await leggiRiquadro(g, riquadro, esegui)), riquadro, figure: riquadri };
 }
