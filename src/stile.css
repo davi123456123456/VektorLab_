@@ -762,3 +762,24 @@ canvas { display: block; touch-action: none; }
   width: 100%; text-align: left; padding: 9px 12px; font-size: var(--t-corpo);
   color: var(--testo-attenuato); border-bottom: 1px solid var(--bordo);
 }
+
+/*
+  «Salvato», sotto il tasto Salva, per un secondo: la conferma che il file
+  sul disco è stato riscritto, dove si sta già guardando.
+*/
+.annuncio-salvato {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  z-index: 50;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  border-radius: var(--raggio-controllo);
+  background: var(--ok);
+  color: #0d1a12;
+  font-size: var(--t-etichetta);
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 40%);
+}

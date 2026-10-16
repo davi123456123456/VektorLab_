@@ -18,6 +18,7 @@ import { coefficienteCritico, type EsitoCoefficiente, type SezioneCritica }
 import { Bottone, Riga, Selettore } from './Pannelli.js';
 import { etichette } from '../state/etichette.js';
 import type { RisultatoAnalisi } from '../core/model/results.js';
+import { SoloComputer } from './SoloComputer.js';
 
 export function BloccoCoefficiente({ r }: { r: RisultatoAnalisi }) {
   const progetto = useStore((s) => s.progetto);
@@ -48,6 +49,13 @@ export function BloccoCoefficiente({ r }: { r: RisultatoAnalisi }) {
 
       {c.massimaTensione && (
         <>
+          {/*
+            Sul telefono il coefficiente è il RIQUADRO e basta — numero, fibra,
+            avviso di stabilità — più gli errori sui dati qui sopra, che dicono
+            perché il numero manca. Il procedimento passo per passo resta al
+            computer.
+          */}
+          <SoloComputer>
           <Sezioni c={c} onSeleziona={seleziona} />
 
           <div className="px-3 pb-1 pt-2">
@@ -88,9 +96,10 @@ export function BloccoCoefficiente({ r }: { r: RisultatoAnalisi }) {
               </li>
             ))}
           </ol>
+          </SoloComputer>
 
           <Esito c={c} />
-          <Progetto c={c} />
+          <SoloComputer><Progetto c={c} /></SoloComputer>
         </>
       )}
     </div>

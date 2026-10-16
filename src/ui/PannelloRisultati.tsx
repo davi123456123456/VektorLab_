@@ -34,6 +34,7 @@ import {
 } from '../core/statica/espressioni.js';
 import type { RisultatoAnalisi, RisultatoAsta } from '../core/model/results.js';
 import { SoloComputer } from './SoloComputer.js';
+import { usaTelefono } from './usaTelefono.js';
 
 /**
  * Cifre significative, non decimali fissi: 0.00123 e 123000 vanno scritti
@@ -57,6 +58,7 @@ export function PannelloRisultati() {
   const calcola = useStore((s) => s.calcolaRisultati);
   const inCorso = useStore((s) => s.calcoloInCorso);
   const errore = useStore((s) => s.erroreCalcolo);
+  const telefono = usaTelefono();
 
   const opzioniSorgente = [
     ...progetto.casi.map((c) => ({ valore: `caso:${c.id}`, etichetta: `Caso — ${c.nome}` })),
@@ -76,9 +78,10 @@ export function PannelloRisultati() {
     >
       <div className="space-y-1.5 py-2">
         {/*
-          Sul telefono i Risultati sono il PDF e basta. Resta solo «calcola»
-          quando manca il risultato — dopo un annulla, per esempio — perché
-          senza risultato il PDF è spento e non ci sarebbe modo di riaccenderlo.
+          Sul telefono la sorgente non si sceglie: si guarda il caso corrente.
+          Resta «calcola» quando manca il risultato — dopo un annulla, per
+          esempio — perché senza risultato il PDF è spento e non ci sarebbe
+          modo di riaccenderlo.
         */}
         <SoloComputer>
         <Riga etichetta="Sorgente">
@@ -117,11 +120,15 @@ export function PannelloRisultati() {
           </div>
         )}
 
-        <SoloComputer>
+        {/*
+          Sul telefono dei risultati restano tre cose: quali diagrammi vedere
+          (N T M D R), il riquadro del coefficiente di sicurezza e il PDF.
+        */}
         {risultato && (
           <>
-            <Sintesi r={risultato} />
+            <SoloComputer><Sintesi r={risultato} /></SoloComputer>
             <Componenti />
+            <SoloComputer>
             {/*
               §5 — eccezione dichiarata alla regola «tutti chiusi tranne il
               primo»: questi non sono dati da consultare, sono i comandi con
@@ -137,21 +144,28 @@ export function PannelloRisultati() {
             <Blocco titolo="Valori notevoli">
               <ValoriNotevoli r={risultato} />
             </Blocco>
+            </SoloComputer>
             {/*
               §3 — aperto di default insieme a «Vista». Sono i due blocchi che
               si guardano sempre: l'uno per decidere cosa vedere, l'altro
               perché il coefficiente di sicurezza è la domanda per cui si è
               fatta l'analisi. Gli altri restano chiusi.
             */}
-            <Blocco titolo="Coefficiente di sicurezza" aperto>
-              <BloccoCoefficiente r={risultato} />
-            </Blocco>
-            <Blocco titolo="Diagnostica">
-              <Diagnostica r={risultato} />
-            </Blocco>
+            {telefono ? (
+              // sul telefono il riquadro senza intestazione da aprire e chiudere
+              <div className="pt-2"><BloccoCoefficiente r={risultato} /></div>
+            ) : (
+              <Blocco titolo="Coefficiente di sicurezza" aperto>
+                <BloccoCoefficiente r={risultato} />
+              </Blocco>
+            )}
+            <SoloComputer>
+              <Blocco titolo="Diagnostica">
+                <Diagnostica r={risultato} />
+              </Blocco>
+            </SoloComputer>
           </>
         )}
-        </SoloComputer>
         {/*
           §1 — «Scarica relazione» sta IN FONDO e c'è sempre, anche senza
           risultati: spento e con il motivo nel suggerimento. Nasconderlo
