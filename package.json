@@ -17,7 +17,8 @@
     "pdf-check": "tsx strumenti/pdfCheck.ts",
     "screenshots": "tsx strumenti/screenshots.ts",
     "foto:attesi": "tsx strumenti/foto/scriviAttesi.ts",
-    "foto:campagna": "tsx strumenti/foto/campagna.ts"
+    "foto:campagna": "tsx strumenti/foto/campagna.ts",
+    "foto:valuta": "tsx strumenti/foto/valuta.ts"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

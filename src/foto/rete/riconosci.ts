@@ -3,7 +3,7 @@
  *
  *   foto ─► pagina a 768 px ─► rete ─► figure ─► lo schema (aste + vincolo)
  *        ─► ritaglio con il 15 % di margine ─► 768 px ─► rete ─► decodifica
- *        ─► raddrizza ─► Primitive
+ *        ─► raddrizza ─► aggancio delle quote ─► Primitive
  *
  * Le primitive sono nel sistema del ritaglio ridotto (y su); `ritaglio`
  * dice come riportarle sulla foto. Riquadri e figure sono in pixel della
@@ -15,6 +15,7 @@ import { decodifica } from './decodifica.js';
 import { trovaFigure, type Riquadro } from './figura.js';
 import { LATO, riduci, ritaglia, tensore, type Grigio } from './ingresso.js';
 import type { Esegui } from './onnx.js';
+import { agganciaQuote } from './quote.js';
 import { raddrizza } from './raddrizza.js';
 
 export const MARGINE_RITAGLIO = 0.15;
@@ -45,5 +46,5 @@ export async function riconosci(g: Grigio, esegui: Esegui): Promise<Riconoscimen
   const { grigio: vicino, scala: scalaRitaglio } = riduci(pezzo, LATO);
   const u = await esegui(tensore(vicino));
   const { primitive, angolo } = raddrizza(decodifica(u, { larghezza: vicino.larghezza, altezza: vicino.altezza }));
-  return { esito: 'ok', primitive, riquadro, figure: riquadri, angolo, ritaglio: { origine, scala: scalaRitaglio } };
+  return { esito: 'ok', primitive: agganciaQuote(primitive), riquadro, figure: riquadri, angolo, ritaglio: { origine, scala: scalaRitaglio } };
 }

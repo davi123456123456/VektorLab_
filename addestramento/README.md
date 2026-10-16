@@ -164,6 +164,49 @@ Cosa migliorare nel generatore, se la Fase 4 lo conferma: segni di sezione
 con frecce (come «altro disegno»), lettere dei nodi tonde (O, D, Q) vicino ai
 pallini, vincoli a soffitto più frequenti, più disegni a mano su quadretti.
 
+## Fase 4: dalla foto alla struttura (2026-10-16)
+
+La decodifica vive in `src/foto/rete/` (TypeScript, la stessa nell'app e negli
+strumenti): pagina a 768 px → figure (`figura.ts`) → ritaglio con il 15 % di
+margine → rete → `decodifica.ts` (punti, aste fra i nodi, verso dei momenti
+dalla punta) → `raddrizza.ts` → `quote.ts` (aggancio degli estremi) →
+`leggi()` della Fase 1. La rete gira con onnxruntime-web anche in Node.
+
+```bash
+npm run foto:valuta -- --meta sviluppo|prova|tutte [--sintetici N]
+```
+
+Scrive in `dati-foto/esiti/` la struttura letta (`NN.vektor`, si apre in
+VektorLab), `NN.json` e `NN.svg` (sovrapposizione sulla foto originale).
+Metà di sviluppo: 01–08, 18, 19, 22; metà di prova: 09–17, 20, 21, 23, 24.
+
+| Misura (2026-10-16) | Media correzioni | Perfette |
+|---|---|---|
+| ritagli sintetici di validazione, rete diretta (60) | — | 36 / 60 |
+| foto sintetiche intere, due passate (50) | 2,64 | 17 / 50 |
+| foto vere, sviluppo (11) | 4,18 | 2 / 11 |
+| foto vere, **prova** (13, misurata una volta) | **4,92** | 2 / 13 |
+
+Obiettivo v1 della spec (≤ 2 correzioni di media sulla prova): **non ancora
+raggiunto**. Tempo: ~1 s a foto in Node su un thread (Mac M2).
+
+Taratura fatta sulla metà di sviluppo (ognuna con il suo test):
+- estremi delle quote agganciati al punto notevole più vicino lungo l'asse,
+  entro il 30 % della quota: la regressione sbaglia di 6 px in mediana e 14 px
+  al 90 % anche sul sintetico, la lettura li vuole entro ~10 px;
+- carichi e ausiliarie sopra un'asta non la spezzano (nelle foto vere le aste
+  sottili prendono il colore delle quote vicino a una forza); un pallino col
+  centro sulla retta invece sì.
+
+Errori che restano, quasi tutti della rete (da correggere nel generatore e
+riaddestrando, non nella decodifica):
+- aste sottili come le linee di quota lette come «ausiliaria» (05: la
+  mensolina verticale; 12, 21: interi telai) — nei disegni sintetici le aste
+  sono sempre più spesse delle ausiliarie;
+- lettere dei nodi (A, B, C) e la «F» lette come «q»; frecce inventate (23);
+- foto sintetiche intere peggiori dei ritagli: la figura è di ~310 px e va
+  ingrandita 2,5× (il ritaglio d'addestramento non è mai sfocato così).
+
 ## Da fare (revisione della Fase 2, 2026-10-15)
 
 Risolto nella Fase 3:

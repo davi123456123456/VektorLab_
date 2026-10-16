@@ -6,11 +6,13 @@
  * coppia di vertici è un'asta se la retta che li unisce corre sulla classe
  * «asta» della segmentazione:
  *
- *   · almeno l'85 % dei campioni (ogni 2 px) ha una cella d'asta entro 1 cella;
- *   · nessun tratto scoperto più lungo di max(6 px, 1.2 × raggio tipico dei
- *     pallini): il buco lasciato da un pallino che interrompe la linea
- *     (≈ 2.7 raggi) basta a dividere l'asta, un tratto sbiadito di pochi
- *     pixel no;
+ *   · almeno il 60 % dei campioni (ogni 2 px) ha una cella d'asta entro 1
+ *     cella, e al più il 15 % è sfondo: carichi e ausiliarie sopra l'asta (la
+ *     punta di una forza, un richiamo di quota) non la spezzano, e nelle foto
+ *     vere le aste sottili si confondono spesso con loro. I simboli invece
+ *     contano come sfondo: il pallino di una cerniera interna è un buco;
+ *   · nessun tratto di sfondo più lungo di max(6 px, 1.2 × raggio tipico dei
+ *     pallini): un tratto sbiadito di pochi pixel non divide l'asta;
  *   · nessun pallino col centro sulla retta (entro mezzo raggio) all'interno
  *     del segmento: un pallino centrato sulla linea la interrompe e l'asta lì
  *     si divide (la regola di Davide), anche quando il buco è di pochi pixel.
@@ -25,7 +27,7 @@ import type { Pallino, Punto, SegmentoAsta } from '../tipi.js';
 import type { Uscite } from './tensori.js';
 import { CLASSE, PASSO_SEG } from './vocabolario.js';
 
-export const ASTE = { lunghezzaMinima: 10, passo: 2, copertura: 0.85, buco: 6, bucoRaggi: 1.2, allineato: 6 };
+export const ASTE = { lunghezzaMinima: 10, passo: 2, asta: 0.6, sfondo: 0.15, buco: 6, bucoRaggi: 1.2, allineato: 6 };
 
 function cella(u: Uscite, x: number, y: number): [number, number] {
   return [Math.round((y - (PASSO_SEG - 1) / 2) / PASSO_SEG), Math.round((x - (PASSO_SEG - 1) / 2) / PASSO_SEG)];
@@ -35,28 +37,39 @@ function asta(u: Uscite, i: number, j: number): boolean {
   return i >= 0 && i < u.h2 && j >= 0 && j < u.w2 && u.seg[i * u.w2 + j] === CLASSE.asta;
 }
 
-/** C'è una cella d'asta entro 1 cella dal punto. */
-function coperto(u: Uscite, x: number, y: number): boolean {
+/** Che cosa c'è entro 1 cella dal punto: asta, un altro disegno o solo sfondo. */
+function sotto(u: Uscite, x: number, y: number): 'asta' | 'disegno' | 'sfondo' {
   const [i, j] = cella(u, x, y);
-  for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) if (asta(u, i + di, j + dj)) return true;
-  return false;
+  let disegno = false;
+  for (let di = -1; di <= 1; di++) {
+    for (let dj = -1; dj <= 1; dj++) {
+      const a = i + di, b = j + dj;
+      if (a < 0 || a >= u.h2 || b < 0 || b >= u.w2) continue;
+      const c = u.seg[a * u.w2 + b];
+      if (c === CLASSE.asta) return 'asta';
+      if (c === CLASSE.carico || c === CLASSE.ausiliaria) disegno = true;
+    }
+  }
+  return disegno ? 'disegno' : 'sfondo';
 }
 
 function corre(u: Uscite, a: Punto, b: Punto, bucoMassimo: number): boolean {
   const l = Math.hypot(b.x - a.x, b.y - a.y);
   const n = Math.max(2, Math.ceil(l / ASTE.passo));
-  let coperti = 0, buco = 0, bucoPeggiore = 0;
+  let aste = 0, sfondo = 0, buco = 0, bucoPeggiore = 0;
   for (let k = 0; k <= n; k++) {
     const t = k / n;
-    if (coperto(u, a.x + t * (b.x - a.x), a.y + t * (b.y - a.y))) {
-      coperti++;
-      buco = 0;
-    } else {
+    const c = sotto(u, a.x + t * (b.x - a.x), a.y + t * (b.y - a.y));
+    if (c === 'sfondo') {
+      sfondo++;
       buco += l / n;
       bucoPeggiore = Math.max(bucoPeggiore, buco);
+    } else {
+      if (c === 'asta') aste++;
+      buco = 0;
     }
   }
-  return coperti / (n + 1) >= ASTE.copertura && bucoPeggiore <= bucoMassimo;
+  return aste / (n + 1) >= ASTE.asta && sfondo / (n + 1) <= ASTE.sfondo && bucoPeggiore <= bucoMassimo;
 }
 
 /** Larghezza della fascia d'asta attraversata perpendicolarmente in p [px]. */

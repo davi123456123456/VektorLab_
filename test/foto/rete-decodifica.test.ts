@@ -61,6 +61,26 @@ describe('aste dalla segmentazione (uscite ideali)', () => {
   });
 });
 
+describe('aste coperte in parte da altri disegni', () => {
+  it('la punta di una forza o un richiamo sull\'estremo non tolgono l\'asta', () => {
+    // asta da x = 20 a x = 220; i primi 24 px sono «carico» (la punta della forza), poi 10 px «ausiliaria»
+    const h2 = 48, w2 = 128;
+    const u: Uscite = { seg: new Uint8Array(h2 * w2), h2, w2, testa: new Float32Array(V.CANALI * 24 * 64), h4: 24, w4: 64 };
+    for (let j = 10; j <= 110; j++) {
+      u.seg[20 * w2 + j] = j < 22 ? V.CLASSE.carico : j < 27 ? V.CLASSE.ausiliaria : V.CLASSE.asta;
+    }
+    const aste = tracciaAste(u, [{ x: 20.5, y: 40.5 }, { x: 220.5, y: 40.5 }], []);
+    expect(aste).toHaveLength(1);
+  });
+
+  it('due nodi uniti solo da quote o carichi non fanno un\'asta', () => {
+    const h2 = 48, w2 = 128;
+    const u: Uscite = { seg: new Uint8Array(h2 * w2), h2, w2, testa: new Float32Array(V.CANALI * 24 * 64), h4: 24, w4: 64 };
+    for (let j = 10; j <= 110; j++) u.seg[20 * w2 + j] = j % 2 ? V.CLASSE.ausiliaria : V.CLASSE.carico;
+    expect(tracciaAste(u, [{ x: 20.5, y: 40.5 }, { x: 220.5, y: 40.5 }], [])).toHaveLength(0);
+  });
+});
+
 describe('decodifica completa (uscite ideali)', () => {
   it('almeno 9 ritagli su 10 si leggono esattamente', () => {
     let perfetti = 0;
