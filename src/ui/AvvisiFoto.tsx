@@ -5,13 +5,17 @@
  * qui: non entra nel progetto, nel .vektor o nella cronologia.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { ETICHETTA } from '../foto/app/disegna.js';
 import type { AvvisoApp } from '../foto/app/avvisi.js';
 import { useStore } from '../state/store.js';
 
 export function AvvisiFoto({ avvisi, chiudi }: { avvisi: AvvisoApp[]; chiudi: () => void }) {
   const [aperto, setAperto] = useState(false);
   const seleziona = useStore((s) => s.seleziona);
+  // annullata la struttura dalla foto, le sue voci non hanno più senso
+  const disegnata = useStore((s) => s.passato.some((c) => c.etichetta === ETICHETTA));
+  useEffect(() => { if (!disegnata) chiudi(); }, [disegnata, chiudi]);
   return (
     <div className="avvisi-foto" role="status">
       <div className="avvisi-foto-riga">

@@ -48,6 +48,9 @@ export function FotoTelefono({ chiudi, disegnato }: {
   disegnato: (avvisi: AvvisoApp[]) => void;
 }) {
   const [passo, setPasso] = useState<Passo>({ tipo: 'scegli' });
+  // la cornice dell'anteprima: la foto intera nello spazio libero, con le sue proporzioni
+  const spazio = useRef<HTMLDivElement>(null);
+  const [cornice, setCornice] = useState({ larghezza: 0, altezza: 0 });
   const anteprima = useRef<HTMLCanvasElement>(null);
   const foto = useRef({ larghezza: 1, altezza: 1 });
   const scatta = useRef<HTMLInputElement>(null);
@@ -78,6 +81,20 @@ export function FotoTelefono({ chiudi, disegnato }: {
       if (c) { c.width = 0; c.height = 0; }
     };
   }, []);
+
+  useEffect(() => {
+    const el = spazio.current;
+    if (!el || passo.tipo !== 'riquadro') return;
+    const adatta = () => {
+      const { larghezza, altezza } = foto.current;
+      const s = Math.min((el.clientWidth - 16) / larghezza, (el.clientHeight - 16) / altezza);
+      setCornice({ larghezza: Math.floor(larghezza * s), altezza: Math.floor(altezza * s) });
+    };
+    adatta();
+    const o = new ResizeObserver(adatta);
+    o.observe(el);
+    return () => o.disconnect();
+  }, [passo.tipo]);
 
   async function usa(file: File | undefined) {
     if (!file) return;
@@ -145,11 +162,13 @@ export function FotoTelefono({ chiudi, disegnato }: {
         </div>
       )}
 
-      <div className="foto-anteprima" hidden={passo.tipo !== 'riquadro'}>
-        <canvas ref={anteprima} />
-        {passo.tipo === 'riquadro' && (
-          <Riquadri passo={passo} foto={foto.current} cambia={(p) => setPasso(p)} />
-        )}
+      <div ref={spazio} className="foto-anteprima" hidden={passo.tipo !== 'riquadro'}>
+        <div className="foto-quadro" style={{ width: cornice.larghezza, height: cornice.altezza }}>
+          <canvas ref={anteprima} />
+          {passo.tipo === 'riquadro' && (
+            <Riquadri passo={passo} foto={foto.current} cambia={(p) => setPasso(p)} />
+          )}
+        </div>
       </div>
 
       {passo.tipo === 'riquadro' && (
@@ -174,39 +193,39 @@ function Riquadri({ passo, foto, cambia }: {
   foto: { larghezza: number; altezza: number };
   cambia: (p: Passo) => void;
 }) {
-  const svg = useRef<SVGSVGElement>(null);
+  const quadro = useRef<HTMLDivElement>(null);
   const angolo = useRef<number | null>(null);
   const { riquadro: r } = passo;
-  const maniglia = 0.035 * Math.max(foto.larghezza, foto.altezza);
+  const minimo = 0.03 * Math.max(foto.larghezza, foto.altezza);
 
-  const inFoto = (e: PE) => {
-    const b = svg.current!.getBoundingClientRect();
-    return { x: ((e.clientX - b.left) / b.width) * foto.larghezza, y: ((e.clientY - b.top) / b.height) * foto.altezza };
-  };
   const muovi = (e: PE) => {
     if (angolo.current === null) return;
-    const p = inFoto(e);
+    const b = quadro.current!.getBoundingClientRect();
+    const x = ((e.clientX - b.left) / b.width) * foto.larghezza;
+    const y = ((e.clientY - b.top) / b.height) * foto.altezza;
     const k = angolo.current;
     const n = { ...r };
-    if (k === 0 || k === 3) n.x0 = Math.min(p.x, r.x1 - maniglia); else n.x1 = Math.max(p.x, r.x0 + maniglia);
-    if (k === 0 || k === 1) n.y0 = Math.min(p.y, r.y1 - maniglia); else n.y1 = Math.max(p.y, r.y0 + maniglia);
+    if (k === 0 || k === 3) n.x0 = Math.max(0, Math.min(x, r.x1 - minimo)); else n.x1 = Math.min(foto.larghezza, Math.max(x, r.x0 + minimo));
+    if (k === 0 || k === 1) n.y0 = Math.max(0, Math.min(y, r.y1 - minimo)); else n.y1 = Math.min(foto.altezza, Math.max(y, r.y0 + minimo));
     cambia({ ...passo, riquadro: n });
   };
+  const pc = (v: number, tot: number) => `${(100 * v) / tot}%`;
   const angoli = [[r.x0, r.y0], [r.x1, r.y0], [r.x1, r.y1], [r.x0, r.y1]];
 
   return (
-    <svg ref={svg} viewBox={`0 0 ${foto.larghezza} ${foto.altezza}`} preserveAspectRatio="none"
-         onPointerMove={muovi} onPointerUp={() => { angolo.current = null; }}>
-      {passo.figure.map((f, k) => k !== passo.scelta && (
-        <rect key={k} x={f.riquadro.x0} y={f.riquadro.y0} width={f.riquadro.x1 - f.riquadro.x0}
-              height={f.riquadro.y1 - f.riquadro.y0} className="foto-figura"
-              onClick={() => cambia({ ...passo, scelta: k, riquadro: f.riquadro })} />
-      ))}
-      <rect x={r.x0} y={r.y0} width={r.x1 - r.x0} height={r.y1 - r.y0} className="foto-scelta" />
+    <div ref={quadro} className="foto-sopra" onPointerMove={muovi} onPointerUp={() => { angolo.current = null; }}>
+      <svg viewBox={`0 0 ${foto.larghezza} ${foto.altezza}`} preserveAspectRatio="none">
+        {passo.figure.map((f, k) => k !== passo.scelta && (
+          <rect key={k} x={f.riquadro.x0} y={f.riquadro.y0} width={f.riquadro.x1 - f.riquadro.x0}
+                height={f.riquadro.y1 - f.riquadro.y0} className="foto-figura" vectorEffect="non-scaling-stroke"
+                onClick={() => cambia({ ...passo, scelta: k, riquadro: f.riquadro })} />
+        ))}
+        <rect x={r.x0} y={r.y0} width={r.x1 - r.x0} height={r.y1 - r.y0} className="foto-scelta" vectorEffect="non-scaling-stroke" />
+      </svg>
       {angoli.map(([x, y], k) => (
-        <circle key={k} cx={x} cy={y} r={maniglia} className="foto-maniglia"
-                onPointerDown={(e) => { angolo.current = k; (e.target as Element).setPointerCapture(e.pointerId); }} />
+        <div key={k} className="foto-maniglia" style={{ left: pc(x, foto.larghezza), top: pc(y, foto.altezza) }}
+             onPointerDown={(e) => { angolo.current = k; quadro.current!.setPointerCapture(e.pointerId); }} />
       ))}
-    </svg>
+    </div>
   );
 }

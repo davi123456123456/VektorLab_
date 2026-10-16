@@ -9,7 +9,8 @@ FIXTURE PER LA DECODIFICA IN TYPESCRIPT (test/foto/campioni-rete).
     sparsa ([canale, riga, colonna, valore] dove |valore| > 1e-3), con le
     primitive vere, lo schema e il riquadro della figura (px y giù);
   · `foto-NNNNNNN.pgm.gz` + `.json`: una foto sintetica intera per la prova
-    con la rete vera.
+    con la rete vera; la stessa in JPEG per la prova nel browser
+    (`npm run foto:telefono`), e `bianca.png`, una foto senza schema.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from pathlib import Path
 from typing import List
 
 import numpy as np
+from PIL import Image
 
 from generatore.__main__ import serializza
 from generatore.campione import genera
@@ -79,10 +81,14 @@ def main() -> None:
             f = ideale(genera(seme, solo_etichette=False, modo=modo, rari=True))
             (CARTELLA / f"ideale-{seme:07d}.json").write_text(serializza(f) + "\n", encoding="utf-8")
     c = genera(FOTO, solo_etichette=False, modo="foto", rari=True)
-    with gzip.open(CARTELLA / f"foto-{FOTO:07d}.pgm.gz", "wb", compresslevel=9) as g:
+    # mtime=0: rigenerando, il file resta identico byte per byte
+    with open(CARTELLA / f"foto-{FOTO:07d}.pgm.gz", "wb") as grezzo, \
+            gzip.GzipFile(fileobj=grezzo, mode="wb", compresslevel=9, mtime=0) as g:
         g.write(pgm(c["immagine"]))
     dati = {"primitive": c["primitive"], "schema": c["schema"], "riquadro": c["meta"]["riquadro"]}
     (CARTELLA / f"foto-{FOTO:07d}.json").write_text(serializza(dati) + "\n", encoding="utf-8")
+    c["immagine"].save(CARTELLA / f"foto-{FOTO:07d}.jpg", quality=85)
+    Image.new("RGB", (800, 600), "white").save(CARTELLA / "bianca.png")
 
 
 if __name__ == "__main__":

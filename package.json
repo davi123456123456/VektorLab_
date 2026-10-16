@@ -18,7 +18,8 @@
     "screenshots": "tsx strumenti/screenshots.ts",
     "foto:attesi": "tsx strumenti/foto/scriviAttesi.ts",
     "foto:campagna": "tsx strumenti/foto/campagna.ts",
-    "foto:valuta": "tsx strumenti/foto/valuta.ts"
+    "foto:valuta": "tsx strumenti/foto/valuta.ts",
+    "foto:telefono": "tsx strumenti/foto/provaTelefono.ts"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

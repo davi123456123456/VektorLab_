@@ -207,6 +207,46 @@ riaddestrando, non nella decodifica):
 - foto sintetiche intere peggiori dei ritagli: la figura è di ~310 px e va
   ingrandita 2,5× (il ritaglio d'addestramento non è mai sfocato così).
 
+## Fase 5: la foto nell'app (2026-10-16)
+
+Solo sul telefono (decisione di Davide): il tasto fotocamera nella barra in
+alto apre «Struttura da foto» → **Scatta** o **Galleria** → la rete trova lo
+schema e lo riquadra (un tocco ne sceglie un altro, gli angoli si
+trascinano) → **Riconosci** → la struttura si disegna nel foglio corrente
+al posto del disegno che c'era, con un solo comando: **Annulla** la toglie
+tutta. Una striscia «Da controllare» elenca gli avvisi della lettura; un
+tocco seleziona i nodi o le aste coinvolti. Sul computer non c'è niente.
+
+- `src/ui/FotoTelefono.tsx`, `src/ui/AvvisiFoto.tsx`: il pannello e la striscia;
+- `src/foto/app/`: decodifica (≤ 2400 px), servizio del worker, ponte, comando;
+- `src/worker/foto.worker.ts`: la rete (onnxruntime-web/wasm), scaricata al primo uso.
+
+Privacy (R2): la bitmap si chiude appena letta, al worker passano solo i
+byte del grigio (trasferiti), il worker li dimentica dopo la lettura o
+all'annullamento; nessuna memorizzazione, l'unica richiesta di rete è il
+modello (`test/foto/privacy.test.ts`).
+
+```bash
+npm run build && npm run preview     # in un altro terminale
+npm run foto:telefono                # Playwright, finestra 390×844 con tocco
+```
+
+Misure (2026-10-16, Chromium sul Mac M2, WASM a un thread, server locale):
+
+| | |
+|---|---|
+| prima foto: scaricamento + ricerca dello schema | 1,4 s |
+| lettura dopo «Riconosci» | 0,8 s |
+| foto successive fino al riquadro | 0,8 s |
+| da scaricare al primo uso (gzip / brotli) | 5,8 MB / 4,4 MB (modello 2,0 MB, WASM 3,7 / 2,3 MB, worker 0,1 MB) |
+| pacchetto principale dell'app | +8 KB (onnxruntime resta nel worker) |
+
+Da provare su un telefono vero: i tempi (R5, < 3 s; un telefono medio è
+forse 3–5 volte più lento del Mac, quindi al limite), la fotocamera
+(`capture="environment"`) su iPhone e Android, la memoria con foto da 48 MP.
+Per andare più veloci: più thread WASM, che richiedono le intestazioni
+COOP/COEP sul sito (Vercel).
+
 ## Da fare (revisione della Fase 2, 2026-10-15)
 
 Risolto nella Fase 3:
