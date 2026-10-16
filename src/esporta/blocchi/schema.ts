@@ -474,7 +474,9 @@ function distribuito(
   const asse = assiAsta(pr, k.astaId) ?? { c: 1, s: 0 };
   const verso = versoreGlobale(k.direzione, asse);
 
-  const N = 9;
+  // tratti in numero PARI: le frecce vanno a punti alterni, e così ce n'è
+  // una anche sull'estremo destro (con 9 il carico finiva senza freccia)
+  const N = 10;
   c.strokeStyle = p.carico;
   c.fillStyle = p.carico;
   c.lineWidth = 0.9;

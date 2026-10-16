@@ -227,26 +227,8 @@ function disegnaDistribuito(
   ctx: CanvasRenderingContext2D, o: OpzioniCarichi,
   g: Geometria, c: Extract<Carico, { tipo: 'distribuito' }>, colore: string,
 ): void {
-  const n = 9;
-  const punti: { base: Punto; cima: Punto }[] = [];
-  for (let i = 0; i <= n; i++) {
-    const t = i / n;
-    const s = c.sIniziale + (c.sFinale - c.sIniziale) * t;
-    const w = { x: g.x1 + (g.x2 - g.x1) * s, y: g.y1 + (g.y2 - g.y1) * s };
-    const base = mondoASchermo(o.camera, w);
-    // le frecce puntano fisicamente nel verso in cui il carico agisce, quindi
-    // si lavora in componenti GLOBALI: ruotando l'asta, un carico locale ruota
-    // con essa e uno globale no, e il disegno lo deve mostrare
-    const q = c.q1 + (c.q2 - c.q1) * t;
-    const { qx: gx, qy: gy } = componentiGlobali(q, c.direzione, { c: g.c, s: g.s });
-    const modulo = Math.hypot(gx, gy);
-    const L = modulo === 0 ? 0 : lunghezza(modulo, o.scala.distribuitoMax);
-    const cima = modulo === 0 ? base : {
-      x: base.x - (gx / modulo) * L,
-      y: base.y + (gy / modulo) * L,
-    };
-    punti.push({ base, cima });
-  }
+  const punti = puntiDistribuito(o, g, c);
+  const n = punti.length - 1;
 
   // contorno del diagramma di carico
   ctx.save();
@@ -266,7 +248,9 @@ function disegnaDistribuito(
   ctx.fill();
   ctx.restore();
 
-  // frecce a intervalli regolari
+  // frecce a intervalli regolari: con i tratti in numero PARI la sequenza
+  // 0, 2, 4… cade anche sull'ultimo punto, e il carico finisce con una
+  // freccia a destra come comincia con una a sinistra
   for (let i = 0; i <= n; i += 2) {
     const p = punti[i];
     freccia(ctx, p.base, p.base.x - p.cima.x, p.base.y - p.cima.y, colore, 1.3);
@@ -278,6 +262,148 @@ function disegnaDistribuito(
     etichettaCarico(ctx, o, `${(qMax / 1e3).toFixed(1)} kN/m`,
                     mid.cima.x + 6, mid.cima.y - 8, colore);
   }
+}
+
+/**
+ * I punti del diagramma di un distribuito: sull'asta (`base`) e sulla coda
+ * delle frecce (`cima`). Dieci tratti — un numero PARI — perché le frecce
+ * vanno a punti alterni e così ce n'è una su entrambi gli estremi; con nove
+ * l'ultima freccia cadeva un tratto prima della fine e il carico finiva nel
+ * nulla.
+ */
+const TRATTI_DISTRIBUITO = 10;
+
+function puntiDistribuito(
+  o: { camera: Camera; scala: ScalaCarichi },
+  g: Geometria, c: Extract<Carico, { tipo: 'distribuito' }>,
+): { base: Punto; cima: Punto }[] {
+  const punti: { base: Punto; cima: Punto }[] = [];
+  for (let i = 0; i <= TRATTI_DISTRIBUITO; i++) {
+    const t = i / TRATTI_DISTRIBUITO;
+    const s = c.sIniziale + (c.sFinale - c.sIniziale) * t;
+    const w = { x: g.x1 + (g.x2 - g.x1) * s, y: g.y1 + (g.y2 - g.y1) * s };
+    const base = mondoASchermo(o.camera, w);
+    // le frecce puntano fisicamente nel verso in cui il carico agisce, quindi
+    // si lavora in componenti GLOBALI: ruotando l'asta, un carico locale ruota
+    // con essa e uno globale no, e il disegno lo deve mostrare
+    const q = c.q1 + (c.q2 - c.q1) * t;
+    const { qx: gx, qy: gy } = componentiGlobali(q, c.direzione, { c: g.c, s: g.s });
+    const modulo = Math.hypot(gx, gy);
+    const L = modulo === 0 ? 0 : lunghezza(modulo, o.scala.distribuitoMax);
+    const cima = modulo === 0 ? base : {
+      x: base.x - (gx / modulo) * L,
+      y: base.y + (gy / modulo) * L,
+    };
+    punti.push({ base, cima });
+  }
+  return punti;
+}
+
+/**
+ * IL CARICO SOTTO IL DITO, per selezionarlo toccandolo (sul telefono).
+ *
+ * Le forme sono quelle del disegno: la freccia di una forza, l'anello di un
+ * momento, la campitura di un distribuito, la freccia di un cedimento. Il
+ * punto di applicazione NON conta — tutto ciò che sta entro `esclusione`
+ * pixel dal nodo o dall'asta — perché lì un tocco vuol dire «metti un carico
+ * qui», e deve restare così. L'esclusione è più larga della tolleranza: se
+ * fosse più stretta, un dito sul nodo prenderebbe comunque la punta.
+ *
+ * Si restituisce l'ultimo colpito nell'ordine di disegno: quello che si vede
+ * sopra gli altri.
+ */
+export function colpisciCarico(
+  o: { progetto: Progetto; camera: Camera; carichi: Carico[]; scala: ScalaCarichi },
+  p: Punto, tolleranza = 14, esclusione = 20,
+): string | null {
+  const nodi = new Map(o.progetto.nodi.map((n) => [n.id, n]));
+  const aste = new Map(o.progetto.aste.map((a) => [a.id, a]));
+  let trovato: string | null = null;
+
+  const lontanoDa = (q: Punto) => Math.hypot(p.x - q.x, p.y - q.y) > esclusione;
+  // la freccia va dalla coda (punta − d) alla punta; il nodo sotto la punta escluso
+  const suFreccia = (punta: Punto, dx: number, dy: number, applicazione: Punto) =>
+    Math.hypot(dx, dy) > 1e-6 && lontanoDa(applicazione)
+    && distanzaDaSegmento(p, { x: punta.x - dx, y: punta.y - dy }, punta) <= tolleranza;
+  const freccia = (punta: Punto, fx: number, fy: number) => {
+    const modulo = Math.hypot(fx, fy);
+    if (modulo === 0) return false;
+    const L = lunghezza(modulo, o.scala.forzaMax);
+    return suFreccia(punta, (fx / modulo) * L, (-fy / modulo) * L, punta);
+  };
+  const anello = (centro: Punto, r: number) => lontanoDa(centro)
+    && Math.abs(Math.hypot(p.x - centro.x, p.y - centro.y) - r) <= tolleranza;
+
+  for (const c of o.carichi) {
+    let colpito = false;
+    switch (c.tipo) {
+      case 'forzaNodale': {
+        const n = nodi.get(c.nodoId);
+        if (n) colpito = freccia(mondoASchermo(o.camera, { x: n.x, y: n.y }), c.fx, c.fy);
+        break;
+      }
+      case 'momentoNodale': {
+        const n = nodi.get(c.nodoId);
+        if (n) {
+          colpito = anello(mondoASchermo(o.camera, { x: n.x, y: n.y }),
+                           15 + 7 * Math.sqrt(Math.abs(c.mz) / o.scala.momentoMax));
+        }
+        break;
+      }
+      case 'forzaInCampata': case 'momentoInCampata': {
+        const g = geometria(c.astaId, aste, nodi);
+        if (!g) break;
+        const w = mondoASchermo(o.camera, {
+          x: g.x1 + (g.x2 - g.x1) * c.s, y: g.y1 + (g.y2 - g.y1) * c.s,
+        });
+        if (c.tipo === 'momentoInCampata') { colpito = anello(w, 15); break; }
+        const [fx, fy] = c.riferimento === 'locale' ? ruotaInGlobale(g, c.fx, c.fy) : [c.fx, c.fy];
+        colpito = freccia(w, fx, fy);
+        break;
+      }
+      case 'distribuito': {
+        const g = geometria(c.astaId, aste, nodi);
+        if (!g) break;
+        const punti = puntiDistribuito(o, g, c);
+        const a = mondoASchermo(o.camera, { x: g.x1, y: g.y1 });
+        const b = mondoASchermo(o.camera, { x: g.x2, y: g.y2 });
+        // dentro la campitura, ma non sulla striscia dell'asta
+        const poligono = [punti[0].base, ...punti.map((q) => q.cima), punti[punti.length - 1].base];
+        colpito = dentroPoligono(p, poligono) && distanzaDaSegmento(p, a, b) > esclusione;
+        break;
+      }
+      case 'cedimento': {
+        const n = nodi.get(c.nodoId);
+        const modulo = Math.hypot(c.ux, c.uy);
+        if (!n || modulo === 0) break;
+        const q = mondoASchermo(o.camera, { x: n.x, y: n.y });
+        const dx = (c.ux / modulo) * 34, dy = (-c.uy / modulo) * 34;
+        colpito = suFreccia({ x: q.x + dx, y: q.y + dy }, dx, dy, q);
+        break;
+      }
+      default: break;
+    }
+    if (colpito) trovato = c.id as string;
+  }
+  return trovato;
+}
+
+function distanzaDaSegmento(p: Punto, a: Punto, b: Punto): number {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const l2 = dx * dx + dy * dy;
+  const t = l2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+
+function dentroPoligono(p: Punto, v: Punto[]): boolean {
+  let dentro = false;
+  for (let i = 0, j = v.length - 1; i < v.length; j = i++) {
+    if ((v[i].y > p.y) !== (v[j].y > p.y)
+        && p.x < ((v[j].x - v[i].x) * (p.y - v[i].y)) / (v[j].y - v[i].y) + v[i].x) {
+      dentro = !dentro;
+    }
+  }
+  return dentro;
 }
 
 /** Il cedimento è uno spostamento IMPOSTO, non una forza: freccia tratteggiata. */

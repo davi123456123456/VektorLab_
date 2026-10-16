@@ -15,6 +15,7 @@ import { useEffect, useRef } from 'react';
 import { disegnaScena, type StatoDisegno } from '../render/scene.js';
 import { distanza, mondoASchermo, schermoAMondo, type Punto } from '../render/camera.js';
 import { calcolaSnap } from '../render/snap.js';
+import { calcolaScala, colpisciCarico } from '../render/carichi.js';
 import {
   ascissaSuAsta, catenaCollineare, colpisci, colpisciSuAsta, dentroRiquadro,
 } from '../render/picking.js';
@@ -171,7 +172,10 @@ export function CanvasView() {
       mostraEtichetteNodi: st.camera.zoom > 25 && st.progetto.nodi.length <= 12,
       carichi: st.modalita === 'materiali' ? [] : carichi,
       mostraValoriCarichi: st.modalita === 'carichi',
-      caricoEvidenziato: st.caricoEvidenziato,
+      // sul telefono non c'è il passaggio del puntatore: si accende il
+      // carico selezionato, o non si vedrebbe che cosa si sta per eliminare
+      caricoEvidenziato: st.caricoEvidenziato
+        ?? (telefonoRef.current ? (st.caricoSelezionato as string | null) : null),
       cinematica: st.modalita === 'analisi' ? st.cinematica : null,
       modoMeccanismo: st.modoMeccanismo,
       faseMeccanismo: fase,
@@ -644,10 +648,30 @@ export function CanvasView() {
 
     // ── modalità CARICHI: il click applica il carico corrente ──
     if (st.modalita === 'carichi') {
+      /*
+       * SUL TELEFONO un tocco su un carico lo SELEZIONA, come un tocco su un
+       * vincolo o su un'asta: è l'unico modo di arrivare a «elimina» senza
+       * l'elenco del pannello. Il punto di applicazione resta escluso (vedi
+       * `colpisciCarico`), così toccare il nodo continua ad aggiungerne uno.
+       */
+      if (telefonoRef.current) {
+        const carichi = st.progetto.carichi.filter((c) => c.casoId === st.casoCorrente);
+        const toccato = colpisciCarico({
+          progetto: st.progetto, camera: st.camera, carichi, scala: calcolaScala(carichi),
+        }, p);
+        if (toccato) {
+          st.svuotaSelezione();
+          st.selezionaCarico(toccato as never);
+          return;
+        }
+      }
       const b = colpisci(st.progetto, st.camera, p);
       if (b?.tipo === 'nodo') applicaCaricoNodale(b.id);
       else if (b?.tipo === 'asta') applicaCaricoAsta(b.id);
-      else if (!e.shiftKey) st.svuotaSelezione();
+      else if (!e.shiftKey) {
+        st.svuotaSelezione();
+        if (telefonoRef.current) st.selezionaCarico(null);
+      }
       return;
     }
 

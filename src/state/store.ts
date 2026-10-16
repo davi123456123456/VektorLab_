@@ -560,8 +560,10 @@ export function creaStore(): UseBoundStore<StoreApi<Stato>> {
 
     casoCorrente: 'principale' as LoadCaseId,
     caricoCorrente: 'forza',
-    valoreForza: 10000,
-    direzioneForza: -Math.PI / 2,
+    // una forza unitaria orizzontale: il valore da cui si parte e si
+    // scrive il proprio, invece di dover prima cancellare un 10 a −90°
+    valoreForza: 1000,
+    direzioneForza: 0,
     valoreMomento: 10000,
     valoreDistribuito: -10000,
     valoreDistribuito2: -10000,
