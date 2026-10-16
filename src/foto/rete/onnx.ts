@@ -3,17 +3,20 @@
  *
  * Il pacchetto si importa solo quando serve (è grande): chi non usa la foto
  * non lo scarica mai. Si prende la variante solo WASM (14 MB invece dei 28
- * della build con WebGPU): la rete usa solo il backend wasm. Le prove e gli strumenti passano la stessa funzione
- * `Esegui`, o una finta con le uscite ideali.
+ * della build con WebGPU): la rete usa solo il backend wasm. Le prove e gli
+ * strumenti passano la stessa funzione `Esegui`, o una finta con le uscite
+ * ideali.
  */
 
 import { segDaLogit, type Uscite } from './tensori.js';
 
 export type Esegui = (t: { dati: Float32Array; H: number; W: number }) => Promise<Uscite>;
 
-export async function creaEsecutore(modello: Uint8Array | ArrayBuffer, opzioni: { thread?: number } = {}): Promise<Esegui> {
+/** `wasm`: l'indirizzo del file .wasm, quando chi impacchetta l'app lo sposta (Vite). */
+export async function creaEsecutore(modello: Uint8Array | ArrayBuffer, opzioni: { thread?: number; wasm?: string } = {}): Promise<Esegui> {
   const ort = await import('onnxruntime-web/wasm');
   ort.env.wasm.numThreads = opzioni.thread ?? 1;
+  if (opzioni.wasm) ort.env.wasm.wasmPaths = { wasm: opzioni.wasm };
   const dati = modello instanceof Uint8Array ? modello : new Uint8Array(modello);
   const sessione = await ort.InferenceSession.create(dati, { executionProviders: ['wasm'] });
   return async ({ dati: ingresso, H, W }) => {
