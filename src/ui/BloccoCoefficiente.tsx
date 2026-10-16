@@ -19,6 +19,7 @@ import { Bottone, Riga, Selettore } from './Pannelli.js';
 import { etichette } from '../state/etichette.js';
 import type { RisultatoAnalisi } from '../core/model/results.js';
 import { SoloComputer } from './SoloComputer.js';
+import { usaLatiTratteggiata } from './usaLatiTratteggiata.js';
 
 export function BloccoCoefficiente({ r }: { r: RisultatoAnalisi }) {
   const progetto = useStore((s) => s.progetto);
@@ -29,6 +30,20 @@ export function BloccoCoefficiente({ r }: { r: RisultatoAnalisi }) {
     selezionaStore({ aste: ids as never });
 
   const nomeAsta = etichette(progetto).asta;
+  /*
+   * M e T si SCRIVONO rispetto alla tratteggiata, come nei diagrammi: il
+   * calcolo del coefficiente usa i valori del motore, e non cambia; qui si
+   * cambia solo il segno mostrato dove la tratteggiata sta dall'altra parte.
+   */
+  const lati = usaLatiTratteggiata();
+  const latoDi = (id: string | undefined) => (id ? lati.get(id as never) ?? 1 : 1);
+  const comeMostrato = (riga: { formula: string; valore: string }) => {
+    const sez = c.massimaTensione;
+    if (!sez || latoDi(sez.astaId) === 1) return riga.valore;
+    if (riga.formula === 'M') return `${((-sez.M) / 1e3).toFixed(2)} kNm`;
+    if (riga.formula === 'T') return `${((-sez.T) / 1e3).toFixed(2)} kN`;
+    return riga.valore;
+  };
   const c = useMemo(
     () => coefficienteCritico(progetto, r, {
       modoTaglio,
@@ -56,7 +71,7 @@ export function BloccoCoefficiente({ r }: { r: RisultatoAnalisi }) {
             computer.
           */}
           <SoloComputer>
-          <Sezioni c={c} onSeleziona={seleziona} />
+          <Sezioni c={c} onSeleziona={seleziona} lato={latoDi(c.massimoMomento?.astaId)} />
 
           <div className="px-3 pb-1 pt-2">
             <Riga etichetta="τ">
@@ -87,7 +102,7 @@ export function BloccoCoefficiente({ r }: { r: RisultatoAnalisi }) {
                               style={{ color: 'var(--testo)' }}>
                           {riga.formula === 'asta'
                             ? conEtichetta(riga.valore, nomeAsta)
-                            : riga.valore}
+                            : p.numero === 1 ? comeMostrato(riga) : riga.valore}
                         </span>
                       </div>
                     ))}
@@ -125,8 +140,10 @@ function conEtichetta(valore: string, nome: (id: never) => string): string {
 }
 
 /** Le due sezioni candidate, e se coincidono. */
-function Sezioni({ c, onSeleziona }: {
+function Sezioni({ c, onSeleziona, lato }: {
   c: EsitoCoefficiente; onSeleziona: (ids: string[]) => void;
+  /** lato della tratteggiata dell'asta del massimo momento */
+  lato: 1 | -1;
 }) {
   const m = c.massimoMomento;
   const t = c.massimaTensione!;
@@ -134,7 +151,7 @@ function Sezioni({ c, onSeleziona }: {
     <div className="space-y-1 px-3 pb-1 text-[length:var(--t-minuto)]">
       {m && (
         <Candidata etichetta="massimo momento" s={m}
-                   valore={`M = ${(m.M / 1e3).toFixed(2)} kNm`}
+                   valore={`M = ${((lato * m.M) / 1e3).toFixed(2)} kNm`}
                    onClick={() => onSeleziona([m.astaId])} />
       )}
       <Candidata etichetta="massima tensione" s={t}
@@ -148,8 +165,8 @@ function Sezioni({ c, onSeleziona }: {
       {m?.salto && (
         <p style={{ color: 'var(--testo-debole)' }}>
           M discontinuo:{' '}
-          <span className="numerico">{(m.salto.sinistra / 1e3).toFixed(2)}</span> /{' '}
-          <span className="numerico">{(m.salto.destra / 1e3).toFixed(2)}</span> kNm
+          <span className="numerico">{((lato * m.salto.sinistra) / 1e3).toFixed(2)}</span> /{' '}
+          <span className="numerico">{((lato * m.salto.destra) / 1e3).toFixed(2)}</span> kNm
         </p>
       )}
     </div>

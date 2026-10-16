@@ -14,7 +14,8 @@
 
 import type { RisultatoAnalisi, RisultatoAsta } from '../../core/model/results.js';
 import type { Progetto } from '../../core/model/types.js';
-import { calcolaTratteggiata, latoEffettivo } from '../../core/model/tratteggiata.js';
+import { latiDelCalcolo, vistaDallaTratteggiata } from '../../core/model/tratteggiata.js';
+import { latoDelPositivo } from '../../render/diagrammi.js';
 import {
   espressioniPerAsta, scrivi, type Polinomio,
 } from '../../core/statica/espressioni.js';
@@ -157,7 +158,16 @@ export function disegnaDiagramma(c: ContestoPdf, o: OpzioniDiagramma): string {
   const q = inquadra(puntiDelModello(o.modelloRisultati), dentro, 18);
   const nodi = new Map(o.modelloRisultati.nodi.map((n) => [n.id, n]));
   const aste = new Map(o.modelloRisultati.aste.map((a) => [a.id, a]));
-  const tratt = calcolaTratteggiata(o.modelloRisultati);
+  /*
+   * LA STESSA REGOLA DELLO SCHERMO (vedi `render/diagrammi.ts`): i valori si
+   * leggono dalla tratteggiata dell'asta che l'autore ha disegnato, M positivo
+   * dalla sua parte (fibre tese), N e T positivi dalla parte opposta. Prima
+   * il documento aveva una regola sua, e sbagliata: su una trave appoggiata
+   * disegnata da sinistra il momento finiva sopra, sulle fibre compresse,
+   * mentre la didascalia diceva il contrario.
+   */
+  const lati = latiDelCalcolo(o.progetto, o.modelloRisultati);
+  const vista = vistaDallaTratteggiata(o.risultato, lati);
   const colore = coloreComponente(p, k);
 
   if (k === 'D') return deformata(c, o, q, nodi, aste, colore);
@@ -170,11 +180,10 @@ export function disegnaDiagramma(c: ContestoPdf, o: OpzioniDiagramma): string {
   if (massimo <= 0) return `${NOME_COMPONENTE[k]} identicamente nullo su tutte le aste.`;
   const ampiezza = ampiezzaDiagramma(o.riquadro.w);
   const scala = ampiezza / massimo;
-  const verso = k === 'M' && o.fibreTese !== false ? -1 : 1;
 
   const quote: { x: number; y: number; testo: string }[] = [];
 
-  for (const ra of o.risultato.aste) {
+  for (const ra of vista.aste) {
     const el = aste.get(ra.astaId);
     if (!el) continue;
     const i = nodi.get(el.nodoIniziale), j = nodi.get(el.nodoFinale);
@@ -183,15 +192,16 @@ export function disegnaDiagramma(c: ContestoPdf, o: OpzioniDiagramma): string {
     const B = q.p(j.x as unknown as number, j.y as unknown as number);
     const L = Math.hypot(B.x - A.x, B.y - A.y) || 1;
     const ux = (B.x - A.x) / L, uy = (B.y - A.y) / L;
-    const lato = latoEffettivo(tratt, el);
-    // la normale sul foglio, dal lato della fibra di riferimento
-    const nx = -uy * lato, ny = ux * lato;
+    // dove vanno i valori POSITIVI: ŷ dell'asta per `latoDelPositivo`, e ŷ
+    // sul foglio — che ha la y verso il basso — è (uy, −ux)
+    const verso = latoDelPositivo(k, lati.get(el.id) ?? 1, o.fibreTese !== false);
+    const nx = uy * verso, ny = -ux * verso;
 
     const v = valori(ra, k);
     const punti = [...ra.ascisse].map((x, t) => {
       const s = ra.lunghezza > 0 ? x / ra.lunghezza : 0;
       const base = { x: A.x + ux * L * s, y: A.y + uy * L * s };
-      const d = v[t] * scala * verso;
+      const d = v[t] * scala;
       return { base, x: base.x + nx * d, y: base.y + ny * d };
     });
     if (punti.length < 2) continue;
@@ -238,8 +248,10 @@ export function disegnaDiagramma(c: ContestoPdf, o: OpzioniDiagramma): string {
   const unitaScala = k === 'M' ? 'kNm' : 'kN';
   return `${NOME_COMPONENTE[k]} — valori in ${unitaScala}. `
     + `Massimo in modulo ${fmt(massimo / 1e3, cifre)} ${unitaScala}. `
-    + (k === 'M' ? 'Il diagramma è riportato dalla parte delle fibre tese.'
-      : 'Le ordinate sono misurate dal lato della tratteggiata.');
+    + (k === 'M'
+      ? 'Il diagramma è riportato dalla parte delle fibre tese: M positivo tende '
+        + 'la fibra tratteggiata e sta dalla sua parte.'
+      : `${k} positivo dalla parte opposta alla tratteggiata, negativo dalla sua parte.`);
 }
 
 function valori(a: RisultatoAsta, k: Exclude<Componente, 'D'>): Float64Array {
@@ -361,6 +373,7 @@ function deformata(
 // ═══════════════════════ DIAGRAMMI PER SINGOLA ASTA ═══════════════════════
 
 export interface OpzioniPerAsta {
+  /** risultato GIÀ letto dalla tratteggiata (`vistaDallaTratteggiata`) */
   risultato: RisultatoAnalisi;
   modelloRisultati: Progetto;
   etichette: Etichette;

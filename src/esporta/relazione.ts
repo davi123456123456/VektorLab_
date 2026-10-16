@@ -33,6 +33,7 @@ import type { EsitoVerifiche } from '../core/checks/index.js';
 import type { EsitoAutoverifiche } from '../core/statica/autoverifiche.js';
 import type { ComponenteReazione } from '../core/statica/reazioni.js';
 import type { Carico, Progetto } from '../core/model/types.js';
+import { latiDelCalcolo, vistaDallaTratteggiata } from '../core/model/tratteggiata.js';
 import type { Etichette } from '../state/etichette.js';
 import { disegnaLogo, LARGHEZZA_LOGO } from './logo.js';
 
@@ -125,10 +126,20 @@ export async function componiRelazione(d: DatiRelazione): Promise<Uint8Array> {
     return Math.max(90, Math.min(voluta, disponibile()));
   };
 
+  /*
+   * T e M si scrivono rispetto alla tratteggiata, come sullo schermo: i
+   * diagrammi per asta, le espressioni e la sezione critica leggono la
+   * vista; i diagrammi sulla struttura la ricavano da sé dal risultato del
+   * motore, che resta quello su cui lavorano le verifiche.
+   */
+  const lati = latiDelCalcolo(d.progetto, d.modelloRisultati);
+  const vista = vistaDallaTratteggiata(d.risultato, lati);
+
   const com: Comune = {
     palette: p, etichette: d.etichette, x: X, larghezza: LARG,
     limite: LIMITE,
     nuovaPagina: () => acapo(),
+    lati,
   };
   const aggiorna = (r: Contesto) => { c = r.c; y = r.y; };
 
@@ -292,7 +303,7 @@ export async function componiRelazione(d: DatiRelazione): Promise<Uint8Array> {
           `Diagrammi per asta — ${d.etichette.asta(ra.astaId)}`, X, y + 8, LARG);
         const h = 300;
         const righe = disegnaAsta(c, {
-          risultato: d.risultato, modelloRisultati: d.modelloRisultati,
+          risultato: vista, modelloRisultati: d.modelloRisultati,
           etichette: d.etichette, palette: p,
           riquadro: { x: X, y: y + 6, w: LARG, h }, astaId: ra.astaId,
         });

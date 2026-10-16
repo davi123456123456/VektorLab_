@@ -14,6 +14,7 @@ import type { ComponenteReazione } from '../core/statica/reazioni.js';
 import type { Tronco } from '../core/statica/elementino.js';
 import { DisegnoConcio } from './DisegnoConcio.js';
 import { SoloComputer } from './SoloComputer.js';
+import { usaLatiTratteggiata } from './usaLatiTratteggiata.js';
 
 const NOME_COMPONENTE: Record<ComponenteReazione['componente'], string> = {
   x: 'orizzontale',
@@ -336,6 +337,7 @@ function usaAngoloAsta(): (astaId: string) => number {
 }
 
 function CorpoLibero() {
+  const lati = usaLatiTratteggiata();
   const tronco = useStore((s) => s.tronco);
   const scelto = useStore((s) => s.troncoScelto)!;
   const alterna = useStore((s) => s.alternaLatoTronco);
@@ -364,7 +366,7 @@ function CorpoLibero() {
         </p>
       ) : (
         <>
-          <Azioni tronco={tronco} />
+          <Azioni tronco={tronco} lato={lati.get(tronco.astaId) ?? 1} />
           <DisegnoConcio
             N={tronco.N} T={tronco.T} M={tronco.M}
             angolo={angoloAsta(tronco.astaId as unknown as string)}
@@ -402,11 +404,12 @@ function CorpoLibero() {
   );
 }
 
-function Azioni({ tronco }: { tronco: Tronco }) {
+/** T e M scritti rispetto alla tratteggiata dell'asta tagliata, come nei diagrammi. */
+function Azioni({ tronco, lato }: { tronco: Tronco; lato: 1 | -1 }) {
   const voci: [string, number, string, string][] = [
     ['N', tronco.N, 'kN', 'var(--sforzo-normale)'],
-    ['T', tronco.T, 'kN', 'var(--taglio)'],
-    ['M', tronco.M, 'kNm', 'var(--momento)'],
+    ['T', lato * tronco.T, 'kN', 'var(--taglio)'],
+    ['M', lato * tronco.M, 'kNm', 'var(--momento)'],
   ];
   return (
     <div className="numerico flex gap-3 pt-1">

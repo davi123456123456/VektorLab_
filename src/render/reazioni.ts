@@ -214,6 +214,13 @@ export interface OpzioniCorpoLibero {
   camera: Camera;
   calcolo: Progetto;
   tronco: Tronco;
+  /**
+   * Lato della tratteggiata dell'asta tagliata: T e M si scrivono rispetto
+   * a lei, come nei diagrammi (`vistaDallaTratteggiata`). Le frecce no —
+   * quelle mostrano il verso fisico delle azioni, che non dipende da come
+   * si sceglie la fibra di riferimento.
+   */
+  lato?: 1 | -1;
   colori: ColoriReazioni;
   mostraValori: boolean;
   /** comparsa in [0,1] */
@@ -314,10 +321,11 @@ export function disegnaCorpoLibero(
   ctx.restore();
 
   // ── le tre azioni sulla faccia tagliata ──
+  const lato = o.lato ?? 1;
   const righe = [
     `N ${(t.N / 1e3).toFixed(2)} kN`,
-    `T ${(t.T / 1e3).toFixed(2)} kN`,
-    `M ${(t.M / 1e3).toFixed(2)} kNm`,
+    `T ${((lato * t.T) / 1e3).toFixed(2)} kN`,
+    `M ${((lato * t.M) / 1e3).toFixed(2)} kNm`,
   ];
   righe.forEach((r, i) => {
     etichettaSuSfondo(ctx, r, pc.x + 12, pc.y - 24 + i * 15,

@@ -35,7 +35,9 @@ import type { ComponenteReazione, ForzaDiSconnessione } from '../core/statica/re
 import type { CorpoRigido } from '../core/model/results.js';
 import { asteNelNodo } from '../core/model/deduzione.js';
 import type { Etichette } from '../state/etichette.js';
-import { calcolaTratteggiata, latoEffettivo } from '../core/model/tratteggiata.js';
+import {
+  calcolaTratteggiata, latiDelCalcolo, latoEffettivo, type LatoTratteggiata,
+} from '../core/model/tratteggiata.js';
 import { gruppiSconnessione } from '../core/model/partizione.js';
 import type { Tronco } from '../core/statica/elementino.js';
 
@@ -303,6 +305,7 @@ function disegnaRisultati(
       camera: s.camera, risultato: r,
       componente: c, scala,
       fibreTese: s.momentoDallaParteDelleFibreTese,
+      lati: latiPer(s.progetto, s.modelloRisultati ?? s.progetto),
       colore: coloreComponente(t, c), sfondo: t.sfondo, testo: t.testo,
       mostraValori: s.mostraValoriRisultati,
       avanzamento: s.avanzamentoDiagrammi,
@@ -359,8 +362,27 @@ function disegnaStatica(
     disegnaCorpoLibero(ctx, {
       camera: s.camera, calcolo: s.modelloDiCalcolo, tronco: s.corpoLibero,
       colori, mostraValori: s.mostraValoriReazioni, comparsa: s.comparsaReazioni,
+      lato: latiPer(s.progetto, s.modelloDiCalcolo).get(s.corpoLibero.astaId) ?? 1,
     });
   }
+}
+
+/*
+ * Il lato della tratteggiata di ogni elemento di calcolo, ricordato finché
+ * i due modelli restano gli stessi oggetti: costa una visita del modello, e
+ * il disegno gira sessanta volte al secondo.
+ */
+let latiRicordati: {
+  autore: Progetto; calcolo: Progetto; lati: Map<ElementId, LatoTratteggiata>;
+} | null = null;
+
+function latiPer(autore: Progetto, calcolo: Progetto): Map<ElementId, LatoTratteggiata> {
+  if (latiRicordati?.autore === autore && latiRicordati.calcolo === calcolo) {
+    return latiRicordati.lati;
+  }
+  const lati = latiDelCalcolo(autore, calcolo);
+  latiRicordati = { autore, calcolo, lati };
+  return lati;
 }
 
 function disegnaVincoli(

@@ -56,9 +56,21 @@ dM/dx = T          dT/dx = q_y
 
 con `q_y` intensità del carico distribuito lungo +y locale.
 
-**Disegno**: il diagramma del momento si traccia **dalla parte delle fibre
-tese** (M > 0 → sotto l'asse). Commutabile con
-`impostazioni.momentoDallaParteDelleFibreTese`.
+**Lettura e disegno — rispetto alla tratteggiata.** Il motore restituisce i
+valori nel riferimento naturale dell'asta (fibra di riferimento dal lato −y
+locale), e quei valori non si toccano: su di essi lavorano le verifiche. Ciò
+che si MOSTRA — diagrammi, quote, tabelle, espressioni, PDF — è riferito alla
+linea tratteggiata che l'utente vede (`vistaDallaTratteggiata`): dove la
+tratteggiata sta dal lato +y, T e M cambiano segno, N no. Poi:
+
+* M positivo tende la fibra tratteggiata e si disegna dalla sua parte, cioè
+  **dalla parte delle fibre tese** (commutabile con
+  `impostazioni.momentoDallaParteDelleFibreTese`);
+* N e T positivi si disegnano dalla parte **opposta** alla tratteggiata.
+
+Quindi N e T negativi stanno dal lato della tratteggiata, M negativo dal lato
+opposto. Il lato si legge sull'asta dell'autore (`latiDelCalcolo`), anche per
+i tratti in cui l'espansione la divide.
 
 ### Forze d'estremità
 

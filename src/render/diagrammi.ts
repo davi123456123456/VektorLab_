@@ -5,18 +5,31 @@
  * su un telaio è l'unico modo per leggere le colonne senza girare la testa, ed
  * è come si disegna a mano.
  *
- * CONVENZIONE DEL MOMENTO — con M > 0 che tende le fibre dal lato −y locale
- * (vedi docs/convenzioni.md), disegnare "dalla parte delle fibre tese"
- * significa riportare M positivo dal lato −y. È la convenzione italiana:
- * il diagramma cade dalla parte che si allunga, quindi mostra a colpo d'occhio
- * dove andrebbe l'armatura in un elemento di calcestruzzo.
- * Il segno è commutabile per chi preferisce la convenzione anglosassone.
+ * TUTTO SI LEGGE DALLA TRATTEGGIATA, che è ciò che l'utente vede. I valori
+ * arrivano dal motore nel riferimento naturale dell'asta e qui passano per
+ * `vistaDallaTratteggiata`: dove la tratteggiata sta dall'altra parte, T e M
+ * cambiano segno. Poi:
  *
- * N e T seguono la convenzione opposta e più diffusa: positivi dal lato +y.
+ *   · M positivo tende la fibra tratteggiata e si disegna dalla sua parte —
+ *     la convenzione italiana delle fibre tese: il diagramma cade dove la
+ *     trave si allunga, cioè dove andrebbe l'armatura;
+ *   · N e T positivi si disegnano dalla parte OPPOSTA alla tratteggiata.
+ *
+ * Quindi N e T negativi stanno dal lato della tratteggiata, M negativo dal
+ * lato opposto. Prima il lato della tratteggiata era ignorato: sulle aste in
+ * cui sta dall'altra parte — tutte e tre in un portale — ogni diagramma
+ * contraddiceva il proprio segno. Il momento però resta, fisicamente, sulle
+ * fibre tese: a cambiare è il segno scritto, non dove si disegna.
+ *
+ * Il momento è commutabile alla convenzione anglosassone (`fibreTese`), e
+ * allora segue N e T.
  */
 
 import type { RisultatoAnalisi, RisultatoAsta } from '../core/model/results.js';
 import type { ElementId, Progetto } from '../core/model/types.js';
+import {
+  vistaDallaTratteggiata, type LatoTratteggiata,
+} from '../core/model/tratteggiata.js';
 import { type Camera, type Punto, mondoASchermo } from './camera.js';
 
 export type Componente = 'N' | 'T' | 'M';
@@ -31,12 +44,28 @@ export interface OpzioniDiagramma {
   scala: number;
   /** true = M positivo dalla parte delle fibre tese (convenzione italiana) */
   fibreTese: boolean;
+  /**
+   * Lato della tratteggiata per ogni asta del modello di calcolo
+   * (`latiDelCalcolo`). Assente = tutte al lato naturale.
+   */
+  lati?: ReadonlyMap<ElementId, LatoTratteggiata>;
   colore: string;
   sfondo: string;
   testo: string;
   mostraValori: boolean;
   /** frazione dell'animazione di tracciamento, in [0,1] */
   avanzamento: number;
+}
+
+/**
+ * Da che parte dell'asta va un valore POSITIVO, già letto dalla tratteggiata:
+ * +1 = lato +ŷ, −1 = lato −ŷ. La tratteggiata sta dal lato −ŷ·`lato`.
+ */
+export function latoDelPositivo(
+  c: Componente, lato: LatoTratteggiata, fibreTese: boolean,
+): 1 | -1 {
+  const versoTratteggiata = -lato as 1 | -1;
+  return c === 'M' && fibreTese ? versoTratteggiata : (-versoTratteggiata as 1 | -1);
 }
 
 export function valoriComponente(a: RisultatoAsta, c: Componente): Float64Array {
@@ -82,17 +111,17 @@ export function disegnaDiagrammi(
   const massimo = massimoAssoluto(o.risultato, o.componente);
   if (massimo === 0 || o.scala === 0) return;
 
-  // Il momento si riporta dalla parte delle fibre tese: con M>0 che tende le
-  // fibre dal lato −y locale, il diagramma va disegnato con il segno invertito
-  // rispetto a N e T.
-  const verso = o.componente === 'M' && o.fibreTese ? -1 : 1;
+  // i valori come li legge chi guarda la tratteggiata
+  const vista = o.lati ? vistaDallaTratteggiata(o.risultato, o.lati) : o.risultato;
 
   // registro delle quote già scritte, valido per tutta la struttura
   const scritte: { x: number; y: number; testo: string }[] = [];
 
-  for (const risAsta of o.risultato.aste) {
+  for (const risAsta of vista.aste) {
     const g = geometria(risAsta.astaId, aste, nodi);
     if (!g) continue;
+    const verso = latoDelPositivo(
+      o.componente, o.lati?.get(risAsta.astaId) ?? 1, o.fibreTese);
     const valori = valoriComponente(risAsta, o.componente);
     const ascisse = risAsta.ascisse;
     const n = Math.max(2, Math.floor(ascisse.length * clamp01(o.avanzamento)));

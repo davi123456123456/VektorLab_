@@ -19,7 +19,7 @@
  * sta in una schermata senza scorrimento, che è l'obiettivo concreto.
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '../state/store.js';
 import { Bottone, Interruttore, Pannello, Riga, Selettore } from './Pannelli.js';
 import { ETICHETTA_COMPONENTE, type Componente } from '../render/diagrammi.js';
@@ -35,6 +35,8 @@ import {
 import type { RisultatoAnalisi, RisultatoAsta } from '../core/model/results.js';
 import { SoloComputer } from './SoloComputer.js';
 import { usaTelefono } from './usaTelefono.js';
+import { usaLatiTratteggiata } from './usaLatiTratteggiata.js';
+import { vistaDallaTratteggiata } from '../core/model/tratteggiata.js';
 
 /**
  * Cifre significative, non decimali fissi: 0.00123 e 123000 vanno scritti
@@ -59,6 +61,10 @@ export function PannelloRisultati() {
   const inCorso = useStore((s) => s.calcoloInCorso);
   const errore = useStore((s) => s.erroreCalcolo);
   const telefono = usaTelefono();
+  // le tabelle scrivono T e M rispetto alla tratteggiata, come i diagrammi
+  const lati = usaLatiTratteggiata();
+  const vista = useMemo(
+    () => (risultato ? vistaDallaTratteggiata(risultato, lati) : null), [risultato, lati]);
 
   const opzioniSorgente = [
     ...progetto.casi.map((c) => ({ valore: `caso:${c.id}`, etichetta: `Caso — ${c.nome}` })),
@@ -142,7 +148,7 @@ export function PannelloRisultati() {
               <TabellaReazioni r={risultato} />
             </Blocco>
             <Blocco titolo="Valori notevoli">
-              <ValoriNotevoli r={risultato} />
+              <ValoriNotevoli r={vista ?? risultato} />
             </Blocco>
             </SoloComputer>
             {/*
@@ -238,8 +244,8 @@ function Sintesi({ r }: { r: RisultatoAnalisi }) {
         ))}
       </div>
       <p className="mt-1 text-[length:var(--t-minuto)]" style={{ color: 'var(--testo-debole)' }}>
-        N&gt;0 trazione · T&gt;0 fa ruotare il concio in senso orario ·
-        M&gt;0 tende le fibre inferiori
+        N&gt;0 trazione · T e M riferiti alla tratteggiata: M&gt;0 tende la fibra
+        tratteggiata · N e T negativi dalla sua parte, M negativo dalla parte opposta
       </p>
     </div>
   );

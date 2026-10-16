@@ -25,6 +25,8 @@
  */
 
 import type { Asta, ElementId, NodeId, Progetto } from './types.js';
+import type { RisultatoAnalisi, RisultatoAsta } from './results.js';
+import { astaDiOrigine } from './espansione.js';
 
 /** +1 se il lato è quello naturale (−ŷ), −1 se invertito per coerenza. */
 export type LatoTratteggiata = 1 | -1;
@@ -155,4 +157,65 @@ export function conLato(
   lato: LatoTratteggiata, v: { N: number; T: number; M: number },
 ): { N: number; T: number; M: number } {
   return { N: v.N, T: lato * v.T, M: lato * v.M };
+}
+
+/**
+ * IL LATO DELLA TRATTEGGIATA PER OGNI ELEMENTO DEL MODELLO DI CALCOLO.
+ *
+ * I risultati appartengono al modello ESPANSO, dove un'asta con un vincolo
+ * in campata diventa due tratti. La tratteggiata che l'utente vede però è
+ * quella dell'asta che ha disegnato: il lato si legge lì, e ogni tratto
+ * eredita quello della sua asta — ne conserva anche il verso, quindi il lato
+ * vale identico. Ricalcolarlo sul modello espanso poteva dare un lato
+ * diverso, perché i nodi in più cambiano da dove parte la visita, e il
+ * diagramma sarebbe finito dalla parte opposta della tratteggiata disegnata.
+ */
+export function latiDelCalcolo(
+  autore: Progetto, calcolo: Progetto,
+): Map<ElementId, LatoTratteggiata> {
+  const tAutore = calcolaTratteggiata(autore);
+  const tCalcolo = calcolo === autore ? tAutore : calcolaTratteggiata(calcolo);
+  const perId = new Map(autore.aste.map((a) => [a.id, a]));
+  const lati = new Map<ElementId, LatoTratteggiata>();
+  for (const a of calcolo.aste) {
+    const originale = perId.get(astaDiOrigine(a.id));
+    lati.set(a.id, originale ? latoEffettivo(tAutore, originale) : latoEffettivo(tCalcolo, a));
+  }
+  return lati;
+}
+
+/**
+ * I RISULTATI LETTI DALLA TRATTEGGIATA — per mostrarli, non per calcolare.
+ *
+ * Il motore restituisce N, T e M nel riferimento NATURALE dell'asta: fibra
+ * di riferimento dal lato −ŷ. Dove la tratteggiata sta dall'altra parte, chi
+ * legge il diagramma ragiona rispetto a lei, e rispetto a lei T e M hanno il
+ * segno opposto (`conLato`). Questa è la copia da mostrare: diagrammi, quote,
+ * tabelle, espressioni.
+ *
+ * Restano come sono, e devono restare: le forze d'estremità e gli spostamenti
+ * (sono vettori fisici, servono a frecce e deformata), e l'originale, su cui
+ * lavorano le verifiche. Lo zero resta +0: un «−0.00» in tabella sembrerebbe
+ * un errore.
+ */
+export function vistaDallaTratteggiata(
+  r: RisultatoAnalisi, lati: ReadonlyMap<ElementId, LatoTratteggiata>,
+): RisultatoAnalisi {
+  return { ...r, aste: r.aste.map((a) => ((lati.get(a.astaId) ?? 1) === 1 ? a : ribaltaAsta(a))) };
+}
+
+const opposto = (x: number): number => (x === 0 ? 0 : -x);
+
+function ribaltaAsta(a: RisultatoAsta): RisultatoAsta {
+  return {
+    ...a,
+    T: a.T.map(opposto),
+    M: a.M.map(opposto),
+    puntiNotevoli: a.puntiNotevoli.map((p) => ({ ...p, T: opposto(p.T), M: opposto(p.M) })),
+    estremi: {
+      ...a.estremi,
+      Tmin: opposto(a.estremi.Tmax), Tmax: opposto(a.estremi.Tmin),
+      Mmin: opposto(a.estremi.Mmax), Mmax: opposto(a.estremi.Mmin),
+    },
+  };
 }

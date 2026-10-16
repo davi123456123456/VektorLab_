@@ -39,6 +39,8 @@ export interface Comune {
   larghezza: number;
   limite: number;
   nuovaPagina: () => Contesto;
+  /** lato della tratteggiata per asta di calcolo: T e M si scrivono rispetto a lei */
+  lati?: ReadonlyMap<string, 1 | -1>;
 }
 
 // ═══════════════════════ §3.2 — DATI DEL MODELLO ═══════════════════════
@@ -333,13 +335,16 @@ export function bloccoCoefficiente(
     return { c, y };
   }
 
+  // T e M come sullo schermo: rispetto alla tratteggiata dell'asta
+  const latoDi = (id: string) => com.lati?.get(id) ?? 1;
   const sc = e.massimaTensione ?? e.massimoMomento;
   if (sc) {
     y = paragrafo(c,
       `Sezione critica: asta ${com.etichette.asta(sc.astaId as never)}, `
       + `ascissa x = ${f(sc.x, 3)} m${sc.lato ? ` (lato ${sc.lato})` : ''}. `
-      + `In quella sezione N = ${f(sc.N / 1e3, 2)} kN, T = ${f(sc.T / 1e3, 2)} kN, `
-      + `M = ${f(sc.M / 1e3, 2)} kNm. `
+      + `In quella sezione N = ${f(sc.N / 1e3, 2)} kN, `
+      + `T = ${f((latoDi(sc.astaId) * sc.T) / 1e3, 2)} kN, `
+      + `M = ${f((latoDi(sc.astaId) * sc.M) / 1e3, 2)} kNm. `
       + (e.coincidono
         ? 'Il massimo momento e la massima tensione cadono nella stessa sezione.'
         : 'Attenzione: la massima tensione NON cade dove il momento è massimo.'),
@@ -355,7 +360,7 @@ export function bloccoCoefficiente(
       const mm = e.massimoMomento;
       y = paragrafo(c,
         `Massimo momento: asta ${com.etichette.asta(mm.astaId as never)}, `
-        + `x = ${f(mm.x, 3)} m, M = ${f(mm.M / 1e3, 2)} kNm.`,
+        + `x = ${f(mm.x, 3)} m, M = ${f((latoDi(mm.astaId) * mm.M) / 1e3, 2)} kNm.`,
         com.x, y + 2, L, { dimensione: 8, colore: p.testoAttenuato });
     }
   }

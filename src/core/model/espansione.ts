@@ -34,6 +34,17 @@ export interface TrattoDiAsta {
   s1: number;
 }
 
+/**
+ * L'asta dell'autore da cui viene un sotto-elemento del modello di calcolo.
+ * I tratti si chiamano `asta#k` (vedi più sotto, dove nascono); un'asta che
+ * non è stata spezzata conserva il proprio id.
+ */
+export function astaDiOrigine(id: ElementId): ElementId {
+  const testo = id as unknown as string;
+  const k = testo.indexOf('#');
+  return (k < 0 ? testo : testo.slice(0, k)) as unknown as ElementId;
+}
+
 export interface Espansione {
   progetto: Progetto;
   /** sotto-elemento → tratto dell'asta originale */
