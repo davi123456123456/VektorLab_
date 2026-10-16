@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { decodificaPuntuali } from '../../src/foto/rete/puntuali.js';
+import { VERSO_INCERTO } from '../../src/foto/tipi.js';
 import type { Uscite } from '../../src/foto/rete/tensori.js';
 import * as V from '../../src/foto/rete/vocabolario.js';
 import type { Punto } from '../../src/foto/tipi.js';
@@ -89,5 +90,36 @@ describe('punta del momento accanto a una forza', () => {
     expect(d.frecce).toHaveLength(1);
     expect(d.frecce[0].punta).toEqual({ x: 81.5, y: 109.5 });
     expect(d.frecce[0].lunghezza).toBeCloseTo(60, 4);
+  });
+});
+
+describe('momento e forza sullo stesso nodo', () => {
+  const vuote = (): Uscite => ({ seg: new Uint8Array(80 * 80), h2: 80, w2: 80, testa: new Float32Array(V.CANALI * 1600), h4: 40, w4: 40 });
+  const metti = (u: Uscite, k: number, i: number, j: number, v: number) => { u.testa[k * 1600 + i * 40 + j] = v; };
+
+  it('una punta radiale (la forza) non diventa la punta dell\'arco', () => {
+    const u = vuote();
+    metti(u, V.MOMENTO0, 20, 20, 0.9);
+    // forza che punta verso il basso sul nodo: punta 8 px sotto il centro, direzione radiale
+    metti(u, V.FRECCIA, 22, 20, 0.95);
+    metti(u, V.SIN_FRECCIA, 22, 20, -1);
+    metti(u, V.LUNG_FRECCIA, 22, 20, 0.5);
+    // punta dell'arco 20 px a destra, tangente (verso l'alto): antiorario
+    metti(u, V.FRECCIA, 20, 25, 0.9);
+    metti(u, V.SIN_FRECCIA, 20, 25, 1);
+    const d = decodificaPuntuali(u);
+    expect(d.momenti).toHaveLength(1);
+    expect(d.momenti[0].verso).toBe('antiorario');
+    expect(d.momenti[0].raggio).toBeCloseTo(20, 5);
+    expect(d.frecce).toHaveLength(1);
+    expect(d.frecce[0].punta).toEqual({ x: 81.5, y: 89.5 });
+  });
+
+  it('un momento senza punta resta, con il verso incerto', () => {
+    const u = vuote();
+    metti(u, V.MOMENTO0 + 1, 20, 20, 0.8);
+    const d = decodificaPuntuali(u);
+    expect(d.momenti).toHaveLength(1);
+    expect(d.momenti[0].confidenza).toBeLessThan(VERSO_INCERTO);
   });
 });

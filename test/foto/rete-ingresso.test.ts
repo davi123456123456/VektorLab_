@@ -83,16 +83,19 @@ describe('figure nella pagina', () => {
   it('una sezione più grande dello schema non gli passa davanti', () => {
     const f = caricaIdeale(pagine[0]);
     const { seg, w2, h2 } = f.uscite;
-    // un blocco «altro» con il bordo «ausiliaria» nell'angolo opposto alla figura
+    // un riquadro di linee d'asta (più celle d'asta dello schema, ma nessun vincolo)
+    // con l'interno «altro», nell'angolo opposto alla figura: una sezione
     const destra = f.riquadro[0] < f.larghezza / 2;
     const j0 = destra ? w2 - 120 : 5, i0 = h2 - 160;
     for (let i = i0; i < i0 + 150; i++) {
       for (let j = j0; j < j0 + 110; j++) {
         const bordo = i === i0 || i === i0 + 149 || j === j0 || j === j0 + 109;
-        seg[i * w2 + j] = bordo ? V.CLASSE.ausiliaria : V.CLASSE.altro;
+        seg[i * w2 + j] = bordo ? V.CLASSE.asta : V.CLASSE.altro;
       }
     }
     const figure = trovaFigure(f.uscite);
+    expect(figure.length).toBeGreaterThanOrEqual(2);
+    expect(figure.some((x) => x.vincoli === 0 && x.aste > figure[0].aste)).toBe(true);
     expect(iou(figure[0].riquadro, f.riquadro)).toBeGreaterThanOrEqual(0.6);
   });
 });

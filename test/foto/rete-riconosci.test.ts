@@ -32,6 +32,17 @@ describe('la rete in Node (onnxruntime-web)', () => {
     expect([g.larghezza, g.altezza, ...g.dati]).toEqual([3, 2, 1, 2, 3, 4, 5, 6]);
   });
 
+  it('un PGM vuoto, troncato o corto dà un errore invece di bloccarsi', () => {
+    expect(() => leggiPGM(new Uint8Array())).toThrow();
+    expect(() => leggiPGM(new Uint8Array(Buffer.from('P5\n3 2\n')))).toThrow();
+    expect(() => leggiPGM(new Uint8Array([...Buffer.from('P5\n3 2\n255\n'), 1, 2]))).toThrow();
+  });
+
+  it('nel browser si carica solo la variante WASM', () => {
+    const sorgente = readFileSync(join(radice, 'src', 'foto', 'rete', 'onnx.ts'), 'utf8');
+    expect(sorgente).toContain("import('onnxruntime-web/wasm')");
+  });
+
   it('forme delle uscite', async () => {
     const u = await esegui({ dati: new Float32Array(256 * 320).fill(1), H: 256, W: 320 });
     expect([u.h2, u.w2, u.seg.length]).toEqual([128, 160, 128 * 160]);

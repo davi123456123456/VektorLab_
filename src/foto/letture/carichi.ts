@@ -16,7 +16,7 @@ import {
   agganciaAngolo, angoloDi, differenzaAngoli, distanza, distanzaSegmento, mediana, proiezione,
 } from '../geometria.js';
 import type { Tolleranze } from '../parametri.js';
-import type { CaricoGrafo, Grafo, Primitive, Punto } from '../tipi.js';
+import { VERSO_INCERTO, type CaricoGrafo, type Grafo, type Primitive, type Punto } from '../tipi.js';
 import { inserisciPunto } from './grafo.js';
 
 const GRADI = Math.PI / 180;
@@ -126,6 +126,9 @@ export function leggiCarichi(g: Grafo, p: Primitive, tol: Tolleranze): void {
       const tr = trattoSotto(g, m.centro);
       const pr = proiezione(m.centro, pxDi(g, tr.i), pxDi(g, tr.j));
       punto = inserisciPunto(g, tr.id, pr.punto, tol.tau);
+    }
+    if (m.confidenza < VERSO_INCERTO) {
+      g.avvisi.push({ codice: 'versoIncerto', messaggio: 'Verso di un momento non letto: controllalo.', punti: [punto] });
     }
     const carico: CaricoGrafo = {
       tipo: 'momento', punto, verso: m.verso === 'antiorario' ? 1 : -1, coefficiente: 1,

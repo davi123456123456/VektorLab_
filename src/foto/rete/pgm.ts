@@ -10,6 +10,7 @@ export function leggiPGM(dati: Uint8Array): Grigio {
   let k = 0;
   const campi: string[] = [];
   while (campi.length < 4) {
+    if (k >= dati.length) throw new Error('PGM troncato: intestazione incompleta');
     let s = '';
     while (k < dati.length && ![0x0a, 0x20, 0x0d, 0x09].includes(dati[k])) s += String.fromCharCode(dati[k++]);
     k++;
@@ -17,5 +18,6 @@ export function leggiPGM(dati: Uint8Array): Grigio {
   }
   if (campi[0] !== 'P5' || campi[3] !== '255') throw new Error('PGM non supportato');
   const larghezza = Number(campi[1]), altezza = Number(campi[2]);
+  if (dati.length - k < larghezza * altezza) throw new Error('PGM troncato: mancano dei pixel');
   return { dati: dati.subarray(k, k + larghezza * altezza), larghezza, altezza };
 }

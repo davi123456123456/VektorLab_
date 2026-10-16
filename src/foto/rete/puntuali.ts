@@ -12,11 +12,15 @@
  *
  * Il verso di un momento non viene dai canali 16–17 (si accendono
  * entrambi) ma dalla punta del suo arco, che la rete mette nel canale delle
- * frecce: la punta più vicina al centro fra 6 e 90 px; antiorario se
+ * frecce: la punta più vicina al centro fra 6 e 90 px fra quelle TANGENTI
+ * all'arco (|cos| fra raggio e direzione < 0.7: una forza che punta sul nodo
+ * del momento è radiale e resta una forza); antiorario se
  * (punta − centro) × direzione > 0 con y su. Quella punta non è un carico.
+ * Senza una punta così il momento resta, con confidenza sotto VERSO_INCERTO:
+ * la lettura avvisa che il verso va controllato.
  */
 
-import type { ArcoMomento, CorpoVincolo, Freccia, Pallino, Punto, Scritta } from '../tipi.js';
+import { VERSO_INCERTO, type ArcoMomento, type CorpoVincolo, type Freccia, type Pallino, type Punto, type Scritta } from '../tipi.js';
 import { canale, centroCella, massimoCanali, picchi, type Picco, type Uscite } from './tensori.js';
 import * as V from './vocabolario.js';
 
@@ -30,7 +34,7 @@ export interface Puntuali {
 }
 
 /** distanza della punta dell'arco dal centro del momento [px] */
-export const PUNTA_MOMENTO = { min: 6, max: 90 };
+export const PUNTA_MOMENTO = { min: 6, max: 90, radiale: 0.7 };
 
 const intervallo = (da: number, n: number) => Array.from({ length: n }, (_, k) => da + k);
 
@@ -68,12 +72,18 @@ export function decodificaPuntuali(u: Uscite): Puntuali {
     let migliore = Infinity;
     punte.forEach((f, k) => {
       const d = Math.hypot(f.punta.x - c.x, f.punta.y - c.y);
-      if (!usate.has(k) && d >= PUNTA_MOMENTO.min && d <= PUNTA_MOMENTO.max && d < migliore) {
-        migliore = d;
-        scelta = k;
-      }
+      if (usate.has(k) || d < PUNTA_MOMENTO.min || d > PUNTA_MOMENTO.max || d >= migliore) return;
+      // y su per la parte radiale, come la direzione
+      const radiale = Math.abs(((f.punta.x - c.x) * Math.cos(f.direzione) - (f.punta.y - c.y) * Math.sin(f.direzione)) / d);
+      if (radiale >= PUNTA_MOMENTO.radiale) return;
+      migliore = d;
+      scelta = k;
     });
-    if (scelta < 0) continue; // senza punta il verso sarebbe un tiro a caso
+    if (scelta < 0) {
+      // senza punta il verso sarebbe un tiro a caso: il momento resta, segnato incerto
+      momenti.push({ centro: c, raggio: 20, verso: 'antiorario', confidenza: Math.min(p.v, VERSO_INCERTO - 0.05) });
+      continue;
+    }
     usate.add(scelta);
     const f = punte[scelta];
     const rx = f.punta.x - c.x, ry = -(f.punta.y - c.y); // y su

@@ -18,9 +18,11 @@ quelle degli archi dei momenti. La rete trova bene una punta e la sua
 direzione, mentre il verso di un arco, guardato dal centro, non lo
 distingue: i canali 16 e 17 si accendono insieme. La decodifica quindi:
 fonde i canali 16 e 17 (massimo) per trovare i centri; prende la punta
-del canale delle frecce più vicina al centro, fra 6 e 90 px d'ingresso;
-stima il raggio come |punta − centro|; il verso è antiorario se
-(punta − centro) × direzione > 0 (y su). Sulla validazione sintetica
+del canale delle frecce più vicina al centro, fra 6 e 90 px d'ingresso,
+fra quelle tangenti all'arco (|cos| fra raggio e direzione < 0.7: una forza
+che punta sul nodo del momento è radiale e resta una forza); senza una
+punta così il verso è incerto; stima il raggio come |punta − centro|; il
+verso è antiorario se (punta − centro) × direzione > 0 (y su). Sulla validazione sintetica
 questa regola dà il verso giusto nell'81 % dei momenti (91 % conoscendo
 il raggio vero). Quella punta non è un carico: non diventa una Freccia.
 """
@@ -135,7 +137,8 @@ def descrizione() -> dict:
         "sigma": SIGMA,
         "momenti": {
             "centri": "massimo dei canali 16 e 17",
-            "punta": "il picco del canale freccia più vicino al centro, fra 6 e 90 px d'ingresso; non è un carico",
+            "punta": "il picco del canale freccia più vicino al centro, fra 6 e 90 px d'ingresso, tangente "
+                     "all'arco (|cos| fra raggio e direzione < 0.7); non è un carico; senza punta il verso è incerto",
             "raggio": "circa |punta − centro|",
             "verso": "antiorario se (punta − centro) × direzione > 0 (y su), altrimenti orario",
         },

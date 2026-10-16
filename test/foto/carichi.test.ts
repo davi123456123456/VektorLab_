@@ -125,6 +125,17 @@ describe('forze e momenti', () => {
     expect(g.punti).toHaveLength(2);
   });
 
+  it('momento dal verso incerto (confidenza bassa): resta, con l\'avviso', () => {
+    const p = trave().momento(1, 0, 'antiorario').primitive();
+    p.momenti[0].confidenza = 0.1;
+    const tol = tolleranze(p);
+    const g = costruisciGrafo(p, tol);
+    leggiCarichi(g, p, tol);
+    expect(g.carichi).toEqual([expect.objectContaining({ tipo: 'momento' })]);
+    expect(codici(g)).toContain('versoIncerto');
+    expect(codici(letto(trave().momento(1, 0, 'antiorario')))).not.toContain('versoIncerto');
+  });
+
   it('momento in campata: un punto nuovo sull\'asta', () => {
     const g = letto(trave().momento(1, 0.1, 'orario'));
     expect(g.carichi).toEqual([expect.objectContaining({ tipo: 'momento', verso: -1 })]);

@@ -305,7 +305,7 @@
  "sigma": 1.5,
  "momenti": {
   "centri": "massimo dei canali 16 e 17",
-  "punta": "il picco del canale freccia più vicino al centro, fra 6 e 90 px d'ingresso; non è un carico",
+  "punta": "il picco del canale freccia più vicino al centro, fra 6 e 90 px d'ingresso, tangente all'arco (|cos| fra raggio e direzione < 0.7); non è un carico; senza punta il verso è incerto",
   "raggio": "circa |punta − centro|",
   "verso": "antiorario se (punta − centro) × direzione > 0 (y su), altrimenti orario"
  },

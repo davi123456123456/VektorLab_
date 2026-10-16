@@ -50,6 +50,12 @@ export interface CorpoVincolo { tipo: TipoCorpo; attacco: Punto; angolo: number;
 /** Freccia singola: `direzione` è il verso della punta. */
 export interface Freccia { punta: Punto; direzione: number; lunghezza: number; confidenza: number }
 
+/**
+ * Sotto questa confidenza il verso di un momento è incerto: la decodifica
+ * non ha trovato la punta del suo arco, la lettura lo segnala.
+ */
+export const VERSO_INCERTO = 0.25;
+
 /** Verso come lo vede chi guarda il foglio. */
 export interface ArcoMomento {
   centro: Punto; raggio: number; verso: 'orario' | 'antiorario'; confidenza: number;
