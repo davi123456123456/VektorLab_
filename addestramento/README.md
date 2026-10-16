@@ -109,6 +109,56 @@ Misura sul Mac M2 da 8 GB (MPS, pezzi da 512, 2026-10-16):
 | 8 | 3,3 (0,53 senza swap) | 4,4 GB | il sistema va in swap: sconsigliato |
 | 4 | 0,25 | 2,2 GB | predefinito: 20 epoche ≈ 3,5 ore |
 
+### Primo modello (2026-10-16): `public/modelli/foto.onnx`
+
+1,07 M parametri, 2,08 MB (pesi fp16), 20 epoche su 10 000 campioni sintetici
+(8000 ritagli + 2000 pagine, con i vincoli rari), ~4 ore sul Mac M2; scelto
+all'epoca 18 (perdita di validazione 0,175).
+
+Due giri. Il primo (v1, in `esiti/rete-v1`) sulle foto vere leggeva tutte
+le cerniere come carrelli e non distingueva il verso dei momenti; il
+generatore è stato corretto (proporzioni dei simboli varie, punte degli
+archi nel canale delle frecce, foto slavate) e la rete riaddestrata (v2).
+
+Validazione sintetica (700 campioni, pezzi centrali da 512 px; picchi entro 1 cella):
+
+| Testa | Precisione | Richiamo |
+|---|---|---|
+| pallini | 0,96 | 0,99 |
+| vincoli (con il tipo) | 0,87 | 0,98 |
+| frecce | 0,93 | 0,97 |
+| nodi | 0,98 | 0,99 |
+| scritte (con il valore) | 0,92 | 0,97 |
+| momenti (canali 16–17) | 0,49 | 0,94 |
+
+Errore d'angolo medio: vincoli 3,8°, frecce 4,9°. IoU della segmentazione:
+asta 0,80, simbolo 0,68, carico 0,66, testo 0,65, ausiliaria 0,63, altro 0,50.
+I canali dei momenti trovano l'arco ma accendono entrambi i versi (per questo
+la precisione è 0,49): il verso si legge dalla punta dell'arco, che la rete
+trova nel 92 % dei momenti con il verso giusto nell'89 % (86 % scegliendo la
+punta a distanza ≈ raggio dal centro, come farà la decodifica).
+
+Foto vere (`python -m rete.guarda`, ritaglio sul riquadro scritto a mano):
+
+| | v1 | v2 |
+|---|---|---|
+| tipo dei vincoli (01, 07, 13, 17, 19–22, 24: 26 vincoli) | 8 / 26 (nessuna cerniera) | 23 / 26 |
+| verso dei momenti (03, 04, 07, 11, 13, 15, 18, 23, 24) | ~50 % per costruzione | 6 / 9 (11 sbagliato, 03 senza punta, 07 non trovato) |
+
+Impressioni sulle foto vere (v2): aste, pallini, distribuiti col verso giusto
+(anche orizzontali), forze e scritte (L, 2L, L/2, q, 2q, F, M) si leggono bene
+sia sui disegni puliti sia sui fogli fotografati. Errori visti:
+- le frecce del segno di sezione (K nella 08) prese per carichi;
+- la lettera «O» di un nodo (22) presa per un pallino;
+- la cerniera a soffitto della 24 letta come carrello;
+- la foto 21 (tratti grigi e sottili su carta azzurrina) segmenta male le colonne;
+- sul disegno a mano su quadretti (17) doppioni e una biella inventata, e le
+  «L» scritte a mano non sempre riconosciute.
+
+Cosa migliorare nel generatore, se la Fase 4 lo conferma: segni di sezione
+con frecce (come «altro disegno»), lettere dei nodi tonde (O, D, Q) vicino ai
+pallini, vincoli a soffitto più frequenti, più disegni a mano su quadretti.
+
 ## Da fare (revisione della Fase 2, 2026-10-15)
 
 Risolto nella Fase 3:

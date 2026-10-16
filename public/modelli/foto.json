@@ -1,0 +1,315 @@
+{
+ "versione": 1,
+ "ingresso": {
+  "canali": 1,
+  "valori": "grigio in [0, 1], 1 = bianco",
+  "multiplo": 32
+ },
+ "passi": {
+  "seg": 2,
+  "testa": 4
+ },
+ "classi": [
+  "sfondo",
+  "asta",
+  "ausiliaria",
+  "carico",
+  "simbolo",
+  "testo",
+  "altro"
+ ],
+ "canali": [
+  {
+   "canale": 0,
+   "nome": "pallino",
+   "genere": "mappa"
+  },
+  {
+   "canale": 1,
+   "nome": "raggio",
+   "genere": "regressione",
+   "scala": 10.0
+  },
+  {
+   "canale": 2,
+   "nome": "corpo:triangolo",
+   "genere": "mappa",
+   "tipo": "triangolo"
+  },
+  {
+   "canale": 3,
+   "nome": "corpo:triangoloRulli",
+   "genere": "mappa",
+   "tipo": "triangoloRulli"
+  },
+  {
+   "canale": 4,
+   "nome": "corpo:incastro",
+   "genere": "mappa",
+   "tipo": "incastro"
+  },
+  {
+   "canale": 5,
+   "nome": "corpo:doppioPendolo",
+   "genere": "mappa",
+   "tipo": "doppioPendolo"
+  },
+  {
+   "canale": 6,
+   "nome": "corpo:pattino",
+   "genere": "mappa",
+   "tipo": "pattino"
+  },
+  {
+   "canale": 7,
+   "nome": "corpo:biella",
+   "genere": "mappa",
+   "tipo": "biella"
+  },
+  {
+   "canale": 8,
+   "nome": "corpo:doppioPendoloInterno",
+   "genere": "mappa",
+   "tipo": "doppioPendoloInterno"
+  },
+  {
+   "canale": 9,
+   "nome": "corpo:pattinoInterno",
+   "genere": "mappa",
+   "tipo": "pattinoInterno"
+  },
+  {
+   "canale": 10,
+   "nome": "corpo:cos",
+   "genere": "regressione",
+   "scala": 1.0
+  },
+  {
+   "canale": 11,
+   "nome": "corpo:sin",
+   "genere": "regressione",
+   "scala": 1.0
+  },
+  {
+   "canale": 12,
+   "nome": "freccia",
+   "genere": "mappa",
+   "nota": "punte di tutte le frecce, anche di quelle degli archi dei momenti"
+  },
+  {
+   "canale": 13,
+   "nome": "freccia:cos",
+   "genere": "regressione",
+   "scala": 1.0
+  },
+  {
+   "canale": 14,
+   "nome": "freccia:sin",
+   "genere": "regressione",
+   "scala": 1.0
+  },
+  {
+   "canale": 15,
+   "nome": "freccia:lunghezza",
+   "genere": "regressione",
+   "scala": 100.0
+  },
+  {
+   "canale": 16,
+   "nome": "momento:antiorario",
+   "genere": "mappa",
+   "verso": "antiorario"
+  },
+  {
+   "canale": 17,
+   "nome": "momento:orario",
+   "genere": "mappa",
+   "verso": "orario"
+  },
+  {
+   "canale": 18,
+   "nome": "nodo",
+   "genere": "mappa"
+  },
+  {
+   "canale": 19,
+   "nome": "scritta:L/2",
+   "genere": "mappa",
+   "famiglia": "L",
+   "valore": 0.5
+  },
+  {
+   "canale": 20,
+   "nome": "scritta:L",
+   "genere": "mappa",
+   "famiglia": "L",
+   "valore": 1
+  },
+  {
+   "canale": 21,
+   "nome": "scritta:3L/2",
+   "genere": "mappa",
+   "famiglia": "L",
+   "valore": 1.5
+  },
+  {
+   "canale": 22,
+   "nome": "scritta:2L",
+   "genere": "mappa",
+   "famiglia": "L",
+   "valore": 2
+  },
+  {
+   "canale": 23,
+   "nome": "scritta:5L/2",
+   "genere": "mappa",
+   "famiglia": "L",
+   "valore": 2.5
+  },
+  {
+   "canale": 24,
+   "nome": "scritta:3L",
+   "genere": "mappa",
+   "famiglia": "L",
+   "valore": 3
+  },
+  {
+   "canale": 25,
+   "nome": "scritta:7L/2",
+   "genere": "mappa",
+   "famiglia": "L",
+   "valore": 3.5
+  },
+  {
+   "canale": 26,
+   "nome": "scritta:4L",
+   "genere": "mappa",
+   "famiglia": "L",
+   "valore": 4
+  },
+  {
+   "canale": 27,
+   "nome": "scritta:q",
+   "genere": "mappa",
+   "famiglia": "q",
+   "coefficiente": 1
+  },
+  {
+   "canale": 28,
+   "nome": "scritta:2q",
+   "genere": "mappa",
+   "famiglia": "q",
+   "coefficiente": 2
+  },
+  {
+   "canale": 29,
+   "nome": "scritta:3q",
+   "genere": "mappa",
+   "famiglia": "q",
+   "coefficiente": 3
+  },
+  {
+   "canale": 30,
+   "nome": "scritta:q/2",
+   "genere": "mappa",
+   "famiglia": "q",
+   "coefficiente": 0.5
+  },
+  {
+   "canale": 31,
+   "nome": "scritta:F",
+   "genere": "mappa",
+   "famiglia": "F",
+   "coefficiente": 1
+  },
+  {
+   "canale": 32,
+   "nome": "scritta:2F",
+   "genere": "mappa",
+   "famiglia": "F",
+   "coefficiente": 2
+  },
+  {
+   "canale": 33,
+   "nome": "scritta:3F",
+   "genere": "mappa",
+   "famiglia": "F",
+   "coefficiente": 3
+  },
+  {
+   "canale": 34,
+   "nome": "scritta:F/2",
+   "genere": "mappa",
+   "famiglia": "F",
+   "coefficiente": 0.5
+  },
+  {
+   "canale": 35,
+   "nome": "scritta:M",
+   "genere": "mappa",
+   "famiglia": "M",
+   "coefficiente": 1
+  },
+  {
+   "canale": 36,
+   "nome": "scritta:2M",
+   "genere": "mappa",
+   "famiglia": "M",
+   "coefficiente": 2
+  },
+  {
+   "canale": 37,
+   "nome": "scritta:3M",
+   "genere": "mappa",
+   "famiglia": "M",
+   "coefficiente": 3
+  },
+  {
+   "canale": 38,
+   "nome": "scritta:M/2",
+   "genere": "mappa",
+   "famiglia": "M",
+   "coefficiente": 0.5
+  },
+  {
+   "canale": 39,
+   "nome": "quota:dx1",
+   "genere": "regressione",
+   "scala": 100.0
+  },
+  {
+   "canale": 40,
+   "nome": "quota:dy1",
+   "genere": "regressione",
+   "scala": 100.0
+  },
+  {
+   "canale": 41,
+   "nome": "quota:dx2",
+   "genere": "regressione",
+   "scala": 100.0
+  },
+  {
+   "canale": 42,
+   "nome": "quota:dy2",
+   "genere": "regressione",
+   "scala": 100.0
+  }
+ ],
+ "centro_cella": "x = colonna·passo + (passo − 1)/2, y = riga·passo + (passo − 1)/2 (px, y giù)",
+ "angoli": "radianti, y su; corpi interni e quote nel semipiano [-7π/8, π/8)",
+ "sigma": 1.5,
+ "verso_dei_momenti": "dalla punta di freccia vicina all'arco: antiorario se (punta − centro) × direzione > 0 (y su)",
+ "modello": {
+  "file": "foto.onnx",
+  "opset": 17,
+  "pesi": "fp16",
+  "parametri": 1074786,
+  "epoca": 18,
+  "perdita_validazione": 0.17489549798624857
+ },
+ "uscite": {
+  "seg": "logit di classe [B, 7, H/2, W/2]",
+  "testa": "[B, 43, H/4, W/4]: probabilità (sigmoide) sui canali 'mappa', valori grezzi sulle 'regressione'"
+ }
+}
