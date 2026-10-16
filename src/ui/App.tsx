@@ -34,6 +34,9 @@ import { usaTelefono } from './usaTelefono.js';
 import { CronologiaTelefono, StrumentiTelefono } from './StrumentiTelefono.js';
 import { CassettoTelefono } from './CassettoTelefono.js';
 import { SoloComputer } from './SoloComputer.js';
+import { FotoTelefono } from './FotoTelefono.js';
+import { AvvisiFoto } from './AvvisiFoto.js';
+import type { AvvisoApp } from '../foto/app/avvisi.js';
 
 export function App() {
   const [aiuto, setAiuto] = useState(false);
@@ -51,6 +54,12 @@ export function App() {
   const messaggia = useStore((s) => s.messaggia);
   const messaggio = useStore((s) => s.messaggio);
   const telefono = usaTelefono();
+  // struttura da foto: solo sul telefono (decisione di Davide); le voci da
+  // controllare valgono per il foglio su cui si è disegnato
+  const [foto, setFoto] = useState(false);
+  const [avvisiFoto, setAvvisiFoto] = useState<AvvisoApp[] | null>(null);
+  const chiudiFoto = useCallback(() => setFoto(false), []);
+  useEffect(() => { setAvvisiFoto(null); }, [generazione]);
 
   useScorciatoie({
     alternaAiuto: useCallback(() => setAiuto((v) => !v), []),
@@ -113,9 +122,7 @@ export function App() {
     <div className="flex h-full flex-col" style={{ background: 'var(--sfondo)' }}>
       <BarraModalita onAiuto={() => setAiuto((v) => !v)}
                      onLogo={() => setInformazioni(true)}
-                     // il riconoscimento da foto non c'è ancora: il tasto
-                     // esiste già perché è qui che verrà collegato
-                     onFoto={() => messaggia('Struttura da foto: in arrivo')} />
+                     onFoto={() => setFoto(true)} />
       <BarraFogli />
 
       {/*
@@ -170,6 +177,9 @@ export function App() {
       </div>
 
       <BarraStato />
+
+      {telefono && foto && <FotoTelefono chiudi={chiudiFoto} disegnato={setAvvisiFoto} />}
+      {telefono && avvisiFoto && <AvvisiFoto avvisi={avvisiFoto} chiudi={() => setAvvisiFoto(null)} />}
     </div>
   );
 }

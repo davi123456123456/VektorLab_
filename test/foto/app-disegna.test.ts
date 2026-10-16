@@ -48,3 +48,17 @@ describe('il comando «Struttura da foto»', () => {
     expect(testo).not.toMatch(/avvis|immagine|data:image|"grigio"|"primitive"/i);
   });
 });
+
+describe('le voci «Da controllare»', () => {
+  it('ogni avviso porta i nodi e le aste dei punti che cita, senza doppioni', async () => {
+    const { avvisiApp } = await import('../../src/foto/app/avvisi.js');
+    const voci = avvisiApp(
+      [{ codice: 'versoIncerto', messaggio: 'm1', punti: ['p1', 'p2', 'p1'] }, { codice: 'nessunaQuota', messaggio: 'm2' }],
+      { p1: { nodi: ['n1' as never], aste: [] }, p2: { nodi: [], aste: ['a3' as never] } },
+    );
+    expect(voci).toEqual([
+      { messaggio: 'm1', nodi: ['n1'], aste: ['a3'] },
+      { messaggio: 'm2', nodi: [], aste: [] },
+    ]);
+  });
+});
