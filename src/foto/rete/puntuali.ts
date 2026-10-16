@@ -53,6 +53,7 @@ export function decodificaPuntuali(u: Uscite): Puntuali {
   const canaliCorpo = intervallo(V.CORPO0, V.TIPI_CORPO.length);
   const corpi: CorpoVincolo[] = daMassimo(canaliCorpo).map((p) => ({
     tipo: V.TIPI_CORPO[piuForte(canaliCorpo, p) - V.CORPO0],
+    punteggi: Object.fromEntries(V.TIPI_CORPO.map((t, k) => [t, valore(V.CORPO0 + k, p)])),
     attacco: centro(p),
     angolo: Math.atan2(valore(V.SIN_CORPO, p), valore(V.COS_CORPO, p)),
     confidenza: p.v,

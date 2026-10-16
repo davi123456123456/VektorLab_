@@ -33,6 +33,9 @@ describe('decodifica dei punti sulle uscite ideali', () => {
         expect(t, `corpo ${k.tipo}`).toBeDefined();
         const interno = k.tipo === 'doppioPendoloInterno' || k.tipo === 'pattinoInterno';
         expect((interno ? diffAsse : diffAngolo)(t!.angolo, k.angolo)).toBeLessThan(3 * GRADI);
+        // i punteggi di tutti i tipi: il revisore sceglie l'alternativa più probabile
+        expect(Object.keys(t!.punteggi ?? {})).toHaveLength(8);
+        expect(Math.max(...Object.values(t!.punteggi!))).toBe(t!.punteggi![t!.tipo]);
       }
       for (const fr of p.frecce) {
         const t = d.frecce.find((x) => dist(x.punta, giu(fr.punta)) <= 4);

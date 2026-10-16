@@ -45,7 +45,11 @@ export type TipoCorpo =
  * triangolo, il bordo dell'incastro); per i corpi interni è il centro del
  * simbolo sull'asse dell'asta.
  */
-export interface CorpoVincolo { tipo: TipoCorpo; attacco: Punto; angolo: number; confidenza: number }
+export interface CorpoVincolo {
+  tipo: TipoCorpo; attacco: Punto; angolo: number; confidenza: number;
+  /** quanto la rete crede a ciascun tipo: il revisore sceglie da qui l'alternativa più probabile */
+  punteggi?: Partial<Record<TipoCorpo, number>>;
+}
 
 /** Freccia singola: `direzione` è il verso della punta. */
 export interface Freccia { punta: Punto; direzione: number; lunghezza: number; confidenza: number }
@@ -93,7 +97,8 @@ export type CodiceAvviso =
   | 'nessunaAsta' | 'simboloIsolato' | 'cernieraAmbigua'
   | 'partizioneNonRappresentabile' | 'versoIncerto' | 'coefficienteNonLetto'
   | 'caricoNonAgganciato' | 'quotaNonLetta' | 'quoteIncoerenti' | 'nessunaQuota'
-  | 'integrita' | 'primitiveScartate' | 'nessunVincolo' | 'erroreLettura' | 'puntiFusi';
+  | 'integrita' | 'primitiveScartate' | 'nessunVincolo' | 'erroreLettura' | 'puntiFusi'
+  | 'revisione';
 
 /** Ciò che lo studente deve controllare: il motore non tira a indovinare in silenzio. */
 export interface Avviso { codice: CodiceAvviso; messaggio: string; punti?: string[] }
