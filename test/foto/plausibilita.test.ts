@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { confronta } from '../../src/foto/confronto.js';
 import { leggi } from '../../src/foto/index.js';
-import { rivedi } from '../../src/foto/plausibilita.js';
+import { LABILE, rivedi } from '../../src/foto/plausibilita.js';
+import { analizzaCinematica } from '../../src/core/index.js';
 import type { Primitive, TipoCorpo } from '../../src/foto/tipi.js';
 import { disegno, type Disegno } from './aiuti.js';
 
@@ -121,7 +122,7 @@ describe('gli esercizi non sono labili', () => {
     p.corpi[0].punteggi = { triangoloRulli: 0.95, triangolo: 0.03, incastro: 0.01 };
     const r = rivedi(p);
     expect(confronta(r.lettura.progetto, leggi(d.primitive()).progetto).differenze).toEqual([]);
-    expect(r.correzioni.map((a) => a.messaggio)).toEqual(['La struttura letta è labile: controlla i vincoli.']);
+    expect(r.correzioni.map((a) => a.messaggio)).toEqual([LABILE]);
   });
 });
 
@@ -142,4 +143,101 @@ describe('una lettura plausibile non si tocca', () => {
       expect(toccate).toBe(0);
     });
   }
+});
+
+describe('dalla revisione indipendente', () => {
+  const labilita = (l: ReturnType<typeof leggi>) => analizzaCinematica(l.progetto).labilita;
+
+  it('un tratto minuscolo con un simbolo non fa crollare la revisione', () => {
+    const p = disegno().asta(0, 0, 2, 0)
+      .appoggio('triangolo', 0, 0, 0).appoggio('triangoloRulli', 2, 0, 0)
+      .asta(2.6, 0.5, 2.64, 0.5).corpo('incastro', 2.6, 0.5, 90)
+      .quota(2, 0, -0.6, 2, -0.6).primitive();
+    expect(() => rivedi(p)).not.toThrow();
+  });
+
+  it('una colonna che si ferma sotto la trave si collega a T, non all\'appoggio', () => {
+    const d = (giunta: boolean) => disegno().asta(0, 2, 2, 2).asta(1, 0, 1, giunta ? 2 : 1.6)
+      .appoggio('triangolo', 0, 2, 0).appoggio('triangoloRulli', 2, 2, 0).appoggio('incastro', 1, 0, 0, { pallino: false })
+      .quota(2, 0, 2.6, 2, 2.6).quota(2, -0.6, 0, -0.6, 2);
+    comeGiusto(d(false).primitive(), d(true));
+  });
+
+  it('una sezione disegnata accanto alla trave non si salda alla struttura', () => {
+    const p = disegno().asta(0, 0, 3, 0)
+      .appoggio('triangolo', 0, 0, 0).appoggio('triangoloRulli', 3, 0, 0)
+      .asta(4, -0.3, 4.4, -0.3).asta(4, 0.3, 4.4, 0.3).asta(4.2, -0.3, 4.2, 0.3)
+      .quota(3, 0, -0.6, 3, -0.6).primitive();
+    expect(rivedi(p).correzioni.filter((a) => a.messaggio.includes('tratto d\'asta'))).toEqual([]);
+  });
+
+  it('il collegamento non trasforma un incastro giusto in cerniera', () => {
+    const mensola = () => disegno().asta(0, 0, 2, 0).appoggio('incastro', 0, 0, 270, { pallino: false }).quota(2, 0, -0.6, 2, -0.6);
+    for (const p of [mensola().asta(-0.9, 0, -0.35, 0).primitive(), mensola().asta(-0.06, -0.5, -0.06, 0.5).primitive()]) {
+      const r = rivedi(p);
+      expect(r.correzioni.filter((a) => a.messaggio.includes('incastro'))).toEqual([]);
+      expect(labilita(r.lettura)).toBe(0);
+    }
+  });
+
+  it('il doppio pendolo interno si annuncia solo se è stato davvero letto', () => {
+    for (const piastre of [0.08, 0.3]) {
+      const p = disegno().asta(0, 0, 6, 0)
+        .appoggio('incastro', 0, 0, 270, { pallino: false }).appoggio('triangoloRulli', 6, 0, 0)
+        .corpo('incastro', 3 - piastre, 0, 90).corpo('incastro', 3 + piastre, 0, 270)
+        .quota(3, 0, -0.6, 3, -0.6).quota(3, 3, -0.6, 6, -0.6).primitive();
+      const r = rivedi(p);
+      if (r.correzioni.some((a) => a.messaggio.includes('doppio pendolo interno'))) {
+        expect(r.lettura.grafo.giunti.some((g) => g.tipo === 'bipendolo')).toBe(true);
+      }
+    }
+  });
+
+  it('due incastri vicino a un nodo a T non diventano un doppio pendolo interno', () => {
+    const p = disegno().asta(0, 1, 2, 1).asta(1, 0, 1, 1)
+      .appoggio('triangolo', 0, 1, 0).appoggio('triangoloRulli', 2, 1, 0).appoggio('incastro', 1, 0, 0, { pallino: false })
+      .corpo('incastro', 0.93, 1, 90).corpo('incastro', 1.07, 1, 270)
+      .quota(2, 0, 1.6, 2, 1.6).quota(1, -0.6, 0, -0.6, 1).primitive();
+    expect(rivedi(p).correzioni.filter((a) => a.messaggio.includes('doppio pendolo interno'))).toEqual([]);
+  });
+
+  it('labile per una cerniera interna in più: non si cambia un appoggio giusto, si avvisa', () => {
+    const p = disegno().asta(0, 0, 1, 0).asta(1, 0, 2, 0).cerniera(1, 0)
+      .appoggio('triangolo', 0, 0, 0).appoggio('triangoloRulli', 2, 0, 0)
+      .quota(1, 0, -0.6, 1, -0.6).quota(1, 1, -0.6, 2, -0.6).primitive();
+    p.corpi.forEach((k) => { k.punteggi = k.tipo === 'triangolo' ? { triangolo: 0.7, incastro: 0.25, triangoloRulli: 0.3 } : { triangoloRulli: 0.7, triangolo: 0.3 }; });
+    const r = rivedi(p);
+    expect(confronta(r.lettura.progetto, leggi(p).progetto).differenze).toEqual([]);
+    expect(r.correzioni.map((a) => a.messaggio)).toEqual([LABILE]);
+  });
+
+  it('una struttura grande e molto labile non fa aspettare', () => {
+    const d = disegno();
+    const n = 40;
+    for (let i = 0; i < n; i++) d.asta(i, 0, i + 1, 0);
+    for (let i = 1; i < n; i++) d.cerniera(i, 0);
+    d.appoggio('triangoloRulli', 0, 0, 0).appoggio('triangoloRulli', n, 0, 0).quota(1, 0, -0.6, 1, -0.6);
+    const p = d.primitive();
+    for (const k of p.corpi) k.punteggi = { triangoloRulli: 0.6, triangolo: 0.21, incastro: 0.2, doppioPendolo: 0.2 };
+    const t = performance.now();
+    rivedi(p);
+    expect(performance.now() - t).toBeLessThan(600);
+  });
+
+  it('il tipo scelto è quello che dice la rete, non il ripiego fisso', () => {
+    comeGiusto(conPunteggi(travi('pattino', 'triangolo'), 'pattino', { pattino: 0.6, triangolo: 0.35, doppioPendolo: 0.1 }),
+      travi('triangolo', 'triangolo'));
+  });
+
+  it('labile: cambia prima il vincolo di cui la rete era meno sicura, e lo dice in italiano corretto', () => {
+    const p = travi('triangoloRulli').primitive();
+    p.corpi[0].punteggi = { triangoloRulli: 0.6, triangolo: 0.3 };
+    p.corpi[1].punteggi = { triangoloRulli: 0.5, triangolo: 0.45 };
+    const r = rivedi(p);
+    expect(confronta(r.lettura.progetto, leggi(disegno().asta(0, 0, 2, 0)
+      .appoggio('triangoloRulli', 0, 0, 0).appoggio('triangolo', 2, 0, 0).quota(2, 0, -0.6, 2, -0.6).primitive()).progetto).differenze).toEqual([]);
+    const testo = r.correzioni.map((a) => a.messaggio).join(' ');
+    expect(testo).not.toMatch(/un cerniera|un biella|ho preso/);
+    expect(testo).toContain('da carrello a cerniera');
+  });
 });
