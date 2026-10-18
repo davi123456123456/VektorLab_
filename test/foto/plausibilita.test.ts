@@ -69,6 +69,20 @@ describe('incastri dove un\'asta finisce', () => {
     comeGiusto(d('incastro').primitive(), d('triangolo'));
   });
 
+  it('due incastri vicini a metà asta sono un doppio pendolo interno (le sue due piastre)', () => {
+    const letta = disegno().asta(0, 0, 2, 0)
+      .appoggio('triangolo', 0, 0, 0).appoggio('triangoloRulli', 2, 0, 0)
+      .corpo('incastro', 0.92, 0, 90).corpo('incastro', 1.08, 0, 270)
+      .quota(1, 0, -0.6, 1, -0.6).quota(1, 1, -0.6, 2, -0.6);
+    // la convenzione della lettura: le aste si interrompono attorno al simbolo interno
+    const giusta = disegno().asta(0, 0, 0.95, 0).asta(1.05, 0, 2, 0)
+      .appoggio('triangolo', 0, 0, 0).appoggio('triangoloRulli', 2, 0, 0)
+      .corpo('doppioPendoloInterno', 1, 0, 0)
+      .quota(1, 0, -0.6, 1, -0.6).quota(1, 1, -0.6, 2, -0.6);
+    const r = comeGiusto(letta.primitive(), giusta);
+    expect(r.correzioni.some((a) => a.messaggio.includes('doppio pendolo interno'))).toBe(true);
+  });
+
   it('all\'estremo e allo spigolo di un telaio resta', () => {
     const estremo = disegno().asta(0, 0, 0, 1).asta(0, 1, 1, 1)
       .appoggio('incastro', 0, 0, 0, { pallino: false }).appoggio('triangoloRulli', 1, 1, 0)

@@ -13,10 +13,10 @@
  * studente non si sostituisce con un progetto vuoto.
  */
 
-import { leggi } from '../index.js';
 import type { Grigio } from '../rete/ingresso.js';
 import type { Esegui } from '../rete/onnx.js';
 import { leggiRiquadro, trovaSchemi } from '../rete/riconosci.js';
+import { rivedi } from '../plausibilita.js';
 import type { Richiesta, Risposta } from './protocollo.js';
 
 export const MESSAGGI = {
@@ -93,7 +93,8 @@ export function creaServizio(dip: Dipendenze) {
       rispondi({ id, tipo: 'avanzamento', fase: 'leggo' });
       const { primitive } = await leggiRiquadro(g, r.riquadro, await rete(id, rispondi));
       if (annullata()) return;
-      const l = leggi(primitive);
+      // la lettura passa dal revisore di plausibilità prima di arrivare al disegno
+      const l = rivedi(primitive).lettura;
       if (l.progetto.aste.length === 0) {
         rispondi({ id, tipo: 'nessunoSchema' });
         return;

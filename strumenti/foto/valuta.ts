@@ -1,7 +1,7 @@
 /**
  * VALUTAZIONE — le foto vere (e quelle sintetiche) dall'inizio alla fine.
  *
- *   npm run foto:valuta -- [--meta sviluppo|prova|tutte] [--sintetici N]
+ *   npm run foto:valuta -- [--meta sviluppo|prova|tutte] [--sintetici N] [--senza-revisione]
  *
  * Per ogni foto di `dati-foto/foto` con la sua soluzione in
  * `dati-foto/atteso/NN.vektor`: riconosci (rete in onnxruntime-web, due
@@ -21,6 +21,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { confronta, type Confronto } from '../../src/foto/confronto.js';
 import { leggi } from '../../src/foto/index.js';
+import { rivedi } from '../../src/foto/plausibilita.js';
 import { creaEsecutore } from '../../src/foto/rete/onnx.js';
 import { leggiPGM } from '../../src/foto/rete/pgm.js';
 import { riconosci, type Riconoscimento } from '../../src/foto/rete/riconosci.js';
@@ -41,6 +42,9 @@ const opzione = (nome: string) => {
 };
 const meta = opzione('meta') ?? 'sviluppo';
 const sintetici = Number(opzione('sintetici') ?? 0);
+// come nell'app la lettura passa dal revisore; --senza-revisione per misurare quanto serve
+const senzaRevisione = process.argv.includes('--senza-revisione');
+const leggiFoto = (p: Primitive) => (senzaRevisione ? leggi(p) : rivedi(p).lettura);
 const python = process.env.FOTO_PYTHON ?? join(radice, 'addestramento', '.venv', 'bin', 'python');
 const cartellaFoto = join(radice, 'dati-foto', 'foto');
 const esiti = join(radice, 'dati-foto', 'esiti');
@@ -75,7 +79,7 @@ try {
     const t = performance.now();
     const r = await riconosci(g, esegui);
     const ms = Math.round(performance.now() - t);
-    const letto = leggi(r.esito === 'ok' ? r.primitive : vuoto);
+    const letto = r.esito === 'ok' ? leggiFoto(r.primitive) : leggi(vuoto);
     const c = confronta(letto.progetto, d.progetto as Progetto);
     const avvisi = letto.avvisi.map((a) => a.codice);
     righe.push(riga(nome, SVILUPPO.includes(nome) ? 'sviluppo' : 'prova', r, c, avvisi, ms));
@@ -90,7 +94,7 @@ try {
     const t = performance.now();
     const r = await riconosci(g, esegui);
     const ms = Math.round(performance.now() - t);
-    const letto = leggi(r.esito === 'ok' ? r.primitive : vuoto);
+    const letto = r.esito === 'ok' ? leggiFoto(r.primitive) : leggi(vuoto);
     const c = confronta(letto.progetto, schemaInProgetto(vero.schema));
     righe.push(riga(f.replace('.json', ''), 'sintetico', r, c, letto.avvisi.map((a) => a.codice), ms));
   }

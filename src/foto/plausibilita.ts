@@ -10,7 +10,9 @@
  *      probabile dopo quello; i vincoli interni restano tutti;
  *   2. l'incastro sta dove un'asta finisce (un'asta sola, o lo spigolo di
  *      due aste non allineate), mai a metà asta, fra due aste allineate o
- *      in un nodo con tre aste: si prende il tipo successivo;
+ *      in un nodo con tre aste: si prende il tipo successivo. Due incastri
+ *      vicini fuori posto sono le due piastre di un doppio pendolo interno
+ *      (la rete le scambia per incastri): diventano quello;
  *   3. due pezzi con niente in mezzo sono un pezzo dimenticato: si
  *      collegano dalle due estremità più vicine;
  *   4. gli esercizi non sono labili: se la struttura letta lo è, si cambia
@@ -40,6 +42,8 @@ const NOME: Record<TipoCorpo, string> = {
 export const ALTERNATIVA = { minimo: 0.2, frazione: 0.3 };
 const GRADI = Math.PI / 180;
 export const LABILE = 'La struttura letta è labile: controlla i vincoli.';
+/** due incastri fuori posto più vicini di così (frazione della diagonale) sono un doppio pendolo interno */
+export const COPPIA = 0.06;
 
 interface Correzione { messaggio: string; dove: Punto | null }
 
@@ -149,6 +153,46 @@ export function rivedi(ingresso: Primitive): { lettura: EsitoLettura; primitive:
   let l = leggi(p);
   for (let giro = 0; giro < 6; giro++) {
     let cambiato = false;
+    // gli incastri disegnati il cui vincolo letto (il più vicino) è fuori posto:
+    // si parte dai corpi perché la lettura fonde due incastri vicini in uno solo
+    const vincoloDi = (k: CorpoVincolo) => l.grafo.vincoli.reduce<{ punto: string; d: number } | null>((m, v) => {
+      const d = distanza(pxDi(l.grafo, v.punto), k.attacco);
+      return !m || d < m.d ? { punto: v.punto, d } : m;
+    }, null);
+    const fuoriPosto = p.corpi.filter((k) => {
+      if (k.tipo !== 'incastro') return false;
+      const v = vincoloDi(k);
+      return !!v && !postoDaIncastro(l.grafo, v.punto);
+    });
+    const vicinanza = COPPIA * Math.hypot(p.larghezza, p.altezza);
+    const accoppiati = new Set<CorpoVincolo>();
+    for (const a of fuoriPosto) {
+      for (const b of fuoriPosto) {
+        if (a === b || accoppiati.has(a) || accoppiati.has(b) || distanza(a.attacco, b.attacco) > vicinanza) continue;
+        accoppiati.add(a);
+        accoppiati.add(b);
+        const m = { x: (a.attacco.x + b.attacco.x) / 2, y: (a.attacco.y + b.attacco.y) / 2 };
+        p.corpi = p.corpi.filter((k) => k !== a && k !== b);
+        p.corpi.push({ tipo: 'doppioPendoloInterno', attacco: m, angolo: 0, confidenza: Math.min(a.confidenza, b.confidenza) });
+        // come per un pallino che interrompe, l'asta si ferma ai due lati del simbolo
+        const meta = distanza(a.attacco, b.attacco) / 2;
+        p.aste = p.aste.flatMap((sg) => {
+          const l2 = distanza(sg.a, sg.b);
+          const u = { x: (sg.b.x - sg.a.x) / l2, y: (sg.b.y - sg.a.y) / l2 };
+          const t = (m.x - sg.a.x) * u.x + (m.y - sg.a.y) * u.y;
+          const fuori = Math.abs((m.x - sg.a.x) * u.y - (m.y - sg.a.y) * u.x);
+          if (fuori > meta || t <= meta || t >= l2 - meta) return [sg];
+          return [{ ...sg, b: { x: sg.a.x + u.x * (t - meta), y: sg.a.y + u.y * (t - meta) } },
+            { ...sg, a: { x: sg.a.x + u.x * (t + meta), y: sg.a.y + u.y * (t + meta) } }];
+        });
+        fatte.push({ messaggio: 'Due incastri vicini a metà asta sono le piastre di un doppio pendolo interno: l\'ho disegnato così.', dove: m });
+        cambiato = true;
+      }
+    }
+    if (cambiato) {
+      l = leggi(p);
+      continue;
+    }
     for (const v of l.grafo.vincoli) {
       if (v.tipo !== 'incastro' || postoDaIncastro(l.grafo, v.punto)) continue;
       const k = corpoVicino(p, pxDi(l.grafo, v.punto));

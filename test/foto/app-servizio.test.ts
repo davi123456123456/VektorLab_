@@ -128,3 +128,19 @@ describe('annullare vuol dire annullare', () => {
     expect(risposte.at(-1)).toEqual({ tipo: 'nessunoSchema', id: 2 });
   });
 });
+
+describe('il revisore nel motore', () => {
+  it('la lettura passa dal revisore: la biella della foto diventa un vincolo da esame, con l\'avviso', async () => {
+    expect(f.primitive.corpi.some((c) => c.tipo === 'biella')).toBe(true);
+    const { risposte, invia } = servizio();
+    await invia(foto());
+    await invia({ tipo: 'leggi', riquadro: tutto, id: 2 });
+    const letto = risposte.find((r) => r.tipo === 'letto');
+    expect(letto?.tipo).toBe('letto');
+    if (letto?.tipo !== 'letto') return;
+    expect(letto.avvisi.some((a) => a.codice === 'revisione' && a.messaggio.includes('biella'))).toBe(true);
+    const tipi = [...letto.progetto.nodi.flatMap((n) => (n.vincolo ? [n.vincolo.tipo] : [])),
+      ...(letto.progetto.vincoliSuAsta ?? []).map((v) => v.vincolo.tipo)];
+    expect(tipi).not.toContain('biella');
+  });
+});
