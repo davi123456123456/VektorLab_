@@ -71,13 +71,14 @@ describe('incastri dove un\'asta finisce', () => {
   });
 
   it('due incastri vicini a metà asta sono un doppio pendolo interno (le sue due piastre)', () => {
+    // incastro + doppio pendolo interno + carrello: isostatica (con una cerniera a sinistra sarebbe labile)
     const letta = disegno().asta(0, 0, 2, 0)
-      .appoggio('triangolo', 0, 0, 0).appoggio('triangoloRulli', 2, 0, 0)
+      .appoggio('incastro', 0, 0, 270, { pallino: false }).appoggio('triangoloRulli', 2, 0, 0)
       .corpo('incastro', 0.92, 0, 90).corpo('incastro', 1.08, 0, 270)
       .quota(1, 0, -0.6, 1, -0.6).quota(1, 1, -0.6, 2, -0.6);
     // la convenzione della lettura: le aste si interrompono attorno al simbolo interno
     const giusta = disegno().asta(0, 0, 0.95, 0).asta(1.05, 0, 2, 0)
-      .appoggio('triangolo', 0, 0, 0).appoggio('triangoloRulli', 2, 0, 0)
+      .appoggio('incastro', 0, 0, 270, { pallino: false }).appoggio('triangoloRulli', 2, 0, 0)
       .corpo('doppioPendoloInterno', 1, 0, 0)
       .quota(1, 0, -0.6, 1, -0.6).quota(1, 1, -0.6, 2, -0.6);
     const r = comeGiusto(letta.primitive(), giusta);
@@ -180,6 +181,16 @@ describe('dalla revisione indipendente', () => {
     }
   });
 
+  it('una sezione accanto alla trave, senza vincoli, si toglie con l\'avviso', () => {
+    const p = disegno().asta(0, 0, 3, 0)
+      .appoggio('triangolo', 0, 0, 0).appoggio('triangoloRulli', 3, 0, 0)
+      .asta(4, -0.3, 4.4, -0.3).asta(4, 0.3, 4.4, 0.3).asta(4.2, -0.3, 4.2, 0.3)
+      .quota(3, 0, -0.6, 3, -0.6).primitive();
+    const r = rivedi(p);
+    expect(r.lettura.progetto.aste.length).toBe(1);
+    expect(r.correzioni.some((a) => a.messaggio.includes('tratto staccato'))).toBe(true);
+  });
+
   it('il doppio pendolo interno si annuncia solo se è stato davvero letto', () => {
     for (const piastre of [0.08, 0.3]) {
       const p = disegno().asta(0, 0, 6, 0)
@@ -191,6 +202,48 @@ describe('dalla revisione indipendente', () => {
         expect(r.lettura.grafo.giunti.some((g) => g.tipo === 'bipendolo')).toBe(true);
       }
     }
+  });
+
+  it('le due piastre lette con l\'asta già interrotta fra loro sono un doppio pendolo interno', () => {
+    // come nella foto 02: la rete interrompe l'asta fra le due piastre e la lettura riunisce i due pezzi
+    const letta = disegno().asta(0, 0, 0.9, 0).asta(1.1, 0, 2, 0)
+      .appoggio('incastro', 0, 0, 270, { pallino: false }).appoggio('triangoloRulli', 2, 0, 0)
+      .corpo('incastro', 0.92, 0, 90).corpo('incastro', 1.08, 0, 270)
+      .quota(1, 0, -0.6, 1, -0.6).quota(1, 1, -0.6, 2, -0.6);
+    const giusta = disegno().asta(0, 0, 0.95, 0).asta(1.05, 0, 2, 0)
+      .appoggio('incastro', 0, 0, 270, { pallino: false }).appoggio('triangoloRulli', 2, 0, 0)
+      .corpo('doppioPendoloInterno', 1, 0, 0)
+      .quota(1, 0, -0.6, 1, -0.6).quota(1, 1, -0.6, 2, -0.6);
+    const r = comeGiusto(letta.primitive(), giusta);
+    expect(r.correzioni.some((a) => a.messaggio.includes('doppio pendolo interno'))).toBe(true);
+  });
+
+  it('le piastre sulle estremità dell\'asta interrotta, lontane dal centro: le estremità si avvicinano al simbolo', () => {
+    // come nella foto 02: ogni piastra sta sull'estremità di un pezzo, e le
+    // estremità sono più lontane dal centro di quanto la lettura cerchi
+    const letta = disegno().asta(0, 0, 1.84, 0).asta(2.16, 0, 4, 0)
+      .appoggio('incastro', 0, 0, 270, { pallino: false }).appoggio('triangoloRulli', 4, 0, 0)
+      .corpo('incastro', 1.84, 0, 90).corpo('incastro', 2.16, 0, 270)
+      .quota(2, 0, -0.6, 2, -0.6).quota(2, 2, -0.6, 4, -0.6);
+    const giusta = disegno().asta(0, 0, 1.95, 0).asta(2.05, 0, 4, 0)
+      .appoggio('incastro', 0, 0, 270, { pallino: false }).appoggio('triangoloRulli', 4, 0, 0)
+      .corpo('doppioPendoloInterno', 2, 0, 0)
+      .quota(2, 0, -0.6, 2, -0.6).quota(2, 2, -0.6, 4, -0.6);
+    const r = comeGiusto(letta.primitive(), giusta);
+    expect(r.correzioni.some((a) => a.messaggio.includes('doppio pendolo interno'))).toBe(true);
+  });
+
+  it('il doppio pendolo interno va nel nodo che la lettura aveva già, dove sono attaccate le quote', () => {
+    // foto 02: la quota finisce sulla prima piastra, dove la lettura ha messo il nodo
+    const quote = (d: Disegno) => d.quota(1, 0, -0.6, 1.84, -0.6).quota(1, 1.84, -0.6, 4, -0.6);
+    const letta = quote(disegno().asta(0, 0, 1.84, 0).asta(2.16, 0, 4, 0)
+      .appoggio('incastro', 0, 0, 270, { pallino: false }).appoggio('triangoloRulli', 4, 0, 0)
+      .corpo('incastro', 1.84, 0, 90).corpo('incastro', 2.16, 0, 270));
+    const giusta = quote(disegno().asta(0, 0, 1.79, 0).asta(1.89, 0, 4, 0)
+      .appoggio('incastro', 0, 0, 270, { pallino: false }).appoggio('triangoloRulli', 4, 0, 0)
+      .corpo('doppioPendoloInterno', 1.84, 0, 0));
+    const r = comeGiusto(letta.primitive(), giusta);
+    expect(r.lettura.avvisi.map((a) => a.codice)).not.toContain('nessunaQuota');
   });
 
   it('due incastri vicino a un nodo a T non diventano un doppio pendolo interno', () => {

@@ -247,7 +247,7 @@ forse 3–5 volte più lento del Mac, quindi al limite), la fotocamera
 Per andare più veloci: più thread WASM, che richiedono le intestazioni
 COOP/COEP sul sito (Vercel).
 
-## Revisore di plausibilità (2026-10-18)
+## Revisore di plausibilità (2026-10-18, corretto il 2026-10-23)
 
 Prima di disegnare, `src/foto/plausibilita.ts` (`rivedi`) corregge le
 letture impossibili per un esercizio d'esame, con le regole di Davide, e
@@ -257,21 +257,30 @@ decodifica conserva i punteggi di tutti i tipi di vincolo):
 - pattino esterno e biella non si disegnano (negli esami non ci sono; i
   vincoli interni sì, tutti): si prende il tipo successivo;
 - l'incastro sta dove un'asta finisce o in uno spigolo; a metà asta, fra due
-  aste allineate o in un nodo con tre aste diventa il tipo successivo; due
-  incastri vicini a metà asta sono le piastre di un doppio pendolo interno;
-- due pezzi staccati si collegano dalle due estremità più vicine;
+  aste allineate o in un nodo con tre aste diventa il tipo successivo, ma
+  solo se la struttura non diventa labile; due incastri vicini a metà asta
+  (non a un nodo) sono le piastre di un doppio pendolo interno, se la
+  rilettura lo trova davvero;
+- due pezzi staccati si collegano dall'estremo libero al punto più vicino
+  dell'altro pezzo, mai da o verso un vincolo, mai attraverso un simbolo, e
+  solo se il buco è al massimo il 35 % della diagonale della struttura; un
+  pezzo senza vincoli che non si può collegare ed è piccolo rispetto al
+  resto (una sezione disegnata accanto, la linea del muro) si toglie;
 - una struttura labile si corregge cambiando il vincolo di cui la rete era
   meno sicura (solo fra alternative con punteggio ≥ 0,2 e ≥ 30 % del tipo
-  letto); se non basta, solo l'avviso «controlla i vincoli».
+  letto, al massimo 50 ms di ricerca); se ci sono cerniere interne (una può
+  essere letta in più) o se manca troppo, solo l'avviso.
 
-Ogni correzione è una voce «Da controllare». Le letture plausibili non si
-toccano (le 40 + 10 letture ideali dei test escono identiche); tempo medio
-1,3 ms.
+Nessuna correzione rende labile una struttura che non lo era; se la
+revisione fallisce resta la lettura di sempre. Ogni correzione è una voce
+«Da controllare». Le letture plausibili non si toccano (le 40 + 10 letture
+ideali dei test escono identiche); tempo medio 0,6 ms (massimo 2,9 ms) sulle
+foto di sviluppo.
 
 | `npm run foto:valuta` | senza revisore | con revisore |
 |---|---|---|
-| sviluppo (11 foto) | 4,27 | **4,00** (02: 2 → 1, 18: 5 → 3) |
-| prova (13 foto, una sola esecuzione) | 4,92 | 5,08 (12: 16 → 18, un tratto aggiunto su una lettura già sbagliata) |
+| sviluppo (11 foto) | 4,27 | **4,09** (02: il doppio pendolo interno ora è giusto, resta l'inizio del carico distribuito; 18: 5 → 3) |
+| prova (13 foto, una sola esecuzione) | 4,92 | 5,00 (12: 16 → 17, un tratto aggiunto su una lettura già sbagliata) |
 
 Il grosso degli errori che restano è della rete (aste mancanti o lette come
 quote), e lì il revisore può solo avvisare.

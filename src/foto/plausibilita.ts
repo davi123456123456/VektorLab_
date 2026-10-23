@@ -17,7 +17,9 @@
  *   3. due pezzi con niente in mezzo sono un pezzo dimenticato: si collega
  *      l'estremo libero di uno al punto più vicino dell'altro, mai da o
  *      verso un vincolo, mai attraverso un simbolo, e solo se il buco è
- *      piccolo rispetto alla struttura (una sezione accanto resta staccata);
+ *      piccolo rispetto alla struttura. Un pezzo senza vincoli che non si
+ *      può collegare e che è piccolo rispetto al resto è un disegno a parte
+ *      (una sezione, la linea del muro): si toglie, con l'avviso;
  *   4. gli esercizi non sono labili: se la struttura letta lo è, si cambia
  *      il vincolo di cui la rete era meno sicura (uno, poi due), solo fra
  *      alternative che la rete riteneva davvero possibili. Se nella lettura
@@ -138,6 +140,14 @@ function pezzi(g: Grafo): string[][] {
   return [...gruppi.values()];
 }
 
+/** La diagonale del riquadro che contiene dei punti del grafo. */
+function diagonale(g: Grafo, ids: string[]): number {
+  const pts = ids.map((id) => pxDi(g, id)).filter((q): q is Punto => !!q);
+  if (pts.length === 0) return 0;
+  const xs = pts.map((q) => q.x), ys = pts.map((q) => q.y);
+  return Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+}
+
 function labilita(l: EsitoLettura): number {
   if (l.progetto.aste.length === 0) return 0;
   try {
@@ -145,6 +155,11 @@ function labilita(l: EsitoLettura): number {
   } catch {
     return 0;
   }
+}
+
+/** Le quote che la lettura non è riuscita ad attaccare. */
+function quotePerse(l: EsitoLettura): number {
+  return l.avvisi.filter((a) => a.codice === 'quotaNonLetta' || a.codice === 'nessunaQuota').length;
 }
 
 function incastriAPosto(l: EsitoLettura): boolean {
@@ -163,12 +178,7 @@ function ponte(l: EsitoLettura, p: Primitive, tol: Tolleranze): [Punto, Punto] |
   if (gruppi.length < 2) return null;
   const vincolati = g.vincoli.map((v) => pxDi(g, v.punto)).filter((q): q is Punto => !!q);
   const vicinoAVincolo = (q: Punto) => vincolati.some((v) => distanza(v, q) < 2 * tol.tau);
-  const diagonale = (ids: string[]) => {
-    const pts = ids.map((id) => pxDi(g, id)).filter((q): q is Punto => !!q);
-    const xs = pts.map((q) => q.x), ys = pts.map((q) => q.y);
-    return Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
-  };
-  const massimo = BUCO * diagonale(gruppi.flat());
+  const massimo = BUCO * diagonale(g, gruppi.flat());
   const simboli = [...p.pallini.map((c) => c.c), ...p.corpi.map((k) => k.attacco)];
   let scelto: { a: Punto; b: Punto; d: number } | null = null;
   gruppi.forEach((x, ix) => gruppi.forEach((y, iy) => {
@@ -236,32 +246,57 @@ function rivediDentro(ingresso: Primitive): Revisione {
         if (distanza(a.k.attacco, b.k.attacco) > vicinanza) continue;
         const m = { x: (a.k.attacco.x + b.k.attacco.x) / 2, y: (a.k.attacco.y + b.k.attacco.y) / 2 };
         // a metà di un'asta, non sopra un nodo (a un nodo a T non c'è un doppio pendolo interno)
-        const suAsta = p.aste.some((s) => distanzaSegmento(m, s.a, s.b) < tol.tau);
-        const suNodo = p.aste.some((s) => distanza(s.a, m) < 2 * tol.tau || distanza(s.b, m) < 2 * tol.tau);
+        // sulla struttura letta (la lettura può aver già riunito l'asta interrotta fra le piastre)
+        const g = l.grafo;
+        const suAsta = g.tratti.some((t) => {
+          const ti = pxDi(g, t.i), tj = pxDi(g, t.j);
+          return !!ti && !!tj && distanzaSegmento(m, ti, tj) < tol.tau;
+        });
+        const suNodo = g.punti.some((x) => distanza(x.px, m) < 2 * tol.tau
+          && !(grado(g, x.id) === 2 && !postoDaIncastro(g, x.id)));
         const rifiuta = () => { nonAccoppiare.add(chiave(a.k)); nonAccoppiare.add(chiave(b.k)); };
         if (!suAsta || suNodo) { rifiuta(); continue; }
-        const q = clona(p);
-        q.corpi = q.corpi.filter((_, i) => i !== a.i && i !== b.i);
-        q.corpi.push({ tipo: 'doppioPendoloInterno', attacco: m, angolo: 0, confidenza: Math.min(a.k.confidenza, b.k.confidenza) });
-        // come per un pallino che interrompe: l'asta si ferma a un passo dal simbolo
         const meta = Math.min(distanza(a.k.attacco, b.k.attacco) / 2, tol.tau);
-        q.aste = q.aste.flatMap((sg) => {
-          const lung = distanza(sg.a, sg.b);
-          if (lung < 1e-9) return [sg];
-          const u = { x: (sg.b.x - sg.a.x) / lung, y: (sg.b.y - sg.a.y) / lung };
-          const t = (m.x - sg.a.x) * u.x + (m.y - sg.a.y) * u.y;
-          const fuori = Math.abs((m.x - sg.a.x) * u.y - (m.y - sg.a.y) * u.x);
-          if (fuori > tol.tau || t <= meta || t >= lung - meta) return [sg];
-          return [{ ...sg, b: { x: sg.a.x + u.x * (t - meta), y: sg.a.y + u.y * (t - meta) } },
-            { ...sg, a: { x: sg.a.x + u.x * (t + meta), y: sg.a.y + u.y * (t + meta) } }];
-        });
-        const lq = leggi(q);
-        const letto = lq.grafo.giunti.some((gj) => {
-          const c = pxDi(lq.grafo, gj.punto);
-          return gj.tipo === 'bipendolo' && !!c && distanza(c, m) < 3 * tol.tau;
-        });
-        if (!letto || (labilita(lq) > 0 && labilita(l) === 0)) { rifiuta(); continue; }
-        fatte.push({ messaggio: 'Due incastri vicini a metà asta sono le piastre di un doppio pendolo interno: l\'ho disegnato così.', dove: [m] });
+        const portata = distanza(a.k.attacco, b.k.attacco) + 2 * tol.tau;
+        // dove mettere il simbolo: nel nodo che la lettura aveva già per le
+        // due piastre (lì possono essere attaccate le quote) o a metà fra le
+        // due; vince quello che la rilettura legge come doppio pendolo
+        // interno perdendo meno quote
+        const centri = [vincoloDi(l, a.k, tol), vincoloDi(l, b.k, tol)].map((id) => (id ? pxDi(g, id) : null))
+          .filter((x): x is Punto => !!x && distanza(x, m) <= portata);
+        let scelta: { c: Punto; q: Primitive; lq: EsitoLettura; perse: number } | null = null;
+        for (const c of [...centri, m]) {
+          const q = clona(p);
+          q.corpi = q.corpi.filter((_, i) => i !== a.i && i !== b.i);
+          q.corpi.push({ tipo: 'doppioPendoloInterno', attacco: c, angolo: 0, confidenza: Math.min(a.k.confidenza, b.k.confidenza) });
+          // come per un pallino che interrompe: l'asta si ferma a un passo dal
+          // simbolo; se la rete l'aveva già interrotta fra le piastre, le due
+          // estremità si portano a quel passo (la lettura cerca lì le aste)
+          q.aste = q.aste.flatMap((sg) => {
+            const lung = distanza(sg.a, sg.b);
+            if (lung < 1e-9) return [sg];
+            const u = { x: (sg.b.x - sg.a.x) / lung, y: (sg.b.y - sg.a.y) / lung };
+            const t = (c.x - sg.a.x) * u.x + (c.y - sg.a.y) * u.y;
+            const fuori = Math.abs((c.x - sg.a.x) * u.y - (c.y - sg.a.y) * u.x);
+            if (fuori > tol.tau) return [sg];
+            const su = (k: number) => ({ x: sg.a.x + u.x * k, y: sg.a.y + u.y * k });
+            if (t > meta && t < lung - meta) return [{ ...sg, b: su(t - meta) }, { ...sg, a: su(t + meta) }];
+            if (t >= -portata && t <= meta && t + meta < lung) return [{ ...sg, a: su(t + meta) }];
+            if (t <= lung + portata && t >= lung - meta && t - meta > 0) return [{ ...sg, b: su(t - meta) }];
+            return [sg];
+          });
+          const lq = leggi(q);
+          const letto = lq.grafo.giunti.some((gj) => {
+            const x = pxDi(lq.grafo, gj.punto);
+            return gj.tipo === 'bipendolo' && !!x && distanza(x, c) < 3 * tol.tau;
+          });
+          if (!letto || (labilita(lq) > 0 && labilita(l) === 0)) continue;
+          const perse = quotePerse(lq);
+          if (!scelta || perse < scelta.perse) scelta = { c, q, lq, perse };
+        }
+        if (!scelta) { rifiuta(); continue; }
+        const { c, q, lq } = scelta;
+        fatte.push({ messaggio: 'Due incastri vicini a metà asta sono le piastre di un doppio pendolo interno: l\'ho disegnato così.', dove: [c] });
         p = q;
         l = lq;
         cambiato = true;
@@ -295,6 +330,39 @@ function rivediDentro(ingresso: Primitive): Revisione {
     const lq = leggi(q);
     if (labilita(lq) > 0 && labilita(l) === 0) break;
     fatte.push({ messaggio: 'Ho aggiunto un tratto d\'asta che mancava fra due pezzi: controllalo.', dove: segmento });
+    p = q;
+    l = lq;
+  }
+
+  // 3b. un pezzo senza vincoli che non si è potuto collegare, piccolo
+  // rispetto al resto: un disegno a parte, non un pezzo della struttura
+  for (let giro = 0; giro < 4; giro++) {
+    const g = l.grafo;
+    const gruppi = pezzi(g);
+    const conVincolo = (ids: string[]) => g.vincoli.some((v) => ids.includes(v.punto));
+    if (gruppi.length < 2 || !gruppi.some(conVincolo)) break;
+    const tutto = diagonale(g, gruppi.flat());
+    const isolato = gruppi.find((x) => !conVincolo(x) && diagonale(g, x) <= BUCO * tutto);
+    if (!isolato) break;
+    const suoi = new Set(g.tratti.filter((t) => isolato.includes(t.i) && isolato.includes(t.j)).map((t) => t.id));
+    // un segmento d'asta è del pezzo se il tratto più vicino al suo punto medio è del pezzo
+    const delPezzo = (sg: Primitive['aste'][number]) => {
+      const m = { x: (sg.a.x + sg.b.x) / 2, y: (sg.a.y + sg.b.y) / 2 };
+      let vicino: { id: string; d: number } | null = null;
+      for (const t of g.tratti) {
+        const ti = pxDi(g, t.i), tj = pxDi(g, t.j);
+        if (!ti || !tj) continue;
+        const d = distanzaSegmento(m, ti, tj);
+        if (!vicino || d < vicino.d) vicino = { id: t.id, d };
+      }
+      return !!vicino && suoi.has(vicino.id);
+    };
+    const q = clona(p);
+    q.aste = q.aste.filter((sg) => !delPezzo(sg));
+    if (q.aste.length === p.aste.length) break;
+    const lq = leggi(q);
+    if (pezzi(lq.grafo).length >= gruppi.length) break;
+    fatte.push({ messaggio: 'Ho tolto un tratto staccato, senza vincoli (forse un disegno a parte): se faceva parte dell\'esercizio, ridisegnalo.', dove: [] }); // il pezzo non c'è più: nessun punto da indicare
     p = q;
     l = lq;
   }
